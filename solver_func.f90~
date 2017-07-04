@@ -1,0 +1,578 @@
+module solver_func
+  use precision
+  use math
+  use solver_defs
+  use spray_defs
+  use rk_defs
+  use rk_func
+
+  implicit none
+
+contains
+
+  subroutine solver_init(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+
+    call rk_init(spray)
+
+    call computeDivc1(spray)
+
+    select case(spray%solver%scheme)
+    case ('WENO5')
+
+       ! Compute Residual
+       call init_weno5(spray)
+    
+    case default
+
+    end select
+
+  end subroutine solver_init
+
+  subroutine solver_run(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+
+    select case(spray%solver%scheme)
+    case ('UPWIND1')
+
+       ! Compute Residual
+       call computeResidual_UPWIND1(spray)       
+       
+    case ('LF')
+
+       ! Compute Residual
+       call computeResidual_LF(spray)
+
+    case ('WENO5')
+
+       ! Compute Residual
+       call computeResidual_WENO5(spray)
+    
+    case default
+
+    end select
+
+    ! Update solution
+    call updateSolution(spray)
+
+  end subroutine solver_run
+
+  ! Compute first order divergence operator
+  subroutine computeDivc1(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+
+    real(WP), dimension(:,:), pointer :: divc => null()
+
+    allocate(divc(0:1,spray%kmino:spray%kmaxo))
+
+    spray%solver%divc => divc
+
+    divc(0,:) = -1.0_WP/spray%dz
+    divc(1,:) = 1.0_WP/spray%dz
+
+  end subroutine computeDivc1
+
+  subroutine init_weno5(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    type(solver_t), pointer :: solver=>null()
+
+    solver => spray%solver
+
+    ! Allocate stencils
+    allocate(solver%S0_p(-3:+1))
+    allocate(solver%S1_p(-3:+1))
+    allocate(solver%S2_p(-3:+1))
+    allocate(solver%S0_m(-2:+2))
+    allocate(solver%S1_m(-2:+2))
+    allocate(solver%S2_m(-2:+2))
+
+    ! Allocate WENO5 operators
+    allocate(solver%weno5p(-3:1,spray%kmino:spray%kmaxo))
+    allocate(solver%weno5m(-2:2,spray%kmino:spray%kmaxo))
+
+    ! Allocate flux vectors
+    allocate(solver%f_p(spray%kmino:spray%kmaxo))
+    allocate(solver%f_m(spray%kmino:spray%kmaxo))
+    allocate(solver%f_t(spray%kmino:spray%kmaxo))
+
+    ! Interpolation at the faces
+    solver%S0_p = 0.0_WP; solver%S0_m = 0.0_WP
+    solver%S1_p = 0.0_WP; solver%S1_m = 0.0_WP
+    solver%S2_p = 0.0_WP; solver%S2_m = 0.0_WP
+
+    solver%S0_p(-1) = real( 1.0/3.0,WP); solver%S0_p( 0) = real(5.0/6.0,WP); solver%S0_p(+1) = real(-1.0/6.0,WP)
+    solver%S0_m(-2) = real(-1.0/6.0,WP); solver%S0_m(-1) = real(5.0/6.0,WP); solver%S0_m( 0) = real( 1.0/3.0,WP)
+
+    solver%S1_p(-2) = real(-1.0/6.0,WP); solver%S1_p(-1) = real(5.0/6.0,WP); solver%S1_p( 0) = real( 1.0/3.0,WP)
+    solver%S1_m(-1) = real( 1.0/3.0,WP); solver%S1_m( 0) = real(5.0/6.0,WP); solver%S1_m(+1) = real(-1.0/6.0,WP)
+
+    solver%S2_p(-3) = real( 1.0/3.0,WP); solver%S2_p(-2) = real(-7.0/6.0,WP); solver%S2_p(-1) = real(11.0/6.0,WP)
+    solver%S2_m( 0) = real(11.0/6.0,WP); solver%S2_m(+1) = real(-7.0/6.0,WP); solver%S2_m(+2) = real( 1.0/3.0,WP)
+
+    ! Optimal weights
+    solver%a0 = 0.3_WP; solver%a1 = 0.6_WP; solver%a2 = 0.1_WP
+      
+  end subroutine init_weno5
+
+  subroutine computeWeno5Coeff(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    type(solver_t), pointer :: solver=>null()
+    integer :: i
+    real(WP) :: alpha,r,c, a0, a1, a2
+    real(WP), parameter :: epsilon = 1.0e-6_WP
+    real(WP) :: ISa, ISb, IS0_p, IS1_p, IS2_p,IS0_m, IS1_m, IS2_m, sum_inv
+    real(WP), dimension(:), pointer :: F_p=>null(), F_m=>null(), &
+                                       S0_p=>null(), S1_p=>null(), S2_p=>null(), &
+                                       S0_m=>null(), S1_m=>null(), S2_m=>null()
+    ! ---------------------------------
+
+     solver => spray%solver    
+
+     F_p => solver%f_p; F_m => solver%f_m
+     S0_p => solver%S0_p; S1_p => solver%S1_p; S2_p => solver%S2_p
+     S0_m => solver%S0_m; S1_m => solver%S1_m; S2_m => solver%S2_m
+
+     ISa = real(13.0/12.0,WP); ISb = real(1.0/4.0,WP)
+  
+     ! compute WENO5 operators...
+     do i=spray%kmin,spray%kmax
+
+        ! Direction x - U>0
+        ! compute smoothness indicators at regular faces...
+        IS0_p = ISa*(F_p(i+1)-2.0_WP*F_p(i)+F_p(i-1))**2 + ISb*(F_p(i+1)-4.0_WP*F_p(i)+3.0_WP*F_p(i-1))**2
+        IS1_p = ISa*(F_p(i-2)-2.0_WP*F_p(i-1)+F_p(i))**2 + ISb*(F_p(i-2)-F_p(i))**2
+        IS2_p = ISa*(F_p(i-3)-2.0_WP*F_p(i-2)+F_p(i-1))**2 + ISb*(F_p(i-3)-4.0_WP*F_p(i-2)+3.0_WP*F_p(i-1))**2
+
+        ! Compute new local weights
+        a0 = solver%a0/(epsilon+IS0_p)
+        a1 = solver%a1/(epsilon+IS1_p)
+        a2 = solver%a2/(epsilon+IS2_p)
+        
+        sum_inv = 1.0_WP/(a0+a1+a2)
+        solver%weno5p(:,i) = (a0*S0_p(:)+a1*S1_p(:)+a2*S2_p(:))*sum_inv
+
+        ! Direction x - U<0
+        ! compute smoothness indicators at regular faces...
+        IS0_m = ISa*(F_m(i-2)-2.0_WP*F_m(i-1)+F_m(i))**2 + ISb*(F_m(i-2)-4.0_WP*F_m(i-1)+3.0_WP*F_m(i))**2
+        IS1_m = ISa*(F_m(i+1)-2.0_WP*F_m(i)+F_m(i-1))**2 + ISb*(F_m(i+1)-F_m(i-1))**2
+        IS2_m = ISa*(F_m(i+2)-2.0_WP*F_m(i+1)+F_m(i))**2 + ISb*(F_m(i+2)-4.0_WP*F_m(i+1)+3.0_WP*F_m(i))**2
+
+        ! Compute new local weights
+        a0 = solver%a0/(epsilon+IS0_m)
+        a1 = solver%a1/(epsilon+IS1_m)
+        a2 = solver%a2/(epsilon+IS2_m)
+        sum_inv = 1.0_WP/(a0+a1+a2)
+        solver%weno5m(:,i) = (a0*S0_m(:)+a1*S1_m(:)+a2*S2_m(:))*sum_inv
+
+     end do
+   
+     ! apply boundary treatment to coefficients
+     ! order of scheme is reduced near boundary
+     ! to avoid large stencil size
+     call apply_weno5_bc()
+
+   contains
+     
+     subroutine apply_weno5_bc()
+       implicit none
+
+       ! Reduced to first order scheme at boundaries
+       ! Left boundary
+       solver%weno5p(: ,spray%kmino:spray%kmin-1) = 0.0_WP
+       solver%weno5p(-1,spray%kmino:spray%kmin-1) = 1.0_WP
+
+       ! Right boundary
+       solver%weno5p(: ,spray%kmax+1:spray%kmaxo) = 0.0_WP
+       solver%weno5p(-1,spray%kmax+1:spray%kmaxo) = 1.0_WP
+       
+       ! Left boundary
+       solver%weno5m(:,spray%kmino:spray%kmin-1) = 0.0_WP
+       solver%weno5m(0,spray%kmino:spray%kmin-1) = 1.0_WP
+
+       ! Right boundary
+       solver%weno5m(:,spray%kmax+1:spray%kmaxo) = 0.0_WP
+       solver%weno5m(0,spray%kmax+1:spray%kmaxo) = 1.0_WP
+
+     end subroutine apply_weno5_bc
+       
+  end subroutine computeWeno5Coeff
+
+  subroutine computeWeno5Flux(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    type(solver_t), pointer :: solver=>null()
+    integer :: k
+
+    solver => spray%solver
+
+    solver%f_t(spray%kmino:spray%kmin) = solver%f_p(spray%kmino:spray%kmin) &
+                                       + solver%f_m(spray%kmino:spray%kmin)
+
+    solver%f_t(spray%kmax+1:spray%kmaxo) = 0.5_WP*(solver%f_p(spray%kmax+1:spray%kmaxo)&
+                                                 + solver%f_m(spray%kmax+1:spray%kmaxo))
+
+    do k=spray%kmin+1,spray%kmax
+       solver%f_t(k) = sum(solver%weno5p(:,k)*solver%f_p(k-3:k+1)) &
+                     + sum(solver%weno5m(:,k)*solver%f_m(k-2:k+2))
+    end do
+
+  end subroutine computeWeno5Flux
+
+  subroutine buildStateVector(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    real(WP), dimension(:,:), pointer :: W=>null()
+    real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
+                                       u_l=>null(), u_g=>null(), d2=>null(), dm=>null(), &
+                                       Td=>null(), b=>null()
+    real(WP), dimension(spray%nzo) :: b2
+
+    rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
+    u_l => spray%u_l; u_g => spray%u_g; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
+
+    W => spray%solver%W
+
+    W = 0.0_WP
+
+    b2 = b**2
+
+    W(1,:) = rho*Y_a*b2
+    W(2,:) = rho*Y_v*b2
+    W(3,:) = rho*Y_g*u_g*b2
+    W(4,:) = rho*Y_l*b2
+    W(5,:) = rho*Y_l*u_l*b2
+    W(6,:) = rho*Y_l*dm*b2
+    W(7,:) = rho*Y_l*d2*b2
+    W(8,:) = rho*Y_l*Td*b2
+
+  end subroutine buildStateVector
+
+  subroutine buildFluxVector(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    real(WP), dimension(:,:), pointer :: F=>null()
+    real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
+                                       u_l=>null(), u_g=>null(), d2=>null(), dm=>null(), &
+                                       Td=>null(), b=>null()
+    real(WP), dimension(spray%nzo) :: b2
+
+    rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
+    u_l => spray%u_l; u_g => spray%u_g; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
+
+    F => spray%solver%F
+    
+    Y_g = 1.0_WP - Y_l
+
+    F = 0.0_WP
+
+    b2 = b**2
+
+    F(1,:) = rho*Y_a*u_g*b2
+    F(2,:) = rho*Y_v*u_g*b2
+    F(3,:) = rho*Y_g*u_g*u_g*b2
+    F(4,:) = rho*Y_l*u_l*b2
+    F(5,:) = rho*Y_l*u_l*u_l*b2
+    F(6,:) = rho*Y_l*dm*u_l*b2
+    F(7,:) = rho*Y_l*d2*u_l*b2
+    F(8,:) = rho*Y_l*Td*u_l*b2
+
+  end subroutine buildFluxVector
+
+  subroutine buildSourceVector(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    real(WP), dimension(:,:), pointer :: S=>null()
+    real(WP), dimension(:), pointer :: u_l=>null(), d2=>null(), dm=>null(), Td=>null(), b=>null(), &
+                                       omega_ent=>null(), omega_vap=>null(), omega_vapdm=>null(), &
+                                       omega_vapd2=>null(), f_drag=>null(), omega_bre1=>null(), &
+                                       omega_bre2=>null(), omega_T=>null()
+    real(WP), dimension(spray%nzo) :: b2
+
+    u_l => spray%u_l; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
+
+    omega_ent => spray%omega_ent; omega_vap => spray%omega_vap; omega_vapdm => spray%omega_vapdm; 
+    omega_vapd2 => spray%omega_vapd2; f_drag => spray%f_drag; omega_bre1 => spray%omega_bre1; 
+    omega_bre2 => spray%omega_bre2; omega_T => spray%omega_T
+
+    S => spray%solver%S
+
+    S = 0.0_WP
+
+    b2 = b**2
+
+    S(1,:) = omega_ent*b
+    S(2,:) = omega_vap*b2
+    S(3,:) = (-f_drag + omega_vap*u_l)*b2
+    S(4,:) = -omega_vap*b2
+    S(5,:) = (f_drag - omega_vap*u_l)*b2
+    S(6,:) = (-omega_bre1 - 4.0_WP/3.0_WP*omega_vapdm)*b2
+    S(7,:) = (-omega_bre2 - 5.0_WP/3.0_WP*omega_vapd2)*b2
+    S(8,:) = (omega_T - omega_vap*Td)*b2
+
+  end subroutine buildSourceVector
+
+  subroutine computeResidual_UPWIND1(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    integer :: i, k
+    integer, pointer :: kmin, kmax, kmino, kmaxo
+    real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
+    real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
+                                       Flux=>null()
+    real(WP) :: a_l, a_r, FL, FR
+    type(solver_t), pointer :: solver=>null()
+
+    solver => spray%solver
+
+    kmin => spray%kmin; kmax => spray%kmax
+    kmino => spray%kmino; kmaxo => spray%kmaxo
+    
+    divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
+    F => spray%solver%F; S => spray%solver%S
+
+    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g
+    Flux => spray%solver%Flux; Res => spray%solver%Res
+
+    do i = 1,3
+
+       do k = kmin,kmax
+       
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+
+       end do
+
+    end do
+
+    do i = 4,8
+
+       do k = kmin,kmax
+       
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+
+       end do
+
+    end do
+
+    Wold = W
+
+  end subroutine computeResidual_UPWIND1
+
+  subroutine computeResidual_LF(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    integer :: i, k
+    integer, pointer :: kmin, kmax, kmino, kmaxo
+    real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
+    real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
+                                       Flux=>null()
+    real(WP) :: a_l, a_r, FL, FR
+
+    kmin => spray%kmin; kmax => spray%kmax
+    kmino => spray%kmino; kmaxo => spray%kmaxo
+    
+    divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
+    F => spray%solver%F; S => spray%solver%S
+
+    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g
+    Flux => spray%solver%Flux; Res => spray%solver%Res
+
+    do k=kmino+1,kmaxo
+
+       alpha_l(k) = 2.0_WP*max(abs(u_l(k-1)),abs(u_l(k))); !hx/dt;%max(abs(u_l(i-1)),abs(u_l(i)));
+       alpha_g(k) = 2.0_WP*max(abs(u_g(k-1)),abs(u_g(k))); !hx/dt;%max(abs(u_l(i)),abs(u_l(i+1)));
+      
+    end do
+
+    do i = 1,3
+
+       Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_g*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
+
+       do k = kmin,kmax
+       
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
+
+       end do
+
+    end do
+
+    do i = 4,8
+
+       Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_l*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
+       
+       do k = kmin,kmax
+       
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
+
+       end do
+
+    end do
+
+    Wold = W
+
+  end subroutine computeResidual_LF
+
+  subroutine computeResidual_WENO5(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    integer :: i, k
+    integer, pointer :: kmin, kmax, kmino, kmaxo
+    real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
+    real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
+                                       Flux=>null()
+    real(WP) :: a_l, a_r, FL, FR
+    type(solver_t), pointer :: solver=>null()
+
+    solver => spray%solver
+
+    kmin => spray%kmin; kmax => spray%kmax
+    kmino => spray%kmino; kmaxo => spray%kmaxo
+    
+    divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
+    F => spray%solver%F; S => spray%solver%S
+
+    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g
+    Flux => spray%solver%Flux; Res => spray%solver%Res
+
+    ! Global LF splitting
+    alpha_l = maxval(u_l); alpha_g = maxval(u_g)
+
+    do i = 1,3
+
+       solver%f_p = 0.5_WP*(F(i,:) + alpha_g*W(i,:))
+       solver%f_m = 0.5_WP*(F(i,:) - alpha_g*W(i,:))
+
+       call computeWeno5Coeff(spray)
+
+       call computeWeno5Flux(spray)
+
+       !where(solver%f_t < 0.0_WP) solver%f_t = 0.0_WP
+
+       do k = kmin,kmax
+       
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k-1:k)) - S(i,k))
+          !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+
+       end do
+
+    end do
+
+    do i = 4,8
+
+       solver%f_p = 0.5_WP*(F(i,:) + alpha_l*W(i,:))
+       solver%f_m = 0.5_WP*(F(i,:) - alpha_l*W(i,:))
+
+       call computeWeno5Coeff(spray)
+
+       call computeWeno5Flux(spray)
+
+       !where(solver%f_t < 0.0_WP) solver%f_t = 0.0_WP
+       
+       do k = kmin,kmax
+       
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k-1:k)) - S(i,k))
+          !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+
+       end do
+
+    end do
+
+    Wold = W
+
+  end subroutine computeResidual_WENO5
+
+  subroutine updateSolution(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    type(rk_solver_t), pointer :: rks
+    real(WP), dimension(:,:), pointer :: RK=>null(), dRK=>null()
+    real(WP), dimension(:,:), pointer :: W=>null(), Wold=>null(), Res=>null()
+    real(WP), dimension(:), pointer :: alpha, beta, dt_ratio
+    integer :: k
+    integer, pointer :: kmino, kmaxo, kmin, kmax
+
+    kmin => spray%kmin; kmax => spray%kmax; kmino => spray%kmino; kmaxo => spray%kmaxo
+
+    W => spray%solver%W; Wold => spray%solver%Wold; Res => spray%solver%Res
+    rks => spray%solver%rk
+
+    RK => rks%RK; dRK => rks%dRK; alpha => rks%alpha; beta => rks%beta; dt_ratio => rks%dt_ratio
+
+    do k = kmin,kmax
+
+       RK(:,k) = alpha(rks%niter)*RK(:,k) + Res(:,k)
+       dRK(:,k) = beta(rks%niter)*RK(:,k)
+       W(:,k) = W(:,k) + dRK(:,k)
+       
+       select case (trim(rks%scheme))
+       case ('Wray-33')
+          if (rks%niter == 2) then
+             RK(:,k) = Res(:,k)
+          end if
+       case ('Shu-33')
+          if (rks%niter /= 3) then
+             RK(:,k) = W(:,k) - Wold(:,k)
+          end if
+       end select
+    end do
+
+
+  end subroutine updateSolution
+  
+end module solver_func
