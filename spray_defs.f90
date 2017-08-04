@@ -40,7 +40,7 @@ module spray_defs
      type(pc_t), dimension(:), pointer :: pc_v
  
      ! Fuel properties
-     real(WP), pointer :: T_fuel, sigma, rho_l, visc_l, MW_f
+     real(WP), pointer :: T_fuel, sigma, rho_l, visc_l, MW_f, MP, NBP
      real(WP), dimension(:), pointer :: L_f, C_l, p_vap
 
      ! Fuel properties from table
@@ -117,7 +117,7 @@ contains
 
     nullify(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g,spray%u_l,spray%u_g,spray%d2,spray%dm,spray%Td,spray%b,spray%Tg)
 
-    nullify(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l,spray%p_vap,spray%MW_f,spray%L_f)
+    nullify(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l,spray%p_vap,spray%MW_f,spray%L_f,spray%MP,spray%NBP)
 
     nullify(spray%LFPTname,spray%LFPT,spray%VFPTname,spray%VFPT)
 
@@ -221,6 +221,8 @@ contains
     allocate(spray%rho_l); spray%rho_l = -9999.0_WP
     allocate(spray%visc_l); spray%visc_l = -9999.0_WP
     allocate(spray%MW_f); spray%MW_f = -9999.0_WP
+    allocate(spray%MP); spray%MP = -9999.0_WP
+    allocate(spray%NBP); spray%NBP = -9999.0_WP
 
     allocate(spray%MW_a); spray%MW_a = -9999.0_WP
     allocate(spray%Z_a); spray%Z_a = -9999.0_WP
@@ -392,7 +394,7 @@ contains
 
     deallocate(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g,spray%u_l,spray%u_g,spray%d2,spray%dm,spray%Td,spray%b,spray%Tg)
 
-    deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l,spray%p_vap,spray%MW_f,spray%L_f)
+    deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l,spray%p_vap,spray%MW_f,spray%L_f,spray%MP,spray%NBP)
 
     deallocate(spray%pc_l)
 

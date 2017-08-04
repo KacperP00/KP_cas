@@ -78,9 +78,6 @@ contains
     ! Compute non-dimensional parameters
     call compute_constNonDparams(spray)
 
-    ! Reference temperature and mass fraction for evaporation model
-    call computeRefTemperature(spray)
-
     ! Time scale
     spray%tau = spray%noz_D/spray%U_inj
 
@@ -127,6 +124,9 @@ contains
     spray%Tg(kmino:kmin-1) = 1.0_WP
 
     spray%b = 0.5_WP
+
+    ! Reference temperature and mass fraction for evaporation model
+    call computeRefTemperature(spray)
 
     ! Compute initial droplet size distribution
     call compute_DSD(spray)
@@ -512,14 +512,13 @@ contains
     real(WP), dimension(spray%nzo) :: T_low, T_high
     integer :: k
 
-    pc_l => spray%pc_l(1)
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
     u_l => spray%u_l; u_g => spray%u_g; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
     DRv => spray%DRv; DRa => spray%DRa
     W => spray%solver%W
 
-    T_high = pc_l%NormalBoilingPoint/spray%T_fuel
-    T_low = pc_l%MeltingPoint/spray%T_fuel
+    T_high = spray%NBP/spray%T_fuel
+    T_low = spray%MP/spray%T_fuel
 
     rho = 0.0_WP; u_l = 0.0_WP; u_g = 0.0_WP; Y_l = 0.0_WP; Y_a = 1.0_WP; Y_v = 0.0_WP;
     dm = 0.0_WP; d2 = 0.0_WP; Td = 1.0_WP
@@ -677,7 +676,9 @@ contains
     spray%rho_l = pc_l%liqDensity
     spray%visc_l = pc_l%liqViscosity%val
     spray%MW_f = pc_l%MolecularWeight/1000.0_WP
-  
+    spray%MP = pc_l%MeltingPoint
+    spray%NBP = pc_l%NormalBoilingPoint
+
   end subroutine computeLiquidFuelProperties
 
   subroutine getLiquidFuelPropertiesFromLFPT(spray)
@@ -712,9 +713,25 @@ contains
     spray%visc_l = values(2)
 
     if (spray%MW_f == -9999.0_WP) then
-       write(*,*) 'Error: Molecular weight of the fuel not provide. Please add following line to input file:'
+       write(*,*) 'Error: Molecular weight of the fuel not provided. Please add following line to input file:'
        write(*,*) 'Fuel molecular weight : <value>'
        call abort
+    end if
+
+    if (spray%NBP == -9999.0_WP) then
+       write(*,*) 'Error: Normal Boiling Point of the fuel not provided. Please add following line to input file:'
+       write(*,*) 'Normal boiling point : <value>'
+       call abort
+    end if
+
+    if (spray%MP == -9999.0_WP) then
+       write(*,*) 'Error: Melting point of the fuel not provided. You may add following line to input file:'
+       write(*,*) 'Fuel molecular weight : <value>'
+
+       spray%MP = 263.0_WP
+
+       write(*,*) 'Setting melting point of the fuel to ', spray%MP, '...'
+
     end if
   
   end subroutine getLiquidFuelPropertiesFromLFPT
@@ -1129,7 +1146,6 @@ contains
 
     ! ---------------------------------
     real(WP), parameter :: eps = 1E-16_WP
-    type(pc_t), pointer :: pc_l
     real(WP), dimension(:,:), pointer :: dsd=>null(), Red=>null(), Shd=>null(), Nud=>null()
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_ref=>null(), &
                                        di=>null(), &
@@ -1145,13 +1161,12 @@ contains
     spray%omega_vap = 0.0_WP; spray%omega_vapdm = 0.0_WP; spray%omega_vapd2 = 0.0_WP
     spray%omega_T = 0.0_WP; spray%Shd = 0.0_WP; spray%Nud = 0.0_WP; 
 
-    pc_l => spray%pc_l(1)
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_ref => spray%Y_ref; Td => spray%Td
     di => spray%di; h => spray%h; dsd => spray%dsd; Red => spray%Red; Shd => spray%Shd; Nud => spray%Nud
     DRg => spray%DRg; VRg => spray%VRg; Sc_g => spray%Sc_g; Pr_g => spray%Pr_g
     Re => spray%Re; CR => spray%CR; LR => spray%LR; De => spray%De
 
-    Lv = spray%L_f; TBd = pc_l%NormalBoilingPoint; T_d = spray%T_fuel*spray%Td; D = spray%noz_D*di
+    Lv = spray%L_f; TBd = spray%NBP; T_d = spray%T_fuel*spray%Td; D = spray%noz_D*di
 
     Xeq = (101325.0_WP/spray%P_a)*exp((Lv*spray%MW_f/spray%R_gas)*(1.0_WP/TBd-1.0_WP/T_d))
 

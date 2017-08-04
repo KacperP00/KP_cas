@@ -10,9 +10,11 @@ Maximum time : 1.0e-3
 ! Fuel name
 Fuel : ndodecane
 
-! Liquid fuel properties table : ndodecane_liquid.dat
-! Vapor fuel properties table : ndodecane_vapor.dat
-! Fuel molecular weight : 170.0e-3
+!Liquid fuel properties table : ndodecane_liquid.dat
+!Vapor fuel properties table : ndodecane_vapor.dat
+!Fuel molecular weight : 170.0e-3
+!Normal boiling point: 553.15 ! Upper limit on droplet temperature
+!Melting point: 263.57       ! Lower limit on droplet temperature 
 
 ! Nozzle parameters
 Injection pressure : 1500e5
