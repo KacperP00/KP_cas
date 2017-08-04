@@ -21,6 +21,12 @@ contains
     ! ---------------------------------------------
 
     select case(trim(fuel))
+    case('diesel')
+
+       call pc_diesel(pc)
+       write(*,*) 'Warning! Not all physical properties of diesel are available!'
+       write(*,*) 'Some properties are taken from ndodecane. Please check pc_database.f90 for details!'
+
     case('ndodecane','n-dodecane','duodecane','adakane 12')
 
        call pc_ndodecane(pc)
@@ -681,6 +687,8 @@ real(WP) function computeVal(pc,eqn,T,A,B,C,D,E)
      computeVal = eqn107(pc,T,A,B,C,D,E)
   case (114)
      computeVal = eqn114(pc,T,A,B,C,D,E)
+  case (115)
+     computeVal = eqn115(pc,T,A,B,C,D,E)
   case default 
      write(*,*) 'No equation available to compute property.'
   end select
@@ -783,5 +791,19 @@ real(WP) function eqn114(pc,T,A,B,C,D,E)
   eqn114 = (A**2)/t1+B-2.0_WP*A*C*t1-2.0_WP*A*D*(t1**2)-(C**2)*(t1**3)/3.0_WP-C*D*(t1**4)/2.0_WP-(D**2)*(t1**5)/5.0_WP
 
 end function eqn114
+
+real(WP) function eqn115(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+  real(WP) :: t1
+
+  t1 = T/1000.0_WP
+
+  eqn115 = A + B*t1 + C*t1**2 + D*t1**3 + E*t1**(-2)
+
+end function eqn115
 
 end module pc_func

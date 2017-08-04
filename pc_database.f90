@@ -6,6 +6,194 @@ module pc_database
 
 contains
 
+  ! XXXXXXX NOT FULLY UPDATED XXXXXXXXX
+  ! Source: Thermodynamic and transport properties of diesel fuel from book 
+  ! Multiphase Flow Dynamics 4 by Nikolay Ivanove Kolev
+  ! All parameters and coefficents are not available, therefore those not
+  ! available are taken from ndodecane
+  subroutine pc_diesel(pc)
+    implicit none
+
+    ! ---------------------------------------------
+    type(pc_t), pointer, intent(inout) :: pc
+    ! ---------------------------------------------
+
+    pc%name = 'diesel'
+    pc%CAS = ''
+    ! components %%%%% Arbitrary %%%%%
+    pc%ChemicalFormula%C = 12;         
+    pc%ChemicalFormula%H = 26;
+    pc%ChemicalFormula%O = 0;
+
+
+    pc%MolecularWeight = 170.000_WP;   ! kg/kmol  varies between 148 and 200
+    pc%Tcrit = 658.40_WP;              ! K    
+    pc%pcrit = 3.0000E6_WP;            ! Pa 
+    pc%vcrit = 0.71600_WP;             ! m^3/kmol retained same as ndodecane
+    pc%CritCompressFactor = 0.238_WP;  ! -        retained same as ndodecane
+
+
+    pc%MeltingPoint = 263.57_WP;             ! K  retained same as ndodecane
+    pc%TripletPointT = 263.57_WP;            ! K  retained same as ndodecane
+    pc%TripletPointp = 6.1520E-01_WP;        ! Pa retained same as ndodecane
+    pc%NormalBoilingPoint = 553.15_WP;       ! K  varies from 453.15 K - 653.15 
+    pc%liqMolarVolume  = 0.228605_WP;        ! m^3/kmol retained same as ndodecane
+
+
+    pc%IG_HeatOfFormation = -2.9072E08_WP;            ! J/kmol retained same as ndodecane
+    pc%IG_GibbsOfFormation = 3.3180E07_WP;            ! J/kmol retained same as ndodecane
+    pc%IG_AbsoluteEntropy = 6.2415E5_WP;              ! J/kmolK retained same as ndodecane
+    pc%HeatFusionAtMeltPoint = 3.6840E07_WP;          ! J/kmol retained same as ndodecane
+    pc%StandardNetHeatOfCombustion = -7.5137E9_WP;    ! J/kmol retained same as ndodecane
+    pc%StandardGibbsOfFormation = MAX_REAL_WP;             ! J/kmol retained same as ndodecane
+    pc%StandardHeatOfFormation = MAX_REAL_WP;              ! J/kmol retained same as ndodecane
+    pc%StandardAbsoluteEntropy = MAX_REAL_WP;              ! J/kmolK retained same as ndodecane
+
+
+    pc%AcentricFactor = 0.5764_WP;            ! - retained same as ndodecane
+    pc%RadiusOfGyration = 5.9140E-10_WP;      ! m retained same as ndodecane
+    pc%SolubilityParameter = 1.5900E4_WP;     ! (J/m^3)^.5 retained same as ndodecane
+    pc%DipoleMoment = 0.0_WP;                   ! C^m retained same as ndodecane
+    pc%VanDerWaalsVolume = 0.12960_WP;        ! m^3/kmol retained same as ndodecane
+
+
+    pc%VanDerWaalsArea = 1.7740E09_WP;        ! m^2/kmol retained same as ndodecane
+    pc%RefractiveIndex = 1.4151_WP;           ! - retained same as ndodecane
+    pc%FlashPoint = 347.00_WP;                ! K retained same as ndodecane
+    pc%FlammabilityLimits = (/ 0.6_WP, 4.7_WP /);     ! vol-! retained same as ndodecane
+    pc%FlammabilityLimitTemps = (/ MAX_REAL_WP, MAX_REAL_WP /); ! K retained same as ndodecane
+    pc%AutoignitionTemp = 476.00_WP;          ! K retained same as ndodecane
+
+
+    !Retained same as ndodecane
+    pc%solDensityMol%A = 5.2800E00_WP;
+    pc%solDensityMol%B = 0.0_WP; 
+    pc%solDensityMol%C = 0.0_WP;
+    pc%solDensityMol%D = 0.0_WP;
+    pc%solDensityMol%E = 0.0_WP;
+    pc%solDensityMol%range(:,1) = (/ 263.57_WP, MAX_REAL_WP /)
+    pc%solDensityMol%range(:,2) = (/ 5.2800E00_WP, MAX_REAL_WP /);
+    pc%solDensityMol%eqn = 100;
+
+    pc%liqDensityMol%A = 828.59744_WP/pc%MolecularWeight;
+    pc%liqDensityMol%B = 0.63993_WP/pc%MolecularWeight;
+    pc%liqDensityMol%C = -0.00216_WP/pc%MolecularWeight;
+    pc%liqDensityMol%D = 0.0_WP;
+    pc%liqDensityMol%E = 0.0_WP;
+    pc%liqDensityMol%range(:,1) = (/ pc%MeltingPoint, pc%Tcrit /);
+    pc%liqDensityMol%range(:,2) = (/ 4.98359080656_WP, 1.84463377882_WP /);
+    pc%liqDensityMol%eqn = 100;
+
+    !Retained same as ndodecane
+    pc%vapPressure%A =  1.3747E02_WP;
+    pc%vapPressure%B = -1.1976E04_WP;
+    pc%vapPressure%C = -1.6698E01_WP;
+    pc%vapPressure%D =  8.0906E-06_WP;
+    pc%vapPressure%E =  2.0000E00_WP;
+    pc%vapPressure%range(:,1) = (/ 263.57_WP, 658.00_WP /);
+    pc%vapPressure%range(:,2) = (/ 6.1534E-01_WP, 1.8223E06_WP /);
+    pc%vapPressure%eqn = 101;  
+
+    !Retained same as ndodecane
+    pc%HeatOfVapMol%A = 1.6E05_WP/pc%MolecularWeight;
+    pc%HeatOfVapMol%B = -187.629_WP/pc%MolecularWeight;
+    pc%HeatOfVapMol%C = 0.365_WP/pc%MolecularWeight;
+    pc%HeatOfVapMol%D = 0.0_WP;
+    pc%HeatOfVapMol%E = 0.0_WP;
+    pc%HeatOfVapMol%range(:,1) = (/ 263.57_WP, 658.00_WP /);
+    pc%HeatOfVapMol%range(:,2) = (/ 23103486.6009_WP, 33097150.536_WP /);
+    pc%HeatOfVapMol%eqn = 100;     
+
+    !Retained same as ndodecane
+    pc%solHeatCapacityMol%A = -4.0970E04_WP;
+    pc%solHeatCapacityMol%B = 2.8390E03_WP;
+    pc%solHeatCapacityMol%C = -1.3232E01_WP;
+    pc%solHeatCapacityMol%D = 2.7972E-02_WP;
+    pc%solHeatCapacityMol%E = 0.0_WP;
+    pc%solHeatCapacityMol%range(:,1) = (/ 29.97_WP, 258.41_WP /);
+    pc%solHeatCapacityMol%range(:,2) = (/ 3.2983E04_WP, 2.9175E05_WP /);
+    pc%solHeatCapacityMol%eqn = 100;
+
+    !Retained same as ndodecane
+    pc%liqHeatCapacityMol%A = 5.0821E05_WP;
+    pc%liqHeatCapacityMol%B = -1.3687E03_WP;
+    pc%liqHeatCapacityMol%C = 3.1015E00_WP;
+    pc%liqHeatCapacityMol%D = 0.0_WP;
+    pc%liqHeatCapacityMol%E = 0.0_WP;
+    pc%liqHeatCapacityMol%range(:,1) = (/ 263.57_WP, 330.00_WP /);
+    pc%liqHeatCapacityMol%range(:,2) = (/ 3.6292E05_WP, 3.9429E05_WP /);
+    pc%liqHeatCapacityMol%eqn = 100;    
+
+    pc%IG_HeatCapacityMol%A = -38118.9718_WP;
+    pc%IG_HeatCapacityMol%B = 1033816.42_WP;
+    pc%IG_HeatCapacityMol%C = -601695.64_WP;
+    pc%IG_HeatCapacityMol%D = 135329.194_WP;
+    pc%IG_HeatCapacityMol%E = 216.8348_WP;
+    pc%IG_HeatCapacityMol%range(:,1) = (/ 423.15_WP, 1273.15_WP /);
+    pc%IG_HeatCapacityMol%range(:,2) = (/ 303067.824251_WP, 582196.957273_WP /);
+    pc%IG_HeatCapacityMol%eqn = 115;
+
+    !Retained same as ndodecane
+    pc%SecondViralCoefMol%A = 8.800E-01_WP;
+    pc%SecondViralCoefMol%B = -1.0910E03_WP;
+    pc%SecondViralCoefMol%C = -5.0300E07_WP;
+    pc%SecondViralCoefMol%D = -5.4871E21_WP;
+    pc%SecondViralCoefMol%E = 1.4959E24_WP;
+    pc%SecondViralCoefMol%range(:,1) = (/ 329.00_WP, 1500.00_WP /);
+    pc%SecondViralCoefMol%range(:,2) = (/ -1.0701E01_WP, 1.3759E-01_WP /);
+    pc%SecondViralCoefMol%eqn = 104;  
+
+    !Retained same as ndodecane
+    pc%liqViscosity%A = -2.0607E01_WP;
+    pc%liqViscosity%B = 1.9430E03_WP;
+    pc%liqViscosity%C = 1.3205E00_WP;
+    pc%liqViscosity%D = 0.0_WP;
+    pc%liqViscosity%E = 0.0_WP;
+    pc%liqViscosity%range(:,1) = (/ 263.57_WP, 489.47_WP/);
+    pc%liqViscosity%range(:,2) = (/ 2.8109E-03_WP, 2.1196E-04_WP /);
+    pc%liqViscosity%eqn = 101;
+
+    !Retained same as ndodecane
+    pc%vapViscosity%A = 6.3440E-08_WP;
+    pc%vapViscosity%B = 8.2870E-01_WP;
+    pc%vapViscosity%C = 2.1950E02_WP;
+    pc%vapViscosity%D = 0.0_WP;
+    pc%vapViscosity%E = 0.0_WP;
+    pc%vapViscosity%range(:,1) = (/ 263.57_WP, 1000.00_WP /);
+    pc%vapViscosity%range(:,2) = (/ 3.5111E-06_WP, 1.5932E-05_WP /);
+    pc%vapViscosity%eqn = 102;
+
+    pc%liqThermalConductivity%A = 0.13924_WP;
+    pc%liqThermalConductivity%B = 3.78253E-05_WP;
+    pc%liqThermalConductivity%C = -2.89732E-07_WP;
+    pc%liqThermalConductivity%D = 0.0_WP;
+    pc%liqThermalConductivity%E = 0.0_WP;
+    pc%liqThermalConductivity%range(:,1) = (/ 263.57_WP, 489.47_WP /);
+    pc%liqThermalConductivity%range(:,2) = (/ 1.2908218003E-01_WP, 8.83401018E-02_WP /);
+    pc%liqThermalConductivity%eqn = 100;
+
+    !Retained same as ndodecane
+    pc%vapThermalConductivity%A = 5.7190E-06_WP;
+    pc%vapThermalConductivity%B = 1.4699E00_WP;
+    pc%vapThermalConductivity%C = 5.7940E02_WP;
+    pc%vapThermalConductivity%D = 0.0_WP;
+    pc%vapThermalConductivity%E = 0.0_WP;
+    pc%vapThermalConductivity%range(:,1) = (/ 489.47_WP, 1000.00_WP /);
+    pc%vapThermalConductivity%range(:,2) = (/ 2.3537E-02_WP, 9.3010E-02_WP /);
+    pc%vapThermalConductivity%eqn = 102; 
+
+    !Retained same as ndodecane
+    pc%SurfaceTension%A = 5.5493E-02_WP;
+    pc%SurfaceTension%B = 1.3262E00_WP;
+    pc%SurfaceTension%C = 0.0_WP;
+    pc%SurfaceTension%D = 0.0_WP;
+    pc%SurfaceTension%E = 0.0_WP;
+    pc%SurfaceTension%range(:,1) = (/ 263.57_WP, 658.00_WP /);
+    pc%SurfaceTension%range(:,2) = (/ 2.8150E-02_WP, 0.0_WP /);
+    pc%SurfaceTension%eqn = 106;
+
+  end subroutine pc_diesel
+
   ! Source: Daubert & Danner, "Physical and thermodynamic properties of pure chemicals", Revision 2000
   subroutine pc_ndodecane(pc)
     implicit none

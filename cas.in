@@ -10,6 +10,10 @@ Maximum time : 1.0e-3
 ! Fuel name
 Fuel : ndodecane
 
+! Liquid fuel properties table : ndodecane_liquid.dat
+! Vapor fuel properties table : ndodecane_vapor.dat
+! Fuel molecular weight : 170.0e-3
+
 ! Nozzle parameters
 Injection pressure : 1500e5
 
@@ -49,8 +53,8 @@ RK scheme : 1
 !Conv scheme : WENO5
 
 ! Output
-Data File : data.out
-PL File : PL.out
+Data File : data_dsd_2d.out
+PL File : PL_dsd_2d.out
 Output frequency : 1000
 
 ! Fixed Non-dimensional parameters
@@ -60,4 +64,4 @@ Output frequency : 1000
 !Fixed DRv : 10
 !Fixed VRa : 10
 !Fixed VRv : 10
-Fixed De : 1
+!Fixed De : 1

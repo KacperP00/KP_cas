@@ -47,6 +47,12 @@ contains
                   read(line(idx+1:len(line)),*) spray%Fuel
                else if(param .eq. 'Fuel temperature') then
                   read(line(idx+1:len(line)),*) spray%T_fuel
+               else if(param .eq. 'Liquid fuel properties table') then
+                  read(line(idx+1:len(line)),*) spray%LFPTname
+               else if(param .eq. 'Vapor fuel properties table') then
+                  read(line(idx+1:len(line)),*) spray%VFPTname
+               else if(param .eq. 'Fuel molecular weight') then
+                  read(line(idx+1:len(line)),*) spray%MW_f
                else if(param .eq. 'Injection pressure') then
                   read(line(idx+1:len(line)),*) spray%P_inj
                else if(param .eq. 'Nozzle exit diameter') then
@@ -77,6 +83,8 @@ contains
                   read(line(idx+1:len(line)),*) spray%init_dm
                else if(param .eq. 'Initial D2') then
                   read(line(idx+1:len(line)),*) spray%init_d2
+               else if(param .eq. 'ROI profile') then
+                  read(line(idx+1:len(line)),*) spray%roi_file
                else if(param .eq. 'RK scheme') then
                   read(line(idx+1:len(line)),*) spray%solver%rk%scheme
                else if(param .eq. 'Conv scheme') then

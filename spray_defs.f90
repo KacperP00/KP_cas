@@ -12,7 +12,6 @@ module spray_defs
      integer, pointer :: Nz, nzo, step
      integer, pointer :: kmin, kmax, kmino, kmaxo
 
-
      ! Numerics
      real(WP), pointer :: dz, Lz
      real(WP), pointer :: dt, ndtime, final_time, ndftime, tau
@@ -26,7 +25,7 @@ module spray_defs
      real(WP), pointer :: noz_D, noz_LD, noz_rD, noz_DoDi, Cnoz, theta, beta
      
      ! Flow variables
-     real(WP), dimension(:), pointer :: z, rho, Y_l, Y_v, Y_a, Y_g, u_l, u_g, d2, dm, Td, b
+     real(WP), dimension(:), pointer :: z, rho, Y_l, Y_v, Y_a, Y_g, u_l, u_g, d2, dm, Td, b, Tg
 
      ! Source terms
      real(WP), dimension(:), pointer :: omega_ent, omega_vap, omega_vapdm, omega_vapd2,f_drag, omega_bre1, omega_bre2, omega_T
@@ -43,6 +42,10 @@ module spray_defs
      ! Fuel properties
      real(WP), pointer :: T_fuel, sigma, rho_l, visc_l, MW_f
      real(WP), dimension(:), pointer :: L_f, C_l, p_vap
+
+     ! Fuel properties from table
+     character(len=128), pointer :: LFPTname, VFPTname
+     real(WP), dimension(:,:), pointer :: LFPT, VFPT
      
      ! Fuel vapor properties
      real(WP), pointer :: rho_v, visc_v, lambda_v, Cp_v
@@ -57,6 +60,8 @@ module spray_defs
      real(WP), dimension(:), pointer :: T_ref, Y_ref, rho_rv, visc_rv, lambda_rv, Cp_rv, G_rv, rho_ra, visc_ra, lambda_ra, Cp_ra
 
      ! Injector/Injection parameters
+     character(len=128), pointer :: roi_file
+     real(WP), dimension(:,:), pointer :: roi
      real(WP), pointer :: P_inj, C_d, U_inj
 
      ! Nozzle flow constants/variables
@@ -110,9 +115,11 @@ contains
 
     nullify(spray%noz_D,spray%noz_LD,spray%noz_rD,spray%noz_DoDi,spray%Cnoz,spray%theta,spray%beta)
 
-    nullify(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g,spray%u_l,spray%u_g,spray%d2,spray%dm,spray%Td,spray%b)
+    nullify(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g,spray%u_l,spray%u_g,spray%d2,spray%dm,spray%Td,spray%b,spray%Tg)
 
     nullify(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l,spray%p_vap,spray%MW_f,spray%L_f)
+
+    nullify(spray%LFPTname,spray%LFPT,spray%VFPTname,spray%VFPT)
 
     nullify(spray%pc_l)
 
@@ -129,6 +136,8 @@ contains
     nullify(spray%rho_g, spray%visc_g, spray%lambda_g, spray%Cp_g, spray%Sc_g, spray%Pr_g)
 
     nullify(spray%T_ref, spray%Y_ref)
+
+    nullify(spray%roi_file, spray%roi)
 
     nullify(spray%P_inj, spray%C_d, spray%U_inj)
 
@@ -204,6 +213,8 @@ contains
     allocate(spray%beta); spray%beta = -9999.0_WP
 
     allocate(spray%Fuel); spray%Fuel = 'noname'
+    allocate(spray%LFPTname); spray%LFPTname = 'noname'
+    allocate(spray%VFPTname); spray%VFPTname = 'noname'
 
     allocate(spray%T_fuel); spray%T_fuel = -9999.0_WP
     allocate(spray%sigma); spray%sigma = -9999.0_WP
@@ -226,6 +237,7 @@ contains
     allocate(spray%lambda_v); spray%lambda_v = -9999.0_WP
     allocate(spray%Cp_v); spray%Cp_v = -9999.0_WP
 
+    allocate(spray%roi_file); spray%roi_file = 'noname'
     allocate(spray%P_inj); spray%P_inj = -9999.0_WP
     allocate(spray%C_d); spray%C_d = -9999.0_WP
     allocate(spray%U_inj); spray%U_inj = -9999.0_WP
@@ -333,6 +345,7 @@ contains
     allocate(spray%d2(spray%nzo)); spray%d2 = -9999.0_WP
     allocate(spray%dm(spray%nzo)); spray%dm = -9999.0_WP
     allocate(spray%Td(spray%nzo)); spray%Td = -9999.0_WP
+    allocate(spray%Tg(spray%nzo)); spray%Tg = -9999.0_WP
     allocate(spray%b(spray%nzo)); spray%b = -9999.0_WP
 
     allocate(spray%dsd(spray%nd,spray%nzo)); spray%dsd = -9999.0_WP
@@ -377,13 +390,21 @@ contains
 
     deallocate(spray%noz_D,spray%noz_LD,spray%noz_rD,spray%noz_DoDi,spray%Cnoz,spray%theta,spray%beta)
 
-    deallocate(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g,spray%u_l,spray%u_g,spray%d2,spray%dm,spray%Td,spray%b)
+    deallocate(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g,spray%u_l,spray%u_g,spray%d2,spray%dm,spray%Td,spray%b,spray%Tg)
 
     deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l,spray%p_vap,spray%MW_f,spray%L_f)
 
     deallocate(spray%pc_l)
 
     deallocate(spray%pc_v)
+
+    if (associated(spray%LFPT)) then
+       deallocate(spray%LFPT)
+    end if
+
+    if (associated(spray%VFPT)) then
+       deallocate(spray%VFPT)
+    end if
     
     deallocate(spray%rho_v, spray%visc_v, spray%lambda_v, spray%Cp_v)
 
@@ -396,6 +417,8 @@ contains
     deallocate(spray%rho_g, spray%visc_g, spray%lambda_g, spray%Cp_g, spray%Sc_g, spray%Pr_g)
 
     deallocate(spray%T_ref, spray%Y_ref)
+
+    deallocate(spray%roi_file, spray%roi)
 
     deallocate(spray%P_inj, spray%C_d, spray%U_inj)
 
