@@ -79,7 +79,7 @@ contains
     call compute_constNonDparams(spray)
 
     ! Time scale
-    spray%tau = spray%noz_D/spray%U_inj
+    spray%tau = spray%D_eff/spray%U_inj
 
     spray%ndtime = 0.0_WP; spray%ndftime = spray%final_time/spray%tau
     
@@ -306,6 +306,7 @@ contains
        p_vena = P_inj - 0.5_WP*rho_l*u_vena**2
        p_venar = P_amb + 0.5_WP*rho_l*u_mean**2 *(1.0_WP-1.0_WP/Cc + Kexp + f*ld)
        if(p_vena < p_vap) then
+          write(*,*) '########  Cavitation detected....'
           p1 = p_vap + 0.5_WP*rho_l*u_vena**2
           Cd = Cc*sqrt((p1-p_vap)/(p1-P_amb))
           u_eff = u_vena - (P_amb-p_vap)/rho_l/u_mean;
@@ -334,10 +335,10 @@ contains
     ! ---------------------------------
 
     ! Fuel Jet exit Reynolds number
-    spray%Re = spray%rho_l*spray%U_inj*spray%noz_D/spray%visc_l
+    spray%Re = spray%rho_l*spray%U_inj*spray%D_eff/spray%visc_l
     
     ! Fuel Jet Weber number
-    spray%We = spray%rho_l*spray%U_inj**2*spray%noz_D/spray%sigma                 
+    spray%We = spray%rho_l*spray%U_inj**2*spray%D_eff/spray%sigma                 
 
     ! Density Ratio liquid to ambient gas
     spray%DRa = spray%rho_l/spray%rho_a
@@ -1166,7 +1167,7 @@ contains
     DRg => spray%DRg; VRg => spray%VRg; Sc_g => spray%Sc_g; Pr_g => spray%Pr_g
     Re => spray%Re; CR => spray%CR; LR => spray%LR; De => spray%De
 
-    Lv = spray%L_f; TBd = spray%NBP; T_d = spray%T_fuel*spray%Td; D = spray%noz_D*di
+    Lv = spray%L_f; TBd = spray%NBP; T_d = spray%T_fuel*spray%Td; D = spray%D_eff*di
 
     Xeq = (101325.0_WP/spray%P_a)*exp((Lv*spray%MW_f/spray%R_gas)*(1.0_WP/TBd-1.0_WP/T_d))
 
@@ -1481,7 +1482,7 @@ contains
           
           read(line,*)  spray%LFPT(i,1), spray%LFPT(i,2), spray%LFPT(i,3), spray%LFPT(i,4), spray%LFPT(i,5), spray%LFPT(i,6), spray%LFPT(i,7), spray%LFPT(i,8)
 
-          write(*,*) spray%LFPT(i,1), spray%LFPT(i,2), spray%LFPT(i,3), spray%LFPT(i,4), spray%LFPT(i,5), spray%LFPT(i,6), spray%LFPT(i,7), spray%LFPT(i,8)
+          !write(*,*) spray%LFPT(i,1), spray%LFPT(i,2), spray%LFPT(i,3), spray%LFPT(i,4), spray%LFPT(i,5), spray%LFPT(i,6), spray%LFPT(i,7), spray%LFPT(i,8)
 
           i = i + 1
 
@@ -1520,7 +1521,7 @@ contains
        close(unit=1041)
        allocate(spray%VFPT(nlines,5)); spray%VFPT = 0.0_WP
        open(unit=105,file=trim(spray%VFPTname),form="formatted",status="old",action="read")
-       write(*,*) 'Reading Fuel Properties from Table...'
+       write(*,*) 'Reading Vapor Fuel Properties from Table...'
        do while (.true.)
           read(unit=1051,fmt='(a)',iostat=ioerr) line
 
@@ -1682,8 +1683,9 @@ contains
     write(99,FMT=*) ''
     write(99,FMT=rowfmt) 'Discharge coefficient of nozzle :',spray%C_d
     write(99,FMT=rowfmt) 'Injection velocity :',spray%U_inj
-    write(99,FMT=rowfmt) 'Max. Mass flow rate(mg/ms) :',spray%rho_l*pi/4*spray%noz_D**2*spray%U_inj*1.0E+03_WP
-    write(99,FMT=rowfmt) 'Max. Momentum flow rate(kgm/s^2) :',spray%rho_l*pi/4*spray%noz_D**2*spray%U_inj**2
+    write(99,FMT=rowfmt) 'Effective jet diameter :',spray%D_eff
+    write(99,FMT=rowfmt) 'Max. Mass flow rate(mg/ms) :',spray%rho_l*pi/4*spray%D_eff**2*spray%U_inj*1.0E+03_WP
+    write(99,FMT=rowfmt) 'Max. Momentum flow rate(kgm/s^2) :',spray%rho_l*pi/4*spray%D_eff**2*spray%U_inj**2
 
     close(unit=99)
 
@@ -1702,10 +1704,10 @@ contains
 
     do k = spray%kmino,spray%kmaxo
         if (spray%rho(k)*spray%Y_l(k) .ge. 1.0E-03_WP) then
-            spray%LPL(step) = spray%noz_D*(spray%z(k)-spray%z(spray%kmin-1))*1000.0_WP
+            spray%LPL(step) = spray%D_eff*(spray%z(k)-spray%z(spray%kmin-1))*1000.0_WP
         end if
         if (spray%Y_v(k) .ge. 1.0E-03_WP) then
-            spray%VPL(step) = spray%noz_D*(spray%z(k)-spray%z(spray%kmin-1))*1000.0_WP
+            spray%VPL(step) = spray%D_eff*(spray%z(k)-spray%z(spray%kmin-1))*1000.0_WP
         end if
     end do
   end subroutine getPenetration
