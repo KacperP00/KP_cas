@@ -13,8 +13,8 @@ Fuel : ndodecane
 !Liquid fuel properties table : ndodecane_liquid.dat
 !Vapor fuel properties table : ndodecane_vapor.dat
 !Fuel molecular weight : 170.0e-3
-!Normal boiling point: 553.15 ! Upper limit on droplet temperature
-!Melting point: 263.57       ! Lower limit on droplet temperature 
+!Normal boiling point: 553.15 
+!Melting point: 263.57       
 
 ! Nozzle parameters
 Injection pressure : 1500e5
@@ -47,6 +47,11 @@ Initial DSD : Rosin-Rammler
 Number of diameter classes : 200
 !Initial Dm : 0.0093 
 !Initial D2 : 1.12e-4
+!Spray half-cone angle : 10.0
+!Tangent of spray half-cone angle : 0.165
+
+! Injection rate profile, a comma-separated file
+!ROI profile : roi.txt
 
 ! RK solver parameters
 RK scheme : 1

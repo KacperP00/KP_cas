@@ -87,6 +87,10 @@ contains
                   read(line(idx+1:len(line)),*) spray%init_dm
                else if(param .eq. 'Initial D2') then
                   read(line(idx+1:len(line)),*) spray%init_d2
+               else if(param .eq. 'Spray half-cone angle') then
+                  read(line(idx+1:len(line)),*) spray%theta
+               else if(param .eq. 'Tangent of spray half-cone angle') then
+                  read(line(idx+1:len(line)),*) spray%beta
                else if(param .eq. 'ROI profile') then
                   read(line(idx+1:len(line)),*) spray%roi_file
                else if(param .eq. 'RK scheme') then

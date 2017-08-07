@@ -390,15 +390,39 @@ contains
 
     ! ---------------------------------
     real(WP) :: dd, ld, theta, DRa, beta
-    
-    dd = spray%noz_DoDi; ld = spray%noz_LD
-    DRa = spray%DRa
 
-    spray%Cnoz = 41.75_WP*(ld**(-0.22_WP))*(dd)**0.15_WP
+    if (spray%beta .lt. 0.0_WP .and. spray%theta .lt. 0.0_WP ) then
+       
+       dd = spray%noz_DoDi; ld = spray%noz_LD
+       DRa = spray%DRa
 
-    spray%theta = spray%Cnoz*(1.0_WP/DRa)**0.26_WP
+       spray%Cnoz = 41.75_WP*(ld**(-0.22_WP))*(dd)**0.15_WP
 
-    spray%beta = tan(spray%theta*Pi/180.0_WP)
+       spray%theta = spray%Cnoz*(1.0_WP/DRa)**0.26_WP
+
+       spray%beta = tan(spray%theta*Pi/180.0_WP)
+
+       write(*,*) '#### Spray half-cone angle or tangent of spray half-cone angle not provided by user....'
+       write(*,*) '#### Computing the same with Hiroyasu correlation....'
+       write(*,*) '#### theta = ',spray%theta, 'beta = ', spray%beta
+    else if (spray%beta .lt. 0.0_WP .and. spray%theta .gt. 0.0_WP) then
+       spray%beta = tan(spray%theta*Pi/180.0_WP)
+       write(*,*) '#### Spray half-cone angle provided by user....'
+       write(*,*) '#### Computing tangent of spray half-cone angle....'
+       write(*,*) '#### theta = ',spray%theta, 'beta = ', spray%beta
+    else if (spray%beta .gt. 0.0_WP .and. spray%theta .lt. 0.0_WP) then
+       spray%theta = atan(spray%beta)*180.0_WP/Pi
+       write(*,*) '#### Tangent of spray half-cone angle provided by user....'
+       write(*,*) '#### Computing spray half-cone angle....'
+       write(*,*) '#### theta = ',spray%theta, 'beta = ', spray%beta
+    else
+       write(*,*) 'Error!!! in computing spray half-cone angle....'
+       write(*,*) 'Please provide spray half-cone angle or check the routine to compute it...'
+       write(*,*) 'Spray half-cone angle : <value>'
+       write(*,*) 'OR'
+       write(*,*) 'Tangent of spray half-cone angle : <value>'
+       call abort
+    end if
 
   end subroutine compute_beta
 
