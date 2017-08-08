@@ -95,13 +95,13 @@ contains
     scal = 2.2278E+09_WP; Cm = 0.009363081_WP; Cvar = 2.38132E-05_WP
 
     if(spray%init_dm == -9999.0_WP) then
-       spray%init_dm = Cm*scal*spray%DRa/(spray%Re*spray%We)
+       spray%init_dm = min(1.0_WP,Cm*scal*spray%DRa/(spray%Re*spray%We))
     end if
 
     var = Cvar*(scal*spray%DRa/(spray%Re*spray%We))**2
 
     if(spray%init_d2 == -9999.0_WP) then
-       spray%init_d2 = spray%init_dm**2 + var
+       spray%init_d2 = min(1.19E-02_WP,spray%init_dm**2 + var)
     end if
 
     ! Initialize non-dimensionalized flow variables and source terms
