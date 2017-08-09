@@ -207,7 +207,7 @@ contains
 
        call pc_isohexane(pc)
 
-    case('isooctane','iso-octane','heptane')
+    case('isooctane','iso-octane')
 
        call pc_isooctane(pc)
 

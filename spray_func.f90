@@ -101,7 +101,7 @@ contains
     var = Cvar*(scal*spray%DRa/(spray%Re*spray%We))**2
 
     if(spray%init_d2 == -9999.0_WP) then
-       spray%init_d2 = min(1.3E-01_WP,spray%init_dm**2 + var)
+       spray%init_d2 = min(1.12E-01_WP,spray%init_dm**2 + var)
     end if
 
     ! Initialize non-dimensionalized flow variables and source terms
@@ -437,55 +437,125 @@ contains
     real(WP), dimension(spray%nd):: D, f
     real(WP), dimension(spray%nd,spray%nzo) :: dsd
     real(WP) :: L, h, norm, r_min, r_max
-    integer :: i, k
+    integer :: i, k, idx
 
-    Dbar = 0.0_WP
-    Dm = spray%dm
-    D2 = spray%d2
+    select case(trim(spray%init_dsd_name))
+    case ('Rosin-Rammler')
 
-    L = 10.0_WP*Dm(1);
+       if(spray%step==0) write(*,*) 'Computing Rosin-Rammler DSD...'
 
-    h = L/spray%nd; spray%h = h
+       Dbar = 0.0_WP
+       Dm = spray%dm
+       D2 = spray%d2
 
-    D = (/ (h*real(i,WP),i=0,spray%nd,1) /)
+       L = 10.0_WP*Dm(1);
 
-    D(1) = 1E-16
+       h = L/spray%nd; spray%h = h
 
-    dsd(:,:) = 0.0_WP
-    
-    r_min = 1.05_WP; r_max = 1.9_WP
-    ratio = D2/Dm**2
+       D = (/ (h*real(i,WP),i=0,spray%nd,1) /)
 
-    do k=spray%kmino,spray%kmaxo
+       D(1) = 1E-16
 
-       if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
-          
-          if (ratio(k) > r_min ) then
-             ratio(k) = min(r_max,ratio(k))
-             call bisection(q(k),ratio(k))
-          else
-             q(k) = 5.1334_WP
+       dsd(:,:) = 0.0_WP
+
+       r_min = 1.05_WP; r_max = 1.9_WP
+       ratio = D2/Dm**2
+
+       do k=spray%kmino,spray%kmaxo
+
+          if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
+
+             if (ratio(k) > r_min ) then
+                ratio(k) = min(r_max,ratio(k))
+                call bisection(q(k),ratio(k))
+             else
+                q(k) = 5.1334_WP
+             end if
+
+             Dbar(k) = Dm(k)/gamma(1.0_WP+1.0_WP/q(k))
+
+             f = (q(k)/Dbar(k)**q(k))*D**(q(k)-1.0_WP)*exp(-(D/Dbar(k))**q(k))
+
+             norm = sum(f*h)
+             if (norm > 0.0_WP) then
+                dsd(:,k) = f/norm;
+             end if
+
           end if
 
-          Dbar(k) = Dm(k)/gamma(1.0_WP+1.0_WP/q(k))
+       end do
 
-          f = (q(k)/Dbar(k)**q(k))*D**(q(k)-1.0_WP)*exp(-(D/Dbar(k))**q(k))
+       dsd(1,:) = 0.0_WP
 
-          norm = sum(f*h)
-          if (norm > 0.0_WP) then
-             dsd(:,k) = f/norm;
+    case default
+
+       write(*,*) 'Computing Delta DSD...'
+
+       Dm = spray%dm
+       D2 = 0.0_WP
+
+       L = 10.0_WP*Dm(1);
+
+       h = L/spray%nd; spray%h = h
+
+       D = (/ (h*real(i,WP),i=0,spray%nd,1) /)
+       f = (/ (real(0.0,WP),i=0,spray%nd,1) /)
+
+       D(1) = Dm(k)
+
+       dsd(:,:) = 0.0_WP
+
+       do k=spray%kmino,spray%kmaxo
+
+          if (Dm(k) > 0.0_WP) then
+
+             call sortGetIndex(D,Dm(k),idx)
+
+             f(idx) = 1.0_WP
+
+             norm = sum(f*h)
+             if (norm > 0.0_WP) then
+                dsd(:,k) = f/norm;
+             end if
+
           end if
 
-       end if
+       end do
 
-    end do
-  
-    dsd(1,:) = 0.0_WP;
+       D(1) = 1E-16
+
+       dsd(1,:) = 0.0_WP
+
+    end select
   
     spray%di = D
     spray%dsd = dsd
 
   contains
+
+    subroutine sortGetIndex(A,val,idx)
+      implicit none
+      real(WP), dimension(:), intent(inout) :: A
+      real(WP), intent(in) :: val
+      integer, intent(out) :: idx
+      ! -------------------------------
+
+      real(WP) :: tmp
+      integer :: i, n, flag
+
+      n = size(A)
+
+      do i=1,n-1
+         if (A(i)>A(i+1)) then
+            tmp = A(i)
+            A(i) = A(i+1)
+            A(i+1) = tmp
+            idx = i+1
+         end if
+      end do
+
+    end subroutine sortGetIndex
+
     subroutine bisection(q_final,ratio)
       implicit none
 
@@ -1439,11 +1509,8 @@ contains
              exit
           end if
 
-          if (index(line,',') > 0) then
-             idx = index(line,',')
-             read(line(1:idx-1),*)  spray%roi(i,1)
-             read(line(idx+1:len(line)),*) spray%roi(i,2)
-          end if
+          read(line,*)  spray%roi(i,1), spray%roi(i,2)
+
           i = i + 1
        end do
        close(unit=105)

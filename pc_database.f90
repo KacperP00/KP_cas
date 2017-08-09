@@ -615,7 +615,7 @@ contains
     pc%liqDensityMol%D = 2.6646E-01_WP;
     pc%liqDensityMol%E = 0.0_WP;
     pc%liqDensityMol%range(:,1) = (/ 280.05_WP, 687.30_WP /);
-    pc%liqDensityMol%range(:,1) = (/ 5.2902E00_WP, 1.5422E00_WP /);
+    pc%liqDensityMol%range(:,2) = (/ 5.2902E00_WP, 1.5422E00_WP /);
     pc%liqDensityMol%eqn = 105;
 
     pc%vapPressure%A =  2.5059E02_WP;
@@ -11320,7 +11320,7 @@ contains
     pc%CritCompressFactor = 0.254_WP;  ! -
 
 
-    pc%MeltingPoint = MAX_REAL_WP;             ! K
+    pc%MeltingPoint = 193.00_WP;             ! K
     pc%TripletPointT = MAX_REAL_WP;            ! K
     pc%TripletPointp = MAX_REAL_WP;            ! Pa
     pc%NormalBoilingPoint = 450.80_WP;    ! K
