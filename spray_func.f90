@@ -121,7 +121,7 @@ contains
     spray%Td = 1.0_WP
     spray%Td(kmino:kmin-1) = 1.0_WP
     spray%Tg = (spray%Y_v*(1.0_WP - spray%De) + spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
-    spray%Tg(kmino:kmin-1) = 1.0_WP
+    spray%Tg(kmino:kmin-1) = spray%T_a/spray%T_fuel
 
     spray%b = 0.5_WP
 
@@ -656,7 +656,8 @@ contains
 
     spray%Tg = (spray%Y_v*(1.0_WP - spray%De*spray%CR*spray%LR) &
              +  spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
-    spray%Tg(spray%kmino:spray%kmin-1) = 1.0_WP
+
+    spray%Tg(spray%kmino:spray%kmin-1) = spray%T_a/spray%T_fuel
 
   end subroutine updateFlowVariables
 
