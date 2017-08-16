@@ -72,8 +72,16 @@ contains
        call computeVaporFuelProperties(spray,spray%T_a)
     end if
 
-    ! Compute nozzle flow
-    call nozzle_flow_model(spray)
+    if( spray%const_inj_vel .gt. 0.0_WP ) then
+       spray%C_d = 1.0_WP
+
+       spray%U_inj = spray%const_inj_vel
+
+       spray%D_eff = spray%noz_D
+    else 
+       ! Compute nozzle flow
+       call nozzle_flow_model(spray)
+    end if
 
     ! Compute non-dimensional parameters
     call compute_constNonDparams(spray)
@@ -1459,7 +1467,7 @@ contains
 
     if (spray%step < 100) spray%dt = 0.1_WP*spray%dt
 
-!!$    if (spray%ndtime < 1500) spray%dt = 0.1_WP*spray%dt
+    !if (spray%ndtime > 0.15e-3/spray%tau .and. spray%ndtime < 0.25e-3/spray%tau ) spray%dt = 0.1_WP*spray%dt
 
   end subroutine computeTimeStep
 
@@ -1795,7 +1803,7 @@ contains
     spray%time(step) = spray%ndtime*spray%tau*1000.0_WP   
 
     do k = spray%kmino,spray%kmaxo
-        if (spray%rho(k)*spray%Y_l(k) .ge. 1.0E-03_WP) then
+        if (spray%rho(k)*spray%Y_l(k) .ge. 1.0E-03_WP .and. spray%b(k) .ge. 0.5_WP) then
             spray%LPL(step) = spray%D_eff*(spray%z(k)-spray%z(spray%kmin-1))*1000.0_WP
         end if
         if (spray%Y_v(k) .ge. 1.0E-03_WP) then

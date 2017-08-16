@@ -65,7 +65,7 @@ module spray_defs
      real(WP), pointer :: P_inj, C_d, U_inj
 
      ! Nozzle flow constants/variables
-     real(WP), pointer :: K_in, K_exp, Cc0, Cc, D_eff
+     real(WP), pointer :: K_in, K_exp, Cc0, Cc, D_eff, const_inj_vel
 
      ! Droplet size distribution
      character(len=128), pointer :: init_dsd_name
@@ -249,6 +249,7 @@ contains
     allocate(spray%Cc0); spray%Cc0 = -9999.0_WP
     allocate(spray%Cc); spray%Cc = -9999.0_WP
     allocate(spray%D_eff); spray%D_eff = -9999.0_WP
+    allocate(spray%const_inj_vel); spray%const_inj_vel = -9999.0_WP
 
     allocate(spray%init_dsd_name); spray%init_dsd_name = 'noname'
     allocate(spray%nd); spray%nd = -9999

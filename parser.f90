@@ -71,6 +71,8 @@ contains
                   read(line(idx+1:len(line)),*) spray%K_in
                else if(param .eq. 'Nozzle K expansion') then
                   read(line(idx+1:len(line)),*) spray%K_exp
+               else if(param .eq. 'Constant injection velocity') then
+                  read(line(idx+1:len(line)),*) spray%const_inj_vel
                else if(param .eq. 'Number of grid points') then
                   read(line(idx+1:len(line)),*) spray%Nz
                else if(param .eq. 'Length') then
