@@ -33,6 +33,8 @@ Nozzle K inlet : 0.035
 
 Nozzle K expansion : 0.0
 
+!Constant injection velocity : 350.0
+
 ! Ambient conditions
 Ambient pressure : 60e5
 
