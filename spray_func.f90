@@ -332,10 +332,6 @@ contains
     
     spray%D_eff = d_eff
 
-    spray%z(k) = spray%z(k)*spray%noz_D/spray%D_eff
-
-    spray%dz(k) = spray%dz(k)*spray%noz_D/spray%D_eff
-
   end subroutine nozzle_flow_model
 
   subroutine compute_constNonDparams(spray)
