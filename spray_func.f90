@@ -112,6 +112,8 @@ contains
        spray%init_d2 = min(1.12E-01_WP,spray%init_dm**2 + var)
     end if
 
+    call initDropletSize(spray)
+
     ! Initialize non-dimensionalized flow variables and source terms
     spray%Y_l(kmino:kmin-1) = 1.0_WP; spray%Y_l(kmin:kmaxo) = 0.0_WP
     spray%Y_v = 0.0_WP;               
@@ -120,16 +122,18 @@ contains
 
     spray%rho = 1.0_WP/(spray%DRa-spray%Y_l*(spray%DRa-1.0_WP))
 
-    spray%u_l(kmino:kmin-1) = 1.0_WP; spray%u_l(kmin:kmaxo) = 0.0_WP
+    spray%u_l(kmino:kmin-1) = 0.0_WP; spray%u_l(kmin:kmaxo) = 0.0_WP
     spray%u_g = 0.0_WP
 
+    spray%d3(kmino:kmin-1) = spray%init_d3; spray%d3(kmin:kmaxo) = 0.0_WP
     spray%d2(kmino:kmin-1) = spray%init_d2; spray%d2(kmin:kmaxo) = 0.0_WP
     spray%dm(kmino:kmin-1) = spray%init_dm; spray%dm(kmin:kmaxo) = 0.0_WP
 
-    spray%Td = 1.0_WP
+    spray%Td = 0.0_WP
     spray%Td(kmino:kmin-1) = 1.0_WP
-    spray%Tg = (spray%Y_v*(1.0_WP - spray%De) + spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
-    spray%Tg(kmino:kmin-1) = spray%T_a/spray%T_fuel
+    spray%Tg = spray%T_a/spray%T_fuel
+    !spray%Tg = (spray%Y_v*(1.0_WP - spray%De) + spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
+    !spray%Tg(kmino:kmin-1) = spray%T_a/spray%T_fuel
 
     spray%b = 0.5_WP
 
@@ -269,6 +273,57 @@ contains
 
   end subroutine run_spray
 
+  ! Initial droplet size
+  subroutine initDropletSize(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    real(WP), parameter :: eps = 1E-16_WP
+    real(WP), pointer :: Re=>null(), We=>null()
+    real(WP) :: u_rel
+
+    real(WP) :: Weg, Wel, Rel, Z, T, OmegaKH, LambdaKH, tauKH, dKH
+    real(WP) :: B0, B1, C1, C2, C3, D10, D20, D30, pw
+
+    Re => spray%Re; We => spray%We
+             
+    ! Kelvin-Helmoltz WAVE model
+    B0 = 0.61_WP; B1 = 10.0_WP
+    Weg = 0.5_WP*We/spray%DRa
+    Wel = 0.5_WP*We
+    Rel = 0.5_WP*Re
+    Z = sqrt(Wel)/(Rel)
+    T = Z*sqrt(Weg)
+    OmegaKH = (0.34_WP+0.38_WP*Weg**1.5_WP)/(1.0_WP+Z)/(1.0_WP+1.4_WP*T**0.6_WP)*sqrt(8.0_WP/We) !/spray%noz_D**3)
+    LambdaKH = (9.02_WP/2.0_WP)*(1.0_WP+0.45_WP*sqrt(Z))*(1.0_WP+0.4_WP*T**0.7_WP)/(1.0_WP+0.865_WP*Weg**1.67_WP)**0.6_WP
+    tauKH = (3.726_WP*B1/2.0_WP)/(OmegaKH*LambdaKH)
+    dKH = 2.0_WP*B0*LambdaKH
+
+    if ( dKH > 1.0_WP ) then
+       dKH = min((3.0_WP*PI/OmegaKH)**(1.0_WP/3.0_WP),(1.5_WP*LambdaKH)**(1.0_WP/3.0_WP))
+    end if
+
+    C1 = 14.5_WP !2.0824e+04 !0.1085_WP !14.0206_WP !6.4723_WP 
+    C2 = 16.5_WP !2.3434e+04 !0.1221_WP !15.8105_WP !7.2934_WP 
+    C3 = 18.0_WP !2.5736e+04 !0.1341_WP !17.3763_WP !8.0139_WP
+
+    pw = 1.0_WP !2.0_WP
+
+    D10 = C1*dKH**pw;
+    D20 = C2*dKH**pw;
+    D30 = C3*dKH**pw;
+
+    spray%init_dm = D10
+    spray%init_d2 = D20**2
+    spray%init_d3 = D30**3
+
+    write(*,*) 'Initial droplet size D10: ', D10, 'D20: ', D20, 'D30:', D30
+
+  end subroutine initDropletSize
+
   subroutine nozzle_flow_model(spray)
     implicit none
 
@@ -398,11 +453,56 @@ contains
 
     ! ---------------------------------
     real(WP) :: dd, ld, theta, DRa, beta
-
-    if (spray%beta .lt. 0.0_WP .and. spray%theta .lt. 0.0_WP ) then
+    real(WP) :: A, gammaa, fgamma
        
-       dd = spray%noz_DoDi; ld = spray%noz_LD
-       DRa = spray%DRa
+    dd = spray%noz_D/spray%noz_Dsac; ld = spray%noz_LD
+    DRa = spray%DRa
+
+    ! Several models for spray cone angle
+    ! Ref.: Spray Atomization Models in Engine Applications,
+    !       from Correlations to Direct Numerical Simulations
+    ! theta is half cone angle
+    ! beta is tan(theta)
+    select case (trim(spray%spray_angle_model))
+    case ('Reitz-Bracco')
+
+       A = 3.0_WP + 0.28_WP*(ld)
+
+       gammaa = (spray%Re/spray%We)**2*DRa
+
+       fgamma = sqrt(3.0_WP)/6.0_WP*(1.0_WP-exp(-10.0_WP*gammaa))
+
+       spray%beta = 4.0_WP*Pi*sqrt(1.0_WP/DRa)*fgamma
+
+       spray%theta = atan(spray%beta)*180.0_WP/Pi
+
+    case ('Reitz-Bracco-Simplified')
+
+       fgamma = sqrt(3.0_WP)/6.0_WP
+
+       spray%beta = 4.0_WP*Pi*sqrt(1.0_WP/DRa)*fgamma
+
+       spray%theta = atan(spray%beta)*180.0_WP/Pi
+
+    case ('Ruiz-Chigier')
+
+       A = 3.0_WP + 0.28_WP*(ld)
+
+       gammaa = (spray%Re/spray%We)**2*DRa
+
+       fgamma = sqrt(3.0_WP)/6.0_WP*(1.0_WP-exp(-10.0_WP*gammaa))
+
+       spray%beta = 4.0_WP*Pi*sqrt(1.0_WP/DRa)*fgamma*(spray%Re/spray%We)**(-0.25_WP)
+
+       spray%theta = atan(spray%beta)*180.0_WP/Pi
+
+    case ('Arai')
+
+       spray%theta = 0.025_WP*(spray%Re**2/DRa*spray%VRa**2/2.0_WP/spray%C_d)**0.25_WP
+
+       spray%beta = tan(spray%theta*Pi/180.0_WP)
+
+    case ('Hiroyasu-Arai','Hiroyasu')
 
        spray%Cnoz = 41.75_WP*(ld**(-0.22_WP))*(dd)**0.15_WP
 
@@ -410,27 +510,55 @@ contains
 
        spray%beta = tan(spray%theta*Pi/180.0_WP)
 
-       write(*,*) '#### Spray half-cone angle or tangent of spray half-cone angle not provided by user....'
-       write(*,*) '#### Computing the same with Hiroyasu correlation....'
-       write(*,*) '#### theta = ',spray%theta, 'beta = ', spray%beta
-    else if (spray%beta .lt. 0.0_WP .and. spray%theta .gt. 0.0_WP) then
-       spray%beta = tan(spray%theta*Pi/180.0_WP)
-       write(*,*) '#### Spray half-cone angle provided by user....'
-       write(*,*) '#### Computing tangent of spray half-cone angle....'
-       write(*,*) '#### theta = ',spray%theta, 'beta = ', spray%beta
-    else if (spray%beta .gt. 0.0_WP .and. spray%theta .lt. 0.0_WP) then
+    case ('Arregle')  
+
+       spray%beta = spray%noz_D**0.508_WP*spray%P_inj**0.00943_WP*spray%rho_a**0.335_WP
+
        spray%theta = atan(spray%beta)*180.0_WP/Pi
-       write(*,*) '#### Tangent of spray half-cone angle provided by user....'
-       write(*,*) '#### Computing spray half-cone angle....'
-       write(*,*) '#### theta = ',spray%theta, 'beta = ', spray%beta
-    else
-       write(*,*) 'Error!!! in computing spray half-cone angle....'
-       write(*,*) 'Please provide spray half-cone angle or check the routine to compute it...'
-       write(*,*) 'Spray half-cone angle : <value>'
-       write(*,*) 'OR'
-       write(*,*) 'Tangent of spray half-cone angle : <value>'
-       call abort
-    end if
+
+    case ('Siebers')
+
+       if (spray%C_theta .lt. 0.0_WP) spray%C_theta = 1.0_WP
+
+       spray%beta = spray%C_theta*((1.0_WP/DRa)**0.19_WP - 0.0043_WP*(DRa)**0.5_WP)
+
+       spray%theta = atan(spray%beta)*180.0_WP/Pi
+
+    case ('Constant','constant')
+
+       if (spray%beta .lt. 0.0_WP .and. spray%theta .gt. 0.0_WP) then
+          spray%beta = tan(spray%theta*Pi/180.0_WP)
+          write(*,*) '#### Spray half-cone angle provided by user....'
+          write(*,*) '#### Computing tangent of spray half-cone angle....'
+          write(*,*) '#### theta = ',spray%theta, 'beta = ', spray%beta
+       else if (spray%beta .gt. 0.0_WP .and. spray%theta .lt. 0.0_WP) then
+          spray%theta = atan(spray%beta)*180.0_WP/Pi
+          write(*,*) '#### Tangent of spray half-cone angle provided by user....'
+          write(*,*) '#### Computing spray half-cone angle....'
+          write(*,*) '#### theta = ',spray%theta, 'beta = ', spray%beta
+       else
+          write(*,*) 'Error!!! in computing spray half-cone angle....'
+          write(*,*) 'Please provide spray half-cone angle or check the routine to compute it...'
+          write(*,*) 'Spray half-cone angle : <value>'
+          write(*,*) 'OR'
+          write(*,*) 'Tangent of spray half-cone angle : <value>'
+          call abort
+       end if
+
+    case default
+
+       write(*,*) 'Error!!! No spray angle model provided....'
+       write(*,*) 'Please choose one of the following spray angle models:'
+       write(*,*) 'Spray half-cone angle model : <name>'
+       write(*,*) 'Reitz-Bracco, Reitz-Bracco-Simplified, Ruiz-Chigier, Arai,...'
+       write(*,*) 'Hiroyasu-Arai, Arregle, Siebers'
+       call abort        
+
+    end select
+
+    write(*,*) '#### Spray half-cone angle model: ',trim(spray%spray_angle_model)
+    write(*,*) '#### theta = ',spray%theta, 'beta = ', spray%beta
+
 
   end subroutine compute_beta
 
@@ -441,11 +569,11 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
-    real(WP), dimension(spray%nzo):: Dbar, q, ratio, Dm, D2
-    real(WP), dimension(spray%nd):: D, f
-    real(WP), dimension(spray%nd,spray%nzo) :: dsd
-    real(WP) :: L, h, norm, r_min, r_max
-    integer :: i, k, idx
+    real(WP), dimension(spray%nzo):: Dbar, q, ratio, Dm, D2, D3, mu, sigma2, B, alpha, beta, gamm, var, skew
+    real(WP), dimension(spray%nd):: D, f, weight
+    real(WP), dimension(spray%nd,spray%nzo) :: dsd, dsdln
+    real(WP) :: L, h, norm, r_min, r_max, peak
+    integer :: i, k, n, idx
 
     select case(trim(spray%init_dsd_name))
     case ('Rosin-Rammler')
@@ -484,6 +612,249 @@ contains
 
              f = (q(k)/Dbar(k)**q(k))*D**(q(k)-1.0_WP)*exp(-(D/Dbar(k))**q(k))
 
+             norm = sum(f*h)
+             if (norm > 0.0_WP) then
+                dsd(:,k) = f/norm;
+             end if
+
+          end if
+
+       end do
+
+       dsd(1,:) = 0.0_WP
+
+    case ('RR+LN','LN+RR')
+
+       if(spray%step==0) write(*,*) 'Computing blended Rosin-Rammler Log-Normal DSD...'
+
+       Dbar = 0.0_WP
+       Dm = spray%dm
+       D2 = spray%d2
+
+       L = 10.0_WP*Dm(1);
+
+       h = L/spray%nd; spray%h = h
+
+       D = (/ (h*real(i,WP),i=0,spray%nd,1) /)
+
+       D(1) = 1E-16
+
+       dsd(:,:) = 0.0_WP
+
+       r_min = 1.05_WP; r_max = 1.9_WP
+       ratio = D2/Dm**2
+
+       do k=spray%kmino,spray%kmaxo
+
+          if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
+
+             if (ratio(k) > r_min ) then
+                ratio(k) = min(r_max,ratio(k))
+                call bisection(q(k),ratio(k))
+             else
+                q(k) = 5.1334_WP
+             end if
+
+             Dbar(k) = Dm(k)/gamma(1.0_WP+1.0_WP/q(k))
+
+             f = (q(k)/Dbar(k)**q(k))*D**(q(k)-1.0_WP)*exp(-(D/Dbar(k))**q(k))
+
+             norm = sum(f*h)
+             if (norm > 0.0_WP) then
+                dsd(:,k) = f/norm;
+             end if
+
+          end if
+
+       end do
+
+       dsd(1,:) = 0.0_WP
+
+       dsdln(:,:) = 0.0_WP
+
+       mu = log(Dm**2/sqrt(D2))
+       sigma2 = log(D2/Dm**2)
+
+       B = 1.0_WP/sqrt(twoPi*sigma2)
+
+       do k=spray%kmino,spray%kmaxo
+
+          if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
+
+             f = B(k)*exp(-((log(D)-mu(k))**2/2.0_WP/sigma2(k)))/D
+
+             norm = sum(f*h)
+             if (norm > 0.0_WP) then
+                dsdln(:,k) = f/norm;
+             end if
+
+          end if
+
+       end do
+
+       dsdln(1,:) = 0.0_WP
+
+       do k=spray%kmino,spray%kmaxo
+
+          if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
+             peak = maxval(dsdln(:,k))
+             weight = dsdln(:,k)/peak
+             do n=2,spray%nd
+                if(weight(n-1) == 1.0_WP) then
+                   weight(n) = 1.0_WP
+                end if
+             end do
+          end if
+
+          !if (k==1) write(*,*) weight
+
+          f = (1.0_WP-weight)*dsdln(:,k) + weight*dsd(:,k)
+          norm = sum(f*h)
+          if (norm > 0.0_WP) then
+             dsd(:,k) = f/norm;
+          end if
+       end do       
+
+    case ('Log-Normal')
+
+       if(spray%step==0) write(*,*) 'Computing Log-Normal DSD...'
+
+       Dm = spray%dm
+       D2 = spray%d2
+
+       L = 10.0_WP*Dm(1);
+
+       h = L/spray%nd; spray%h = h
+
+       D = (/ (h*real(i,WP),i=0,spray%nd,1) /)
+
+       D(1) = 1E-16
+
+       dsd(:,:) = 0.0_WP
+
+       mu = log(Dm**2/sqrt(D2))
+       sigma2 = log(D2/Dm**2)
+
+       B = 1.0_WP/sqrt(twoPi*sigma2)
+
+       do k=spray%kmino,spray%kmaxo
+
+          if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
+
+             f = B(k)*exp(-((log(D)-mu(k))**2/2.0_WP/sigma2(k)))/D
+
+             norm = sum(f*h)
+             if (norm > 0.0_WP) then
+                dsd(:,k) = f/norm;
+             end if
+
+          end if
+
+       end do
+
+       dsd(1,:) = 0.0_WP
+    case ('Gamma')
+
+       if(spray%step==0) write(*,*) 'Computing Gamma DSD...'
+
+       Dm = spray%dm
+       D2 = spray%d2
+
+       L = 10.0_WP*Dm(1);
+
+       h = L/spray%nd; spray%h = h
+
+       D = (/ (h*real(i,WP),i=0,spray%nd,1) /)
+
+       D(1) = 1E-16
+
+       dsd(:,:) = 0.0_WP
+
+       alpha = Dm**2/(D2-Dm**2)
+       beta = Dm/(D2-Dm**2)
+
+       do k=spray%kmino,spray%kmaxo
+
+          if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
+
+             B(k) = beta(k)**alpha(k)/gamma(alpha(k))
+
+             f = B(k)*D**(alpha(k)-1.0_WP)*exp(-beta(k)*D)
+
+             norm = sum(f*h)
+             if (norm > 0.0_WP) then
+                dsd(:,k) = f/norm;
+             end if
+
+          end if
+
+       end do
+
+       dsd(1,:) = 0.0_WP
+
+    case ('GenGamma','Generalized Gamma')
+
+       if(spray%step==0) write(*,*) 'Computing Generalized Gamma DSD with three parameters...'
+
+       Dm = spray%dm
+       D2 = spray%d2
+       D3 = spray%d3
+
+       L = 10.0_WP*Dm(1);
+
+       h = L/spray%nd; spray%h = h
+
+       D = (/ (h*real(i,WP),i=0,spray%nd,1) /)
+
+       D(1) = 1E-16
+
+       dsd(:,:) = 0.0_WP
+
+       var = D2-Dm**2
+       skew = (D3-3.0_WP*Dm*D2+2.0_WP*Dm**3)/var**1.5
+       alpha = 4.0_WP/skew**2
+       beta = sqrt(var/alpha)
+       gamm = Dm - 2.0_WP*sqrt(var)/skew
+       
+       do k=spray%kmino,spray%kmaxo
+
+          if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
+
+             B(k) = 1.0_WP/(beta(k)**alpha(k))/gamma(alpha(k))
+
+             f = B(k)*(D-gamm(k))**(alpha(k)-1.0_WP)*exp(-(D-gamm(k))/beta(k))
+
+             norm = sum(f*h)
+             if (norm > 0.0_WP) then
+                dsd(:,k) = f/norm;
+             end if
+
+          end if
+
+       end do
+
+       dsd(1,:) = 0.0_WP
+
+    case ('MEF','MEP','Maximum-Entropy-Formalism','Maximum-Entropy-Principle')
+
+       if(spray%step==0) write(*,*) 'Computing DSD using maximum entropy formalism...'
+
+       Dm = spray%dm
+       D2 = spray%d2
+       D3 = spray%d3
+
+       dsd(:,:) = 0.0_WP
+       
+       do k=spray%kmino,spray%kmaxo
+
+          if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
+
+             call maximumEntropyFormalism(spray,Dm(k),D2(k),D3(k),k,D,f)
+
+             D(1) = 1E-16
+
+             h = D(2)-D(1); spray%h = h
+             
              norm = sum(f*h)
              if (norm > 0.0_WP) then
                 dsd(:,k) = f/norm;
@@ -599,6 +970,190 @@ contains
 
   end subroutine compute_DSD
 
+  subroutine maximumEntropyFormalism(spray,Dm,D2,D3,k,Dp,pdf)
+    implicit none
+
+    ! ---------------------------------
+
+    type(spray_t), pointer, intent(inout) :: spray
+    real(WP), dimension(spray%nd), intent(out) :: pdf
+    real(WP), intent(in) :: Dm,D2,D3
+    integer, intent(in) :: k
+
+    ! ---------------------------------
+    real(WP), dimension(spray%nd):: Dp
+    real(WP), dimension(spray%nd):: D, g1, g2, g3, g4, p
+    real(WP), dimension(4):: lambda, lambdaNew, dlambda, func, pold, pnew, gradf, funcnew
+    real(WP), dimension(4,4):: Jac, JacInv, Jacnew, JacInvnew
+    real(WP), dimension(2,2):: L12
+    real(WP), dimension(2):: gL, coeff
+    real(WP) :: L, h, tol, err, relax, relax1, relax2, Eg1, Eg2, Eg3, Eg4, alpha, fold, fnew, gf0, gf1, gfdash0, gfrelax1, gfrelax2
+    integer :: i, n, count, max_count
+
+    L = 4.0_WP
+
+    n = spray%nd
+    h = L/n
+
+    D = (/ (h*real(i,WP),i=0,n,1) /)
+
+    g1 = (/ (1.0_WP,i=0,n,1) /)
+    g2 = D
+    g3 = D**2
+    g4 = D**3
+
+    tol = spray%solver%nr%tol !1.0E-2_WP
+    err = 1.0_WP
+
+    lambda = (/ 0.0_WP, 0.0_WP, 0.0_WP, 0.0_WP /)
+
+    p = 3.0_WP*D**2.*exp(-lambda(1)*g1-lambda(2)*g2-lambda(3)*g3-lambda(4)*g4)
+    p = p/sum(p*h)
+
+    relax = spray%solver%nr%relax_coeff !1.0E-1_WP
+    relax1 = relax 
+    relax2 = relax
+
+    Eg1 = 1.0_WP
+    Eg2 = Dm/D3**(1.0_WP/3.0_WP)
+    Eg3 = D2/D3**(2.0_WP/3.0_WP)
+    Eg4 = 1.0_WP
+
+    alpha = spray%solver%nr%alpha !1.0E-04_WP
+
+    count = 0
+    max_count = spray%solver%nr%max_count !2000
+
+    do while (abs(err)>tol .and. count<max_count)
+
+       func = (/ sum(p*g1*h)-Eg1, sum(p*g2*h)-Eg2, sum(p*g3*h)-Eg3, sum(p*g4*h)-Eg4 /)
+      
+       Jac = transpose( reshape( &
+             (/ sum(p*g1*(-g1)*h), sum(p*g1*(-g2)*h), sum(p*g1*(-g3)*h), sum(p*g1*(-g4)*h),   &
+                sum(p*g2*(-g1)*h), sum(p*g2*(-g2)*h), sum(p*g2*(-g3)*h), sum(p*g2*(-g4)*h),   &
+                sum(p*g3*(-g1)*h), sum(p*g3*(-g2)*h), sum(p*g3*(-g3)*h), sum(p*g3*(-g4)*h),   &
+                sum(p*g4*(-g1)*h), sum(p*g4*(-g2)*h), sum(p*g4*(-g3)*h), sum(p*g4*(-g4)*h) /),&
+             shape(Jac)))
+
+       pold = -matmul(pinv(func),Jac)
+
+       fold = 0.5_WP*sum(func*func)
+
+       gradf = matmul(Jac,func)
+
+       lambdaNew = lambda + relax*pold
+
+       dlambda = lambdaNew-lambda
+
+       err = sqrt(sum(func*func))
+
+       lambda = lambdaNew;
+
+       p = 3.0_WP*D**2*exp(-lambda(1)*g1-lambda(2)*g2-lambda(3)*g3-lambda(4)*g4)
+       p = p/sum(p*h)
+
+       funcnew = (/ sum(p*g1*h)-Eg1, sum(p*g2*h)-Eg2, sum(p*g3*h)-Eg3, sum(p*g4*h)-Eg4 /)
+
+       Jacnew = transpose( reshape( &
+             (/ sum(p*g1*(-g1)*h), sum(p*g1*(-g2)*h), sum(p*g1*(-g3)*h), sum(p*g1*(-g4)*h),   &
+                sum(p*g2*(-g1)*h), sum(p*g2*(-g2)*h), sum(p*g2*(-g3)*h), sum(p*g2*(-g4)*h),   &
+                sum(p*g3*(-g1)*h), sum(p*g3*(-g2)*h), sum(p*g3*(-g3)*h), sum(p*g3*(-g4)*h),   &
+                sum(p*g4*(-g1)*h), sum(p*g4*(-g2)*h), sum(p*g4*(-g3)*h), sum(p*g4*(-g4)*h) /),&
+             shape(Jacnew)))
+
+       pnew = -matmul(pinv(funcnew),Jacnew)
+
+       fnew = 0.5_WP*sum(funcnew*funcnew)
+
+       if(fnew < fold + alpha*sum(gradf*dlambda)) then
+             lambdaNew = lambda + relax*pnew
+             
+             dlambda = lambdaNew - lambda
+             err = sqrt(sum(funcnew*funcnew))
+
+             lambda = lambdaNew;
+
+             p = 3.0_WP*D**2*exp(-lambda(1)*g1-lambda(2)*g2-lambda(3)*g3-lambda(4)*g4)
+             p = p/sum(p*h)
+       end if
+
+       if(fnew > fold + alpha*sum(gradf*dlambda)) then
+          relax2 = relax1
+          relax1 = relax
+          gf0 = fold
+          gf1 = fnew
+          gfdash0 = sum(gradf*pold)
+          gfrelax1 = (gf1-gf0-gfdash0)*relax1**2+gfdash0*relax1+gf0
+          gfrelax2 = (gf1-gf0-gfdash0)*relax2**2+gfdash0*relax2+gf0
+
+          if(relax == 1.0_WP) then
+
+             relax = max(0.1_WP,-gfdash0/(2.0_WP*(gf1-gf0-gfdash0)))
+
+          else
+
+             L12 = transpose( reshape( &
+                   (/ 1.0_WP/relax1**2, -1.0_WP/relax2**2, -relax2/relax1**2, relax1/relax2**2 /), &
+                   shape(L12)))
+
+             gL = (/ gfrelax1-gfdash0*relax1-gf0, gfrelax2-gfdash0*relax2-gf0 /)
+
+             if(relax1 == relax2) relax2 = relax1 + 1.0E-2_WP
+
+             coeff = 1.0_WP/(relax1-relax2)*matmul(L12,gL)
+             
+             if(coeff(1) == 0.0_WP) coeff(1) = 1.0e-2_WP
+
+             if(coeff(2) == 0.0_WP) coeff(2) = 1.0e-1_WP
+
+             relax = (-coeff(2)+sqrt(max(0.0_WP,coeff(2)**2 - 3.0_WP*coeff(1)*gfdash0)))/3.0_WP/coeff(1)
+             relax = max(1.0E-6_WP,max(0.1_WP*relax1,min(0.5_WP*relax1,relax)))
+          end if
+
+       end if
+
+       count = count + 1
+
+       if(count == max_count .and. err > 2.0_WP*tol) then
+
+          max_count = min(2*max_count,1000000)
+          
+       end if
+
+       if(count > max_count) write(*,*) 'Warning! Newton iteration not converged!!! Error: ', err
+    end do
+
+    p = 3.0_WP*D**2*exp(-lambda(1)*g1-lambda(2)*g2-lambda(3)*g3-lambda(4)*g4)
+    p = p/sum(p*h)
+
+    p = p/D3**(1.0_WP/3.0_WP)
+
+    D = D*D3**(1.0_WP/3.0_WP)
+
+    pdf = p(1:spray%nd)
+
+    Dp = D(1:spray%nd)
+
+    spray%dsdlam(1,k) = lambda(1); spray%dsdlam(2,k) = lambda(2)
+    spray%dsdlam(3,k) = lambda(3); spray%dsdlam(4,k) = lambda(4)
+
+    write(*,*) 'Newton itrations: ', count, 'Error: ', err, 'Tol: ', tol
+    
+  contains
+    pure function pinv(A) result(X)
+      !! Performs a direct calculation of the inverse of a 4×4 matrix.
+      real(WP), intent(in) :: A(4)   !! Vector
+      real(WP)             :: X(4)   !! Inverse vector using Moore-Penrose pseudoinverse
+
+      real(WP) :: L2
+
+      L2 = (A(1)**2 + A(2)**2 + A(3)**2 + A(4)**2)
+
+      X = (/ A(1)/L2, A(2)/L2, A(3)/L2, A(4)/L2  /)
+
+    end function pinv
+  end subroutine maximumEntropyFormalism
+
   subroutine updateFlowVariables(spray)
     implicit none
 
@@ -609,14 +1164,14 @@ contains
     type(pc_t), pointer :: pc_l
     real(WP), dimension(:,:), pointer :: W=>null()
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
-                                       u_l=>null(), u_g=>null(), d2=>null(), dm=>null(), &
+                                       u_l=>null(), u_g=>null(), d3=>null(), d2=>null(), dm=>null(), &
                                        Td=>null(), b=>null()
     real(WP), pointer :: DRv=>null(), DRa=>null()
     real(WP), dimension(spray%nzo) :: T_low, T_high
     integer :: k
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
-    u_l => spray%u_l; u_g => spray%u_g; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
     DRv => spray%DRv; DRa => spray%DRa
     W => spray%solver%W
 
@@ -624,7 +1179,7 @@ contains
     T_low = spray%MP/spray%T_fuel
 
     rho = 0.0_WP; u_l = 0.0_WP; u_g = 0.0_WP; Y_l = 0.0_WP; Y_a = 1.0_WP; Y_v = 0.0_WP;
-    dm = 0.0_WP; d2 = 0.0_WP; Td = 1.0_WP
+    dm = 0.0_WP; d2 = 0.0_WP; Td = 0.0_WP
 
     !u_g(:) = W(3,:)/(W(1,:)+W(2,:))
 
@@ -644,15 +1199,27 @@ contains
 
        if(Y_l(k) >= 1E-16_WP) then
 
-          dm(k) = max(0.0_WP,W(6,k)/rho(k)/Y_l(k)/b(k)**2)
+          dm(k) = max(0.0_WP,W(7,k)/rho(k)/Y_l(k)/b(k)**2)
 
-          d2(k) = max(0.0_WP,W(7,k)/rho(k)/Y_l(k)/b(k)**2)
+          d2(k) = max(0.0_WP,W(8,k)/rho(k)/Y_l(k)/b(k)**2)
 
-          if( dm(k) > 0.0_WP .and. d2(k) > 0.0_WP ) then
+          d3(k) = max(0.0_WP,W(9,k)/rho(k)/Y_l(k)/b(k)**2)
+
+          if( dm(k) == 0.0_WP .or. d2(k) == 0.0_WP .or. d3(k) == 0.0_WP ) then
+             dm(k) = 0.0_WP
+             d2(k) = 0.0_WP
+             d3(k) = 0.0_WP
+             Y_l(k) = 0.0_WP
+             Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k));
+             rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
+             b(k) = sqrt(max(0.0_WP,(W(1,k)+W(2,k)+W(4,k)))/rho(k))
+          end if
+
+          if( dm(k) > 0.0_WP .and. d2(k) > 0.0_WP .and. d3(k) > 0.0_WP ) then
 
              u_l(k) = W(5,k)/rho(k)/Y_l(k)/b(k)**2
              
-             Td(k) = max(T_low(k),min(T_high(k),W(8,k)/rho(k)/Y_l(k)/b(k)**2))
+             Td(k) = max(T_low(k),min(T_high(k),W(6,k)/rho(k)/Y_l(k)/b(k)**2))
              
           end if
 
@@ -662,10 +1229,12 @@ contains
 
     Y_g = 1.0_WP - Y_l
 
-    spray%Tg = (spray%Y_v*(1.0_WP - spray%De*spray%CR*spray%LR) &
-             +  spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
+    !spray%Tg = (spray%Y_v*(1.0_WP - spray%De*spray%CR*spray%LR) &
+    !         +  spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
 
-    spray%Tg(spray%kmino:spray%kmin-1) = spray%T_a/spray%T_fuel
+    !spray%Tg(spray%kmino:spray%kmin-1) = spray%T_a/spray%T_fuel
+
+    spray%Tg = spray%T_a/spray%T_fuel
 
   end subroutine updateFlowVariables
 
@@ -1014,7 +1583,7 @@ contains
        call abort
     end if
 
-    R_gas = 8.3144598E03_WP   ! J/K/kmol
+    R_gas = 1000.0_WP*spray%R_gas   ! J/K/kmol
     
     allocate(values(size(spray%VFPT,2))); values = 0.0_WP
 
@@ -1125,12 +1694,12 @@ contains
     real(WP) :: R_gas
     
     if (spray%MW_f == -9999.0_WP) then
-       write(*,*) 'Error: Molecular weight of the fuel not provide. Please add following line to input file:'
+       write(*,*) 'Error: Molecular weight of the fuel not provide. Please add following line to the input file:'
        write(*,*) 'Fuel molecular weight : <value>'
        call abort
     end if
 
-    R_gas = 8.3144598E03_WP   ! J/K/kmol
+    R_gas = 1000.0_WP*spray%R_gas   ! J/K/kmol
     
     allocate(values(size(spray%VFPT,2))); values = 0.0_WP
 
@@ -1262,7 +1831,8 @@ contains
     real(WP) :: TBd, K_T
     integer :: k
 
-    spray%omega_vap = 0.0_WP; spray%omega_vapdm = 0.0_WP; spray%omega_vapd2 = 0.0_WP
+    spray%omega_vap = 0.0_WP; spray%omega_vapdm = 0.0_WP; spray%omega_vapd2 = 0.0_WP; 
+    spray%omega_vapd3 = 0.0_WP
     spray%omega_T = 0.0_WP; spray%Shd = 0.0_WP; spray%Nud = 0.0_WP; 
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_ref => spray%Y_ref; Td => spray%Td
@@ -1310,8 +1880,9 @@ contains
           K_vap = 8.0_WP*coeff*Shd(:,k)/(VRg(k)*Sc_g(k))
 
           spray%omega_vap(k) = (1.5_WP*rho(k)*Y_l(k))*sum((h*dsd(:,k)*K_vap/di**2))/Re
-          spray%omega_vapd2(k) = (1.5_WP*rho(k)*Y_l(k))*sum((h*dsd(:,k)*K_vap))/Re
           spray%omega_vapdm(k) = (1.5_WP*rho(k)*Y_l(k))*sum((h*dsd(:,k)*K_vap/di))/Re
+          spray%omega_vapd2(k) = (1.5_WP*rho(k)*Y_l(k))*sum((h*dsd(:,k)*K_vap))/Re
+          spray%omega_vapd3(k) = (1.5_WP*rho(k)*Y_l(k))*sum((h*dsd(:,k)*K_vap*di))/Re
 
           Nud(:,k) = (2.0_WP + 0.552_WP*(Red(:,k)**0.5_WP)*(Pr_g(k)**(1.0_WP/3.0_WP)))
           !Qd = (1.0_WP/(Pr_g(k)*VRg(k)))*(spray%Cp_g(k)/spray%C_l(k))*(zetta/(exp(zetta)-1.0_WP+eps))*(spray%T_a/spray%T_fuel-Td(k))*Nud(:,k)/di;
@@ -1324,6 +1895,72 @@ contains
     end do
 
   end subroutine evaporationModel
+
+  subroutine evaporationModelOld(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    real(WP), parameter :: eps = 1E-16_WP
+    real(WP), dimension(:,:), pointer :: dsd=>null(), Red=>null(), Shd=>null(), Nud=>null()
+    real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_ref=>null(), &
+                                       di=>null(), &
+                                       DRg=>null(), VRg=>null(), Sc_g=>null(), Pr_g=>null(), &
+                                       Td=>null(), CR=>null(), LR=>null()
+    real(WP), pointer :: Re=>null(), h=>null(), De=>null()
+    real(WP), dimension(spray%nzo) :: Lv, Lk, Xeq, T_d, Ystar_fe, Bdeq, zeta
+
+    real(WP), dimension(spray%nd) :: zetta, D, Xneq, Ystar_f, Bd, coeff, K_vap, Qd
+    real(WP) :: TBd, K_T
+    integer :: k
+
+    spray%omega_vap = 0.0_WP; spray%omega_vapdm = 0.0_WP; spray%omega_vapd2 = 0.0_WP; 
+    spray%omega_vapd3 = 0.0_WP
+    spray%omega_T = 0.0_WP; spray%Shd = 0.0_WP; spray%Nud = 0.0_WP; 
+
+    rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_ref => spray%Y_ref; Td => spray%Td
+    di => spray%di; h => spray%h; dsd => spray%dsd; Red => spray%Red; Shd => spray%Shd; Nud => spray%Nud
+    DRg => spray%DRg; VRg => spray%VRg; Sc_g => spray%Sc_g; Pr_g => spray%Pr_g
+    Re => spray%Re; CR => spray%CR; LR => spray%LR; De => spray%De
+
+    TBd = spray%NBP; T_d = spray%T_fuel*spray%Td
+
+
+    Ystar_fe = 1.0_WP/(1.0_WP + spray%WR*(spray%P_a/spray%p_vap-1.0_WP))
+
+    spray%Y_ref = spray%Y_v !(spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP !spray%Y_v ! (spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP
+    where(Ystar_fe < 0.0_WP) Ystar_fe = 0.0_WP
+
+    Bdeq = (Ystar_fe - Y_ref)/(1.0_WP-Ystar_fe)
+    where(Bdeq < eps) Bdeq = eps
+
+    do k = spray%kmin,spray%kmax
+       
+       if ( spray%d2(k) > eps .and. spray%dm(k) > eps ) then
+
+          coeff = log(1.0_WP+Bdeq(k))/Bdeq(k)
+
+          Shd(:,k) = (2.0_WP + 0.6_WP*(Red(:,k)**0.5_WP)*(Sc_g(k)**(1.0_WP/3.0_WP)))*coeff
+
+          K_vap = 8.0_WP*coeff*Bdeq(k)*Shd(:,k)/(VRg(k)*Sc_g(k))
+
+          spray%omega_vap(k) = (1.5_WP*rho(k)*Y_l(k))*sum((h*dsd(:,k)*K_vap/di**2))/Re
+          spray%omega_vapd3(k) = (1.5_WP*rho(k)*Y_l(k))*sum((h*dsd(:,k)*K_vap*di))/Re
+          spray%omega_vapd2(k) = (1.5_WP*rho(k)*Y_l(k))*sum((h*dsd(:,k)*K_vap))/Re
+          spray%omega_vapdm(k) = (1.5_WP*rho(k)*Y_l(k))*sum((h*dsd(:,k)*K_vap/di))/Re
+
+          Nud(:,k) = (2.0_WP + 0.6_WP*(Red(:,k)**0.5_WP)*(Pr_g(k)**(1.0_WP/3.0_WP)))*coeff
+          Qd = (1.0_WP/(Pr_g(k)*VRg(k)))*(spray%Cp_g(k)/spray%C_l(k))*(spray%Tg(k)-Td(k))*Nud(:,k)/di;
+          K_T = sum(h*dsd(:,k)*(6.0_WP*Qd/di-1.5_WP*De*CR(k)*LR(k)*K_vap/di**2)/Re)
+
+          spray%omega_T(k) = K_T*rho(k)*Y_l(k)
+       end if
+
+    end do
+
+  end subroutine evaporationModelOld
 
   subroutine dragModel(spray)
     implicit none
@@ -1387,14 +2024,14 @@ contains
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), u_l=>null(), u_g=>null(), &
                                        di=>null(), DRg=>null(), VRg=>null()
     real(WP), pointer :: Re=>null(), We=>null(), h=>null()
-    real(WP), dimension(spray%nzo) :: u_rel, u_rel2, K_bre1, K_bre2
+    real(WP), dimension(spray%nzo) :: u_rel, u_rel2, K_bre1, K_bre2, K_bre3
 
-    real(WP), dimension(spray%nd) :: Weg, Wel, Rel, Z, T, OmegaKH, LambdaKH, tauKH, dKH, &
-                                     OmegaRT, LambdaRT, tauRT, dRT, crit, tb, dst, diff
+    real(WP), dimension(spray%nd) :: Weg, Wel, Rel, Z, T, OmegaKH, LambdaKH, tauKH, dKH, dKH1, dKH2, dKH21, dKH22, &
+                                     OmegaRT, LambdaRT, tauRT, dRT, critKH, critKH1, critRT, tb, dst, diff
     real(WP) :: B0, B1, C3 
     integer :: k
 
-    spray%omega_bre1 = 0.0_WP; spray%omega_bre2 = 0.0_WP
+    spray%omega_bre1 = 0.0_WP; spray%omega_bre2 = 0.0_WP; spray%omega_bre3 = 0.0_WP
 
     rho => spray%rho; Y_l => spray%Y_l; u_l => spray%u_l; u_g => spray%u_g; 
     di => spray%di; h => spray%h; dsd => spray%dsd; Red => spray%Red; CD => spray%CD
@@ -1404,7 +2041,7 @@ contains
 
     u_rel2 = u_rel**2
 
-    crit = 0.0_WP
+    critKH = 0.0_WP; critKH1 = 0.0_WP; critRT = 0.0_WP
 
     do k = spray%kmin,spray%kmax
        
@@ -1422,7 +2059,16 @@ contains
              OmegaKH = (0.34_WP+0.38_WP*Weg**1.5_WP)/(1.0_WP+Z)/(1.0_WP+1.4_WP*T**0.6_WP)*sqrt(8.0_WP/We/di**3)
              LambdaKH = (9.02_WP/2.0_WP)*di*(1.0_WP+0.45_WP*sqrt(Z))*(1.0_WP+0.4_WP*T**0.7_WP)/(1.0_WP+0.865_WP*Weg**1.67_WP)**0.6_WP
              tauKH = (3.726_WP*B1/2.0_WP)*di/(OmegaKH*LambdaKH)
-             dKH = 2.0_WP*B0*LambdaKH
+             dKH1 = 2.0_WP*B0*LambdaKH
+
+             dKH21 = (3.0_WP*Pi*di**2/OmegaKH)**(1.0_WP/3.0_WP)
+             dKH22 = (1.5_WP*di**2*LambdaKH)**(1.0_WP/3.0_WP)
+
+             where(dKH21 < dKH22) critKH1 = 1.0_WP
+             dKH2 = critKH1*dKH21 + (1.0-critKH1)*dKH22
+
+             where(dKH1 > 1.0_WP) critKH = 1.0_WP
+             dKH = (1.0_WP-critKH)*dKH1 + critKH*dKH2
 
              ! Rayleigh-Taylor model
              C3 = 2.5_WP
@@ -1432,17 +2078,18 @@ contains
              tauRT = 1.0_WP/OmegaRT
              dRT = LambdaRT
 
-             where(di>dRT .and. tauRT<tauKH) crit = 1.0_WP
+             where(di>dRT .and. tauRT<tauKH) critRT = 1.0_WP
 
-             tb = crit*tauRT + (1.0_WP-crit)*tauKH;
-             dst = crit*dRT + (1.0_WP-crit)*dKH;
+             tb = critRT*tauRT + (1.0_WP-critRT)*tauKH;
+             dst = critRT*dRT + (1.0_WP-critRT)*dKH;
 
           end if
 
           diff = di - dst
           where(diff < 0.0_WP) diff = 0.0_WP
           K_bre1(k) = sum(diff/tb*dsd(:,k)*h)
-          K_bre2(k) = sum(2*di*diff/tb*dsd(:,k)*h)
+          K_bre2(k) = 2.0_WP*sum(di*diff/tb*dsd(:,k)*h)
+          K_bre3(k) = 3.0_WP*sum(di*di*diff/tb*dsd(:,k)*h)
          
        end if
 
@@ -1450,6 +2097,7 @@ contains
 
     spray%omega_bre1 = K_bre1*rho*Y_l
     spray%omega_bre2 = K_bre2*rho*Y_l
+    spray%omega_bre3 = K_bre3*rho*Y_l
 
   end subroutine breakupModel
 
@@ -1680,6 +2328,7 @@ contains
 
     spray%u_g(kmino:kmin-1) = 0.0_WP
 
+    spray%d3(kmino:kmin-1) = spray%init_d3
     spray%d2(kmino:kmin-1) = spray%init_d2
     spray%dm(kmino:kmin-1) = spray%init_dm
 
@@ -1698,6 +2347,7 @@ contains
     spray%u_l(kmax+1:kmaxo) = spray%u_l(kmax)
     spray%u_g(kmax+1:kmaxo) = spray%u_g(kmax)
 
+    spray%d3(kmax+1:kmaxo) = spray%d3(kmax)
     spray%d2(kmax+1:kmaxo) = spray%d2(kmax)
     spray%dm(kmax+1:kmaxo) = spray%dm(kmax)
 
@@ -1727,11 +2377,11 @@ contains
     open(unit=100,file=trim(fname),form="formatted",status="replace",action="write")
 
     !rowfmth = '(A,A,A,A,A,A,A,A,A,A,A,A)'
-    rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
+    rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
 
-    !write(100,fmt=rowfmth) 'z,', 'rho,', 'Y_l,', 'Y_v,', 'Y_a,', 'Y_g,', 'u_l,', 'u_g,', 'dm,', 'd2,', 'Td,', 'b'
+    !write(100,fmt=rowfmth) 'z,', 'rho,', 'Y_l,', 'Y_v,', 'Y_a,', 'Y_g,', 'u_l,', 'u_g,', 'dm,', 'd2,', 'd3,', 'Td,', 'b'
     do k = kmin-1,kmax
-       write(100,FMT=rowfmt) spray%z(k), spray%rho(k), spray%Y_l(k), spray%Y_v(k), spray%Y_a(k), spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%d2(k), spray%Td(k), spray%Tg(k), spray%b(k)
+       write(100,FMT=rowfmt) spray%z(k), spray%rho(k), spray%Y_l(k), spray%Y_v(k), spray%Y_a(k), spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%d2(k), spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k)
     end do
 
     close(unit=100)
@@ -1747,6 +2397,19 @@ contains
     end do
 
     close(unit=101)
+
+
+    write(fname,"(A,A1,I0.6)") 'dsd.out', '_', step
+
+    open(unit=102,file=trim(fname),form="formatted",status="replace",action="write")
+
+    rowfmth = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
+
+    do k = kmin-1,kmax
+       write(102,FMT=rowfmth) spray%z(k), spray%dsdlam(1,k), spray%dsdlam(2,k), spray%dsdlam(3,k), spray%dsdlam(4,k), spray%dm(k), spray%d2(k), spray%d3(k)
+    end do
+
+    close(unit=102)
 
   end subroutine write_output
 
@@ -1809,6 +2472,12 @@ contains
         if (spray%Y_v(k) .ge. 1.0E-03_WP) then
             spray%VPL(step) = spray%D_eff*(spray%z(k)-spray%z(spray%kmin-1))*1000.0_WP
         end if
+!!$        if (spray%rho(k)*spray%Y_l(k)*spray%b(k) .ge. 1.0E-03_WP) then
+!!$            spray%LPL(step) = spray%D_eff*(spray%z(k)-spray%z(spray%kmin-1))*1000.0_WP
+!!$        end if
+!!$        if (spray%Y_v(k)*spray%b(k) .ge. 1.0E-03_WP) then
+!!$            spray%VPL(step) = spray%D_eff*(spray%z(k)-spray%z(spray%kmin-1))*1000.0_WP
+!!$        end if
     end do
   end subroutine getPenetration
 

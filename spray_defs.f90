@@ -22,13 +22,14 @@ module spray_defs
      real(WP), dimension(:), pointer :: DRg, VRg, LR, CR
      
      ! Geometric variables
-     real(WP), pointer :: noz_D, noz_LD, noz_rD, noz_DoDi, Cnoz, theta, beta
+     real(WP), pointer :: noz_D, noz_LD, noz_rD, noz_Dsac
      
      ! Flow variables
-     real(WP), dimension(:), pointer :: z, rho, Y_l, Y_v, Y_a, Y_g, u_l, u_g, d2, dm, Td, b, Tg
+     real(WP), dimension(:), pointer :: z, rho, Y_l, Y_v, Y_a, Y_g, u_l, u_g, d2, dm, d3, Td, b, Tg
 
      ! Source terms
-     real(WP), dimension(:), pointer :: omega_ent, omega_vap, omega_vapdm, omega_vapd2,f_drag, omega_bre1, omega_bre2, omega_T
+     real(WP), dimension(:), pointer :: omega_ent, omega_vap, omega_vapdm, omega_vapd2, omega_vapd3, &
+                                        f_drag, omega_bre1, omega_bre2, omega_bre3, omega_T
 
      ! Fuel name
      character(len=128), pointer :: Fuel
@@ -64,14 +65,18 @@ module spray_defs
      real(WP), dimension(:,:), pointer :: roi
      real(WP), pointer :: P_inj, C_d, U_inj
 
+     ! Spray angle parameters
+     character(len=128), pointer :: spray_angle_model
+     real(WP), pointer :: theta, beta, Cnoz, C_theta
+
      ! Nozzle flow constants/variables
      real(WP), pointer :: K_in, K_exp, Cc0, Cc, D_eff, const_inj_vel
 
      ! Droplet size distribution
      character(len=128), pointer :: init_dsd_name
      integer, pointer :: nd
-     real(WP), pointer :: h, init_dm, init_d2
-     real(WP), dimension(:,:), pointer :: dsd, CD, Red, Shd, Nud
+     real(WP), pointer :: h, init_dm, init_d2, init_d3, d10, d20, d30
+     real(WP), dimension(:,:), pointer :: dsd, CD, Red, Shd, Nud, dsdlam
      real(WP), dimension(:), pointer :: di
 
      ! Universal constants
@@ -92,78 +97,6 @@ module spray_defs
   end type spray_t
 
 contains
-
-  subroutine nullify_spray(spray)
-    implicit none
-
-    ! ---------------------------------
-    type(spray_t), pointer, intent(inout) :: spray
-
-    ! ---------------------------------
-
-    nullify(spray%Nz,spray%nzo,spray%step,spray%kmin,spray%kmax,spray%kmino,spray%kmaxo)
-
-    nullify(spray%z,spray%Lz,spray%dz)
-
-    nullify(spray%dt,spray%ndtime,spray%final_time,spray%ndftime,spray%tau)
-
-    nullify(spray%MaxCFL,spray%CFL)
-
-    nullify(spray%Re,spray%We,spray%DRa,spray%DRv,spray%DRg,spray%VRa,spray%VRv,spray%VRg)
-    
-    nullify(spray%WR,spray%De,spray%LR,spray%CR)
-
-    nullify(spray%noz_D,spray%noz_LD,spray%noz_rD,spray%noz_DoDi,spray%Cnoz,spray%theta,spray%beta)
-
-    nullify(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g,spray%u_l,spray%u_g,spray%d2,spray%dm,spray%Td,spray%b,spray%Tg)
-
-    nullify(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l,spray%p_vap,spray%MW_f,spray%L_f,spray%MP,spray%NBP)
-
-    nullify(spray%LFPTname,spray%LFPT,spray%VFPTname,spray%VFPT)
-
-    nullify(spray%pc_l)
-
-    nullify(spray%pc_v)
-    
-    nullify(spray%rho_v, spray%visc_v, spray%lambda_v, spray%Cp_v)
-
-    nullify(spray%rho_rv, spray%visc_rv, spray%lambda_rv, spray%Cp_rv, spray%G_rv)
-    
-    nullify(spray%MW_a, spray%Z_a, spray%P_a, spray%T_a, spray%rho_a, spray%visc_a, spray%lambda_a, spray%Cp_a)
-
-    nullify(spray%rho_ra, spray%visc_ra, spray%lambda_ra, spray%Cp_ra)
-
-    nullify(spray%rho_g, spray%visc_g, spray%lambda_g, spray%Cp_g, spray%Sc_g, spray%Pr_g)
-
-    nullify(spray%T_ref, spray%Y_ref)
-
-    nullify(spray%roi_file, spray%roi)
-
-    nullify(spray%P_inj, spray%C_d, spray%U_inj)
-
-    nullify(spray%K_in, spray%K_exp, spray%Cc0, spray%Cc, spray%D_eff)
-
-    nullify(spray%init_dsd_name)
-
-    nullify(spray%nd)
-
-    nullify(spray%h, spray%init_dm, spray%init_d2)
-
-    nullify(spray%dsd, spray%CD, spray%Red, spray%Shd, spray%Nud)
-
-    nullify(spray%di)
-
-    nullify(spray%R_gas)
-
-    nullify(spray%solver)
-
-    nullify(spray%omega_ent, spray%omega_vap, spray%omega_vapdm, spray%omega_vapd2, spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_T)
-
-    nullify(spray%outfreq)
-
-    nullify(spray)
-
-  end subroutine nullify_spray
 
   ! Allocate spray with default values
   subroutine allocate_spray(spray)
@@ -207,10 +140,12 @@ contains
     allocate(spray%noz_D); spray%noz_D = -9999.0_WP
     allocate(spray%noz_LD); spray%noz_LD = -9999.0_WP
     allocate(spray%noz_rD); spray%noz_rD = -9999.0_WP
-    allocate(spray%noz_DoDi); spray%noz_DoDi = -9999.0_WP
+    allocate(spray%noz_Dsac); spray%noz_Dsac = -9999.0_WP
     allocate(spray%Cnoz); spray%Cnoz = -9999.0_WP
+    allocate(spray%C_theta); spray%C_theta = -9999.0_WP
     allocate(spray%theta); spray%theta = -9999.0_WP
     allocate(spray%beta); spray%beta = -9999.0_WP
+    allocate(spray%spray_angle_model); spray%spray_angle_model = 'noname'
 
     allocate(spray%Fuel); spray%Fuel = 'noname'
     allocate(spray%LFPTname); spray%LFPTname = 'noname'
@@ -256,12 +191,20 @@ contains
     allocate(spray%h); spray%h = -9999.0_WP
     allocate(spray%init_dm); spray%init_dm = -9999.0_WP
     allocate(spray%init_d2); spray%init_d2 = -9999.0_WP
+    allocate(spray%init_d3); spray%init_d3 = -9999.0_WP
 
     allocate(spray%R_gas); spray%R_gas = -9999.0_WP
 
     allocate(spray%solver)
 
     allocate(spray%solver%rk)
+
+    allocate(spray%solver%nr)
+    ! Default initialization
+    spray%solver%nr%tol = 1.0E-02_WP
+    spray%solver%nr%relax_coeff = 2.0E-02_WP
+    spray%solver%nr%alpha = 1.0E-04_WP
+    spray%solver%nr%max_count = 2000
 
     allocate(spray%outfreq); spray%outfreq = -9999
 
@@ -345,6 +288,7 @@ contains
     allocate(spray%Y_g(spray%nzo)); spray%Y_g = -9999.0_WP
     allocate(spray%u_l(spray%nzo)); spray%u_l = -9999.0_WP
     allocate(spray%u_g(spray%nzo)); spray%u_g = -9999.0_WP
+    allocate(spray%d3(spray%nzo)); spray%d2 = -9999.0_WP
     allocate(spray%d2(spray%nzo)); spray%d2 = -9999.0_WP
     allocate(spray%dm(spray%nzo)); spray%dm = -9999.0_WP
     allocate(spray%Td(spray%nzo)); spray%Td = -9999.0_WP
@@ -357,6 +301,7 @@ contains
     allocate(spray%Shd(spray%nd,spray%nzo)); spray%Shd = -9999.0_WP
     allocate(spray%Nud(spray%nd,spray%nzo)); spray%Nud = -9999.0_WP
     allocate(spray%di(spray%nd)); spray%di = -9999.0_WP
+    allocate(spray%dsdlam(4,spray%nzo)); spray%dsdlam = -9999.0_WP
 
     call allocate_solver(spray%solver,spray%nzo)
 
@@ -364,9 +309,11 @@ contains
     allocate(spray%omega_vap(spray%nzo)); spray%omega_vap = -9999.0_WP
     allocate(spray%omega_vapdm(spray%nzo)); spray%omega_vapdm = -9999.0_WP
     allocate(spray%omega_vapd2(spray%nzo)); spray%omega_vapd2 = -9999.0_WP
+    allocate(spray%omega_vapd3(spray%nzo)); spray%omega_vapd3 = -9999.0_WP
     allocate(spray%f_drag(spray%nzo)); spray%f_drag = -9999.0_WP
     allocate(spray%omega_bre1(spray%nzo)); spray%omega_bre1 = -9999.0_WP
     allocate(spray%omega_bre2(spray%nzo)); spray%omega_bre2 = -9999.0_WP
+    allocate(spray%omega_bre3(spray%nzo)); spray%omega_bre3 = -9999.0_WP
     allocate(spray%omega_T(spray%nzo)); spray%omega_T = -9999.0_WP
 
   end subroutine allocate_spray_grid_vars
@@ -391,9 +338,11 @@ contains
     
     deallocate(spray%WR,spray%De,spray%LR,spray%CR)
 
-    deallocate(spray%noz_D,spray%noz_LD,spray%noz_rD,spray%noz_DoDi,spray%Cnoz,spray%theta,spray%beta)
+    deallocate(spray%noz_D,spray%noz_LD,spray%noz_rD,spray%noz_Dsac)
+    
+    deallocate(spray%Cnoz,spray%C_theta,spray%theta,spray%beta,spray%spray_angle_model)
 
-    deallocate(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g,spray%u_l,spray%u_g,spray%d2,spray%dm,spray%Td,spray%b,spray%Tg)
+    deallocate(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g,spray%u_l,spray%u_g,spray%d3,spray%d2,spray%dm,spray%Td,spray%b,spray%Tg)
 
     deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l,spray%p_vap,spray%MW_f,spray%L_f,spray%MP,spray%NBP)
 
@@ -431,9 +380,9 @@ contains
 
     deallocate(spray%nd)
 
-    deallocate(spray%h, spray%init_dm, spray%init_d2)
+    deallocate(spray%h, spray%init_dm, spray%init_d2, spray%init_d3)
 
-    deallocate(spray%dsd, spray%CD, spray%Red, spray%Shd, spray%Nud)
+    deallocate(spray%dsd, spray%CD, spray%Red, spray%Shd, spray%Nud, spray%dsdlam)
 
     deallocate(spray%di)
 
@@ -441,7 +390,7 @@ contains
 
     call deallocate_solver(spray%solver)
 
-    deallocate(spray%omega_ent, spray%omega_vap, spray%omega_vapdm, spray%omega_vapd2, spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_T)
+    deallocate(spray%omega_ent, spray%omega_vap, spray%omega_vapdm, spray%omega_vapd2, spray%omega_vapd3, spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_bre3, spray%omega_T)
 
     deallocate(spray%outfreq)
 

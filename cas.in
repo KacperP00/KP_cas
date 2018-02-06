@@ -27,7 +27,7 @@ Nozzle LD ratio : 11.0
 
 Nozzle rD ratio : 0.256
 
-Nozzle exit/inlet diameter ratio : 0.857142857	
+Nozzle sac diameter : 660e-9
 
 Nozzle K inlet : 0.035
 
@@ -49,6 +49,8 @@ Initial DSD : Rosin-Rammler
 Number of diameter classes : 200
 !Initial Dm : 0.0093 
 !Initial D2 : 1.12e-4
+!Spray half-cone angle model : Hiroyasu-Arai
+!C_theta : 1.0
 !Spray half-cone angle : 10.0
 !Tangent of spray half-cone angle : 0.165
 

@@ -5,6 +5,12 @@ module solver_defs
 
   implicit none
 
+  ! Newton-Raphson solver
+  type nr_solver_t
+     real(WP) :: relax_coeff, alpha, tol
+     integer :: max_count
+  end type nr_solver_t
+
   type solver_t
 
      ! Scheme
@@ -29,7 +35,10 @@ module solver_defs
      real(WP), dimension(:,:), pointer :: W, Wold, F, S, Res
 
      ! Flux, Residual, Wave speeds(liquid and gas phase)
-     real(WP), dimension(:), pointer :: Flux, alpha_l, alpha_g    
+     real(WP), dimension(:), pointer :: Flux, alpha_l, alpha_g
+
+     ! Newton-Raphson solver
+     type(nr_solver_t), pointer :: nr
 
   end type solver_t
 
@@ -50,18 +59,18 @@ contains
 !!$            solver%W, solver%Wold, solver%F, solver%S, solver%Res, &
 !!$            solver%Flux, solver%alpha_l, solver%alpha_g)
 
-    allocate(solver%W(8,nzo)); solver%W = 0.0_WP
-    allocate(solver%Wold(8,nzo)); solver%Wold = 0.0_WP
-    allocate(solver%F(8,nzo)); solver%F = 0.0_WP
-    allocate(solver%S(8,nzo)); solver%S = 0.0_WP
-    allocate(solver%Res(8,nzo)); solver%Res = 0.0_WP
+    allocate(solver%W(9,nzo)); solver%W = 0.0_WP
+    allocate(solver%Wold(9,nzo)); solver%Wold = 0.0_WP
+    allocate(solver%F(9,nzo)); solver%F = 0.0_WP
+    allocate(solver%S(9,nzo)); solver%S = 0.0_WP
+    allocate(solver%Res(9,nzo)); solver%Res = 0.0_WP
 
     allocate(solver%Flux(nzo)); solver%Flux = 0.0_WP
     allocate(solver%alpha_l(nzo)); solver%alpha_l = 0.0_WP
     allocate(solver%alpha_g(nzo)); solver%alpha_g = 0.0_WP
 
-    allocate(solver%rk%RK(8,nzo)); solver%rk%RK = 0.0_WP
-    allocate(solver%rk%dRK(8,nzo)); solver%rk%dRK = 0.0_WP
+    allocate(solver%rk%RK(9,nzo)); solver%rk%RK = 0.0_WP
+    allocate(solver%rk%dRK(9,nzo)); solver%rk%dRK = 0.0_WP
 
   end subroutine allocate_solver
 
@@ -86,6 +95,8 @@ contains
     deallocate(solver%Flux, solver%Res, solver%alpha_l, solver%alpha_g)
     
     deallocate(solver%rk%RK, solver%rk%dRK)
+    
+    deallocate(solver%nr)
 
     deallocate(solver)
 

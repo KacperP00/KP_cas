@@ -65,8 +65,8 @@ contains
                   read(line(idx+1:len(line)),*) spray%noz_LD
                else if(param .eq. 'Nozzle rD ratio') then
                   read(line(idx+1:len(line)),*) spray%noz_rD
-               else if(param .eq. 'Nozzle exit/inlet diameter ratio') then
-                  read(line(idx+1:len(line)),*) spray%noz_DoDi
+               else if(param .eq. 'Nozzle sac diameter') then
+                  read(line(idx+1:len(line)),*) spray%noz_Dsac
                else if(param .eq. 'Nozzle K inlet') then
                   read(line(idx+1:len(line)),*) spray%K_in
                else if(param .eq. 'Nozzle K expansion') then
@@ -89,6 +89,20 @@ contains
                   read(line(idx+1:len(line)),*) spray%init_dm
                else if(param .eq. 'Initial D2') then
                   read(line(idx+1:len(line)),*) spray%init_d2
+               else if(param .eq. 'Initial D3') then
+                  read(line(idx+1:len(line)),*) spray%init_d3
+               else if(param .eq. 'Tolerance for Newton solver') then
+                  read(line(idx+1:len(line)),*) spray%solver%nr%tol
+               else if(param .eq. 'Initial relaxation coefficient for Newton solver') then
+                  read(line(idx+1:len(line)),*) spray%solver%nr%relax_coeff
+               else if(param .eq. 'Alpha for Newton solver') then
+                  read(line(idx+1:len(line)),*) spray%solver%nr%alpha
+               else if(param .eq. 'Maximum iterations for Newton solver') then
+                  read(line(idx+1:len(line)),*) spray%solver%nr%max_count
+               else if(param .eq. 'Spray half-cone angle model') then
+                  read(line(idx+1:len(line)),*) spray%spray_angle_model
+               else if(param .eq. 'C_theta') then
+                  read(line(idx+1:len(line)),*) spray%C_theta
                else if(param .eq. 'Spray half-cone angle') then
                   read(line(idx+1:len(line)),*) spray%theta
                else if(param .eq. 'Tangent of spray half-cone angle') then
