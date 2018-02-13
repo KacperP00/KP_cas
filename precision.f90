@@ -5,6 +5,7 @@ module precision
   integer, parameter  :: WP = DP
   real(WP), private   :: sample_real_at_WP
   real(WP), parameter :: MAX_REAL_WP = HUGE(sample_real_at_WP)
+  real(WP), parameter :: MIN_REAL_WP = TINY(sample_real_at_WP)
   integer, private    :: sample_int
   integer, parameter  :: MAX_INTEGER = HUGE(sample_int)
   ! for future extension

@@ -1,66 +1,160 @@
-HOMEDIR = $(shell pwd | sed -e 's/\/src.*//')
-LIBDIR  = $(HOMEDIR)/lib
-MODDIR  = $(HOMEDIR)/mod
-OBJDIR  = $(HOMEDIR)/obj
-BINDIR  = $(HOMEDIR)/bin
-VPATH   = $(LIBDIR) $(BINDIR) $(OBJDIR)
+#$preamble
+# A simple hand-made makefile for a package including applications
+# built from Fortran 90 sources, taking into account the usual
+# dependency cases.
 
-# Compiler and archiver
-CC  = mpicc
-CXX = mpicxx
-F90 = mpif90
-F77 = mpif90
-LD = mpif90
-AR  = xiar rcsv
-RL  = echo
+# This makefile works with the GNU make command, the one find on
+# GNU/Linux systems and often called gmake on non-GNU systems, if you
+# are using an old style make command, please see the file
+# Makefile_oldstyle provided with the package.
 
-# Compiler flags
-CFLAGS   =
-F90FLAGS = -fpp
-F77FLAGS =
-INCFLAGS =
-LDFLAGS  = -mkl -limf -lm
+MODDIR = mod/
+OBJDIR = obj/
+
+# ======================================================================
+# Let's start with the declarations
+# ======================================================================
+
+# The compiler
+FC = ifort #gfortran
+
+# flags for debugging or for maximum performance, comment as necessary
+DBGFLAGS = -g#-fbounds-check
+
+OPTFLAGS = -O2
+
+# flags forall (e.g. look for system .mod files, required in gfortran)
+ICFLAGS  = -I$(MODDIR)
+
 MODFLAGS = -module $(MODDIR)
-DBGFLAGS = -g -CA -CB -CS -CV -traceback -debug all -WB
-#DBGFLAGS = -g -CA -CB -CS -CV -traceback -debug all -WB -warn all -check all
-OPTFLAGS = -O3 -ip -prec-div -xhost -axSSE4.2,SSE3,SSE2 -static-intel -heap-array
 
-DEBUG_OPTIONS = "FLAGS_ADD = $(DBGFLAGS)" "LDFLAGS_ADD = $(DBGLDFLAGS)"
-OPT_OPTIONS = "FLAGS_ADD = $(OPTFLAGS)" "LDFLAGS_ADD = $(OPTLDFLAGS)"
+OBJFLAGS = -J $(OBJDIR)
 
-LIBDIR  = ./lib
-MODDIR  = ./mod
-BINDIR  = ./bin
+# libraries needed for linking, unused in the examples
+#LDFLAGS = -li_need_this_lib
 
-.SUFFIXES: 
-.SUFFIXES: .o .f90 .c
+# List of executables to be built within the package
+CASDBG = cas
+CASOPT = cas_opt
 
-F90FILES = precision.f90 spray_defs.d90 parser.f90 cas.f90
+# "make" builds cas with debug flags
+cas_debug: FCFLAGS = $(DBGFLAGS) $(ICFLAGS) $(MODFLAGS) $(OBJFLAGS)
+cas_debug: $(CASDBG)
 
-CFILES = 
-LIBFILE =
+# "make" builds cas with opt flags
+cas_opt: FCFLAGS = $(OPTFLAGS)
+cas_opt: $(CASOPT)
 
-OFILES = $(F90FILES:.f90=.o) $(CFILES:.c=.o)
-MODFILES = $(F90FILES:.f90=.mod)
+# objects
+OBJ = precision.o math.o \
+      pc_defs.o pc_database.o pc_func.o \
+      rk_defs.o solver_defs.o spray_defs.o rk_func.o solver_func.o spray_func.o parser.o \
+      cas.o
 
-default: $(LIBDIR)/$(LIBFILE)
+#$intro
+# ======================================================================
+# Here comes the most interesting part: the rules for prog1, prog2,
+# prog3 and prog4, modify to suit your needs
+# ======================================================================
 
-$(LIBDIR)/$(LIBFILE): $(OFILES)
-	cd $(OBJDIR); $(AR) $@ $(OFILES); $(RL) $@
+# In order to understand the next section, the process of building an
+# executable has to be clear: this is typically done in two steps:
 
-# $(MODFLAGS) is replaced, since it is unavailable in some compilers
-.f90.o:
-	$(F90) $(F90FLAGS) $(FLAGS_ADD) $(INCFLAGS) -I$(MODDIR) -c $*.f90  -o $(OBJDIR)/$*.o $(MODFLAGS)
-.c.o:
-	$(CC) $(CFLAGS) $(INCFLAGS) -c $*.c -o $(OBJDIR)/$*.o
+# 1.Compilation: every source file required for our program (tipically
+# x.f90 or x.F90 in case of Fortran) is compiled into an object file
+# (usually x.o)
+# 2.Linking: the final executable file is built by "linking" together
+# all the object files compiled in the previous step; in this step
+# additional pre-compiled libraries of can be added, but this will not
+# be treated here.
 
-opt:
-	@$(MAKE) $(OPT_OPTIONS)
+# These two steps are often performed through the same command and can
+# be combined into a single operation, so it is easy to confuse them,
+# but, in order to understand what comes further, one has to keep in
+# mind that they are logically different operations.
 
-debug:
-	@$(MAKE) $(DEBUG_OPTIONS)
+# A general suggestion: when building an executable called "prog", a
+# good practice is to put the main program, i.e. the procedure
+# declared as "PROGRAM" in Fortran, in a file named "prog.f90" or
+# "prog.F90", after the name of the executable, this will simplify the
+# creation of the rules in the makefile.
+
+#$part1
+# The simplest case: prog1 is simply built from prog1.f90 through
+# prog1.o; there is nothing to specify for prog1, because this simple
+# situation is already handled by the general rules for building
+# executables from Fortran sources.
+
+#$part2
+# Including a file: prog2, as before, is simply built from prog2.f90
+# through prog2.o; however prog2.o, besides depending on prog2.f90,
+# depends also on prog2.incf through inclusion, if prog2.incf is newer
+# than prog2.o, prog2.o has to be rebuilt; this has to be specified in
+# the makefile by means of a particular rule; it is not necessary to
+# confirm the dependency of prog2.o on prog2.f90, as well as of prog2
+# on prog2.o, since they are already handled by the general rules:
+cas: $(OBJ)
+
+#$part3
+# Calling external procedures: prog3 requires to link in not just
+# prog3.o, as usual, but also aux.o, which contains a subroutine
+# called from within prog3.f90; moreover prog3 has to be rebuilt if
+# aux.o is newer than prog3 itself; both tasks are accomplished by
+# adding an explicit dependency for the executable on aux.o; as
+# before, there is no need to confirm that prog3 depends on prog3.o,
+# that prog3.o depends on prog3.f90 and that aux.o depends on aux.f90
+# since these dependencies are already handled by the general rules:
+cas_opt: $(OBJ)
+
+#$part4
+# Using Fortran MODULES: prog4.f90 USEs a Fortran module defined
+# inside mod.f90, this is similar to the include case (prog2), but,
+# since there is no standard naming convention for compiled module
+# files in f90, the dependency is more easily built on the object
+# files, because when mod.o is generated, one is sure that
+# any_module_inside_mod.mod has been newly generated as well; mod.o
+# must also be linked in when building the executable, so the
+# dependency on mod.o is added also for prog4, as in the external
+# procedure case (prog3):
+#prog4.o: mod.o
+#prog4: mod.o
+
+#$part5
+# Putting it all together: when an executable is built from many
+# sources, ALL the object files have to be specified in the executable
+# dependencies, not just those containing SUBROUTINEs, FUNCTIONs or
+# MODULEs that are directly CALLed or USEd in the main program
+# file. However among the dependencies of the main program object
+# file, only those that are directly CALLed or USEd inside it have to
+# be specified, the other object files have to be specified as
+# dependencies of the relevant object files that require them and will
+# be built by a chain rule.
+
+#$conclusion
+# ======================================================================
+# And now the general rules, these should not require modification
+# ======================================================================
+
+# General rule for building prog from prog.o; $^ (GNU extension) is
+# used in order to list additional object files on which the
+# executable depends
+%: %.o
+	$(FC) $(FCFLAGS) -o $@ $^ $(LDFLAGS)
+
+# General rules for building prog.o from prog.f90 or prog.F90; $< is
+# used in order to list only the first prerequisite (the source file)
+# and not the additional prerequisites such as module or include files
+%.o: %.f90
+	$(FC) $(FCFLAGS) -c $<
+
+%.o: %.F90
+	$(FC) $(FCFLAGS) -c $<
+
+# Utility targets
+.PHONY: clean veryclean
 
 clean:
-	cd $(MODDIR); rm -f $(MODFILES)
-	cd $(LIBDIR); rm -f $(LIBFILE)
-	cd $(OBJDIR); rm -f $(OFILES)
+	rm -f *.o *.mod *.MOD
+
+veryclean: clean
+	rm -f *~ $(PROGRAMS)

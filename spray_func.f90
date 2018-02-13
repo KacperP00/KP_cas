@@ -111,8 +111,8 @@ contains
     if(spray%init_d2 == -9999.0_WP) then
        spray%init_d2 = min(1.12E-01_WP,spray%init_dm**2 + var)
     end if
-!write(*,*) '#####', spray%init_dm, spray%init_d2
-    call initDropletSize(spray)
+write(*,*) '#####', spray%init_dm, spray%init_d2
+    !call initDropletSize(spray)
 
     ! Initialize non-dimensionalized flow variables and source terms
     spray%Y_l(kmino:kmin-1) = 1.0_WP; spray%Y_l(kmin:kmaxo) = 0.0_WP
@@ -208,6 +208,9 @@ contains
           ! Apply BCs
           call applyBC(spray)
 
+          ! Compute DSD
+          call compute_DSD(spray)
+
           ! update models: Entrainment, Drag, Breakup, Evaporation and heating
           call entrainmentTerm(spray)
 
@@ -231,9 +234,6 @@ contains
 
           ! Update flow variables
           call updateFlowVariables(spray)
-
-          ! Compute DSD
-          call compute_DSD(spray)
 
           ! Update reference temperature
           call computeRefTemperature(spray)
@@ -1154,7 +1154,7 @@ contains
     end function pinv
   end subroutine maximumEntropyFormalism
 
-  subroutine updateFlowVariables(spray)
+  subroutine updateFlowVariables_org(spray)
     implicit none
 
     ! ---------------------------------
@@ -1199,28 +1199,110 @@ contains
 
        if(Y_l(k) >= 1E-16_WP) then
 
+          u_l(k) = W(5,k)/rho(k)/Y_l(k)/b(k)**2
+
           dm(k) = max(0.0_WP,W(7,k)/rho(k)/Y_l(k)/b(k)**2)
 
           d2(k) = max(0.0_WP,W(8,k)/rho(k)/Y_l(k)/b(k)**2)
 
           d3(k) = max(0.0_WP,W(9,k)/rho(k)/Y_l(k)/b(k)**2)
 
-          if( dm(k) == 0.0_WP .or. d2(k) == 0.0_WP .or. d3(k) == 0.0_WP ) then
+          if( dm(k) == 0.0_WP .or. d2(k) == 0.0_WP ) then !.or. d3(k) == 0.0_WP ) then
              dm(k) = 0.0_WP
              d2(k) = 0.0_WP
              d3(k) = 0.0_WP
+             u_l(k) = 0.0_WP
              Y_l(k) = 0.0_WP
              Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k));
              rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
+             Td(k) = 0.0_WP
              b(k) = sqrt(max(0.0_WP,(W(1,k)+W(2,k)+W(4,k)))/rho(k))
           end if
 
-          if( dm(k) > 0.0_WP .and. d2(k) > 0.0_WP .and. d3(k) > 0.0_WP ) then
-
-             u_l(k) = W(5,k)/rho(k)/Y_l(k)/b(k)**2
+          if( dm(k) > 0.0_WP .and. d2(k) > 0.0_WP ) then !.and. d3(k) > 0.0_WP ) then
              
              Td(k) = max(T_low(k),min(T_high(k),W(6,k)/rho(k)/Y_l(k)/b(k)**2))
              
+          end if
+
+       end if
+
+    end do
+
+    Y_g = 1.0_WP - Y_l
+
+    !spray%Tg = (spray%Y_v*(1.0_WP - spray%De*spray%CR*spray%LR) &
+    !         +  spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
+
+    !spray%Tg(spray%kmino:spray%kmin-1) = spray%T_a/spray%T_fuel
+
+    spray%Tg = spray%T_a/spray%T_fuel
+
+  end subroutine updateFlowVariables_org
+
+  subroutine updateFlowVariables(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    type(pc_t), pointer :: pc_l
+    real(WP), dimension(:,:), pointer :: W=>null()
+    real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
+                                       u_l=>null(), u_g=>null(), d3=>null(), d2=>null(), dm=>null(), &
+                                       Td=>null(), b=>null()
+    real(WP), pointer :: DRv=>null(), DRa=>null()
+    real(WP), dimension(spray%nzo) :: T_low, T_high
+    real(WP) :: dm_min, d2_min, d3_min
+    integer :: k
+
+    rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
+    DRv => spray%DRv; DRa => spray%DRa
+    W => spray%solver%W
+
+    T_high = spray%NBP/spray%T_fuel
+    T_low = spray%MP/spray%T_fuel
+
+    !rho = 0.0_WP; u_l = 0.0_WP; u_g = 0.0_WP; Y_l = 0.0_WP; Y_a = 1.0_WP; Y_v = 0.0_WP;
+    !dm = 0.0_WP; d2 = 0.0_WP; Td = 0.0_WP; b = 0.5_WP
+
+    !u_g(:) = W(3,:)/(W(1,:)+W(2,:))
+
+    do k = spray%kmin,spray%kmax
+       
+
+       if( spray%ndtime > 0.0_WP ) then
+
+          u_g(k) = W(3,k)/(W(1,k)+W(2,k))
+
+          Y_l(k) = max(0.0_WP,W(4,k)/(W(1,k)+W(2,k)+W(4,k)));
+
+          Y_v(k) = max(0.0_WP,W(2,k)/(W(1,k)+W(2,k)+W(4,k)));
+
+          Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k));
+
+          rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
+
+          b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(4,k))/rho(k)))
+
+          dm_min = (3.0_WP*rho(k)*Y_l(k)/4.0_WP/Pi)**(1.0_WP/3.0_WP)
+          d2_min = (3.0_WP*rho(k)*Y_l(k)/4.0_WP/Pi)**(2.0_WP/3.0_WP)
+          d3_min = (3.0_WP*rho(k)*Y_l(k)/4.0_WP/Pi)
+
+          if( W(4,k) .gt. MIN_REAL_WP .and. Y_l(k) .gt. MIN_REAL_WP) then
+
+             u_l(k) = W(5,k)/W(4,k)
+
+             dm(k)  = max(0.0_WP,min(dm_min,W(7,k)/W(4,k)))
+
+             d2(k)  = max(0.0_WP,min(d2_min,W(8,k)/W(4,k)))
+
+             d3(k)  = max(0.0_WP,min(d3_min,W(9,k)/W(4,k)))
+
+             Td(k)  = max(T_low(k),min(T_high(k),W(6,k)/W(4,k)))
+
           end if
 
        end if
@@ -1998,7 +2080,7 @@ contains
 
        where(Red(:,k) <= 1000.0_WP) Hvs = 1.0_WP
        
-       if ( spray%d2(k) > eps .and. spray%dm(k) > eps ) then
+       if ( spray%d2(k) > eps .and. spray%dm(k) > eps .and. u_rel(k) > eps) then
 
           CD(:,k) = (24.0_WP/(Red(:,k)+eps) + 4.0_WP/((Red(:,k)+eps)**(1.0_WP/3.0_WP)))*Hvs + 0.424_WP*(1.0_WP-Hvs)
           CDd = sum(CD(:,k)/di*dsd(:,k)*h)
@@ -2031,6 +2113,15 @@ contains
     real(WP) :: B0, B1, C3 
     integer :: k
 
+    u_rel = 0.0_WP; u_rel2 = 0.0_WP; K_bre1 = 0.0_WP; K_bre2 = 0.0_WP; K_bre3 = 0.0_WP;
+
+    Weg = 0.0_WP; Wel = 0.0_WP; Rel = 0.0_WP; Z = 0.0_WP; T = 0.0_WP; 
+    OmegaKH = 0.0_WP; LambdaKH = 0.0_WP; tauKH = 0.0_WP; dKH = 0.0_WP; 
+    dKH1 = 0.0_WP; dKH2 = 0.0_WP; dKH21 = 0.0_WP; dKH22 = 0.0_WP;
+    OmegaRT = 0.0_WP; LambdaRT = 0.0_WP; tauRT = 0.0_WP; dRT = 0.0_WP; 
+    critKH = 0.0_WP; critKH1 = 0.0_WP; critRT = 0.0_WP; 
+    tb = 0.0_WP; dst = 0.0_WP; diff = 0.0_WP;
+
     spray%omega_bre1 = 0.0_WP; spray%omega_bre2 = 0.0_WP; spray%omega_bre3 = 0.0_WP
 
     rho => spray%rho; Y_l => spray%Y_l; u_l => spray%u_l; u_g => spray%u_g; 
@@ -2040,8 +2131,6 @@ contains
     u_rel = abs(u_g-u_l)
 
     u_rel2 = u_rel**2
-
-    critKH = 0.0_WP; critKH1 = 0.0_WP; critRT = 0.0_WP
 
     do k = spray%kmin,spray%kmax
        
@@ -2082,14 +2171,14 @@ contains
 
              tb = critRT*tauRT + (1.0_WP-critRT)*tauKH;
              dst = critRT*dRT + (1.0_WP-critRT)*dKH;
+             
+             diff = di - dst
+             where(diff < 0.0_WP) diff = 0.0_WP
+             K_bre1(k) = sum(diff/tb*dsd(:,k)*h)
+             K_bre2(k) = 2.0_WP*sum(di*diff/tb*dsd(:,k)*h)
+             K_bre3(k) = 3.0_WP*sum(di*di*diff/tb*dsd(:,k)*h)
 
           end if
-
-          diff = di - dst
-          where(diff < 0.0_WP) diff = 0.0_WP
-          K_bre1(k) = sum(diff/tb*dsd(:,k)*h)
-          K_bre2(k) = 2.0_WP*sum(di*diff/tb*dsd(:,k)*h)
-          K_bre3(k) = 3.0_WP*sum(di*di*diff/tb*dsd(:,k)*h)
          
        end if
 
@@ -2328,9 +2417,9 @@ contains
 
     spray%u_g(kmino:kmin-1) = 0.0_WP
 
-    spray%d3(kmino:kmin-1) = spray%init_d3
-    spray%d2(kmino:kmin-1) = spray%init_d2
-    spray%dm(kmino:kmin-1) = spray%init_dm
+    spray%d3(kmino:kmin-1+11) = spray%init_d3
+    spray%d2(kmino:kmin-1+11) = spray%init_d2
+    spray%dm(kmino:kmin-1+11) = spray%init_dm
 
     spray%Td(kmino:kmin-1) = 1.0_WP 
 
