@@ -111,7 +111,7 @@ contains
     if(spray%init_d2 == -9999.0_WP) then
        spray%init_d2 = min(1.12E-01_WP,spray%init_dm**2 + var)
     end if
-
+!write(*,*) '#####', spray%init_dm, spray%init_d2
     call initDropletSize(spray)
 
     ! Initialize non-dimensionalized flow variables and source terms
@@ -306,9 +306,9 @@ contains
        dKH = min((3.0_WP*PI/OmegaKH)**(1.0_WP/3.0_WP),(1.5_WP*LambdaKH)**(1.0_WP/3.0_WP))
     end if
 
-    C1 = 14.5_WP !2.0824e+04 !0.1085_WP !14.0206_WP !6.4723_WP 
-    C2 = 16.5_WP !2.3434e+04 !0.1221_WP !15.8105_WP !7.2934_WP 
-    C3 = 18.0_WP !2.5736e+04 !0.1341_WP !17.3763_WP !8.0139_WP
+    C1 = 14.0807_WP !2.0824e+04 !0.1085_WP !14.0206_WP !6.4723_WP 
+    C2 = 15.8461_WP !2.3434e+04 !0.1221_WP !15.8105_WP !7.2934_WP 
+    C3 = 17.4024_WP !2.5736e+04 !0.1341_WP !17.3763_WP !8.0139_WP
 
     pw = 1.0_WP !2.0_WP
 
@@ -551,7 +551,7 @@ contains
        write(*,*) 'Please choose one of the following spray angle models:'
        write(*,*) 'Spray half-cone angle model : <name>'
        write(*,*) 'Reitz-Bracco, Reitz-Bracco-Simplified, Ruiz-Chigier, Arai,...'
-       write(*,*) 'Hiroyasu-Arai, Arregle, Siebers'
+       write(*,*) 'Hiroyasu-Arai, Arregle, Siebers, Constant'
        call abort        
 
     end select
