@@ -1,5 +1,7 @@
 To compile to code
 
 1. Enter the 'src' directory
-2. Run 'make all_debug'
+2. Run 'make all_debug' to compile with debug options
+OR
+2. Run 'make all_opt' to compile with optimization options
 

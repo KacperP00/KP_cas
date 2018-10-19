@@ -1,7 +1,11 @@
 !----------------------------------------!
 ! CAS: Cross-sectionally Averaged Spray  !
-! This program solves one-D multiphase   !
-! equations describing spray formation   !
+! This program solves cross-sectionally  !
+! averaged one-D multiphase equations    !
+! describing spray formation             !
+!                                        !
+! Author: Abhishek Y. Deshmukh           !
+! Contact: a.deshmukh@itv.rwth-aachen.de !
 !----------------------------------------!
 
 program cas
