@@ -342,9 +342,13 @@ contains
     
     deallocate(spray%Cnoz,spray%C_theta,spray%theta,spray%beta,spray%spray_angle_model)
 
-    deallocate(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g,spray%u_l,spray%u_g,spray%d3,spray%d2,spray%dm,spray%Td,spray%b,spray%Tg)
+    deallocate(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g, &
+               spray%u_l,spray%u_g, &
+               spray%d3,spray%d2,spray%dm, &
+               spray%Td,spray%b,spray%Tg)
 
-    deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l,spray%p_vap,spray%MW_f,spray%L_f,spray%MP,spray%NBP)
+    deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l, &
+               spray%p_vap,spray%MW_f,spray%L_f,spray%MP,spray%NBP)
 
     deallocate(spray%pc_l)
 
@@ -390,7 +394,8 @@ contains
 
     call deallocate_solver(spray%solver)
 
-    deallocate(spray%omega_ent, spray%omega_vap, spray%omega_vapdm, spray%omega_vapd2, spray%omega_vapd3, spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_bre3, spray%omega_T)
+    deallocate(spray%omega_ent, spray%omega_vap, spray%omega_vapdm, spray%omega_vapd2, spray%omega_vapd3, &
+               spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_bre3, spray%omega_T)
 
     deallocate(spray%outfreq)
 

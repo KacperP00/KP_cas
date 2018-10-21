@@ -1865,13 +1865,17 @@ contains
     spray%rho_g = (Y_a + Y_v)/(Y_a/spray%rho_ra + Y_v/spray%rho_rv)
     spray%rho_g(spray%kmino:spray%kmin-1) = spray%rho_g(spray%kmin)
 
-    phi_va = ((1.0_WP+sqrt(spray%visc_rv/spray%visc_ra)*(spray%WR)**0.25_WP)**2)/sqrt(8.0_WP*(1.0_WP+1.0_WP/spray%WR))
-    phi_av = ((1.0_WP+sqrt(spray%visc_ra/spray%visc_rv)*(1.0_WP/spray%WR)**0.25_WP)**2)/sqrt(8.0_WP*(1.0_WP+spray%WR))
+    phi_va = ((1.0_WP+sqrt(spray%visc_rv/spray%visc_ra)*(spray%WR)**0.25_WP)**2) &
+                     /sqrt(8.0_WP*(1.0_WP+1.0_WP/spray%WR))
+    phi_av = ((1.0_WP+sqrt(spray%visc_ra/spray%visc_rv)*(1.0_WP/spray%WR)**0.25_WP)**2) &
+                     /sqrt(8.0_WP*(1.0_WP+spray%WR))
 
-    spray%visc_g = Y_v/(Y_v+Y_a*phi_va/spray%WR)*spray%visc_rv + (Y_a/(Y_a+Y_v*phi_av*spray%WR))*spray%visc_ra
+    spray%visc_g = Y_v/(Y_v+Y_a*phi_va/spray%WR)*spray%visc_rv &
+                 + (Y_a/(Y_a+Y_v*phi_av*spray%WR))*spray%visc_ra
     spray%visc_g(spray%kmino:spray%kmin-1) = spray%visc_g(spray%kmin)
 
-    spray%lambda_g = Y_v/(Y_v+Y_a*phi_va/spray%WR)*spray%lambda_rv + (Y_a/(Y_a+Y_v*phi_av*spray%WR))*spray%lambda_ra
+    spray%lambda_g = Y_v/(Y_v+Y_a*phi_va/spray%WR)*spray%lambda_rv &
+                   + (Y_a/(Y_a+Y_v*phi_av*spray%WR))*spray%lambda_ra
     spray%lambda_g(spray%kmino:spray%kmin-1) = spray%lambda_g(spray%kmin)
 
     spray%Cp_g = (Y_v*spray%Cp_rv + Y_a*spray%Cp_ra)/(Y_v+Y_a)
@@ -1898,8 +1902,10 @@ contains
     spray%rho_g = (Y_a + Y_v)/(Y_a*spray%DRa + Y_v*spray%DRv)*spray%rho_l
     spray%rho_g(spray%kmino:spray%kmin-1) = spray%rho_g(spray%kmin)
 
-    phi_va = ((1.0_WP+sqrt(spray%VRa/spray%VRv)*(spray%WR)**0.25_WP)**2)/sqrt(8.0_WP*(1.0_WP+1.0_WP/spray%WR))
-    phi_av = ((1.0_WP+sqrt(spray%VRv/spray%VRa)*(1.0_WP/spray%WR)**0.25_WP)**2)/sqrt(8.0_WP*(1.0_WP+spray%WR))
+    phi_va = ((1.0_WP+sqrt(spray%VRa/spray%VRv)*(spray%WR)**0.25_WP)**2) &
+                     /sqrt(8.0_WP*(1.0_WP+1.0_WP/spray%WR))
+    phi_av = ((1.0_WP+sqrt(spray%VRv/spray%VRa)*(1.0_WP/spray%WR)**0.25_WP)**2) &
+                     /sqrt(8.0_WP*(1.0_WP+spray%WR))
 
     spray%visc_g = Y_v/(Y_v+Y_a*phi_va/spray%WR)*spray%visc_l/spray%VRv + (Y_a/(Y_a+Y_v*phi_av*spray%WR))*spray%visc_l/spray%VRa
     spray%visc_g(spray%kmino:spray%kmin-1) = spray%visc_g(spray%kmin)
@@ -2014,7 +2020,9 @@ contains
           ! Radial Gaussian profile for Y_ref
           coeff_a = 3.0_WP*Y_v(k)/b(k)/sqrt(twoPi)
           if(coeff_a .gt. 0.0_WP .and. coeff_a .lt. 1.0_WP) then
-             coeff = b(k)**2/18*(log(1.0_WP-coeff_a)*log(coeff_a) - log(1.0_WP-coeff_a*exp(-4.5_WP))*log(coeff_a*exp(-4.5_WP))) - b(k)**2*log(1.0_WP-Ystar_f)
+             coeff = b(k)**2/18*(log(1.0_WP-coeff_a)*log(coeff_a) &
+                   - log(1.0_WP-coeff_a*exp(-4.5_WP))*log(coeff_a*exp(-4.5_WP))) &
+                   - b(k)**2*log(1.0_WP-Ystar_f)
           else
              coeff = log(1.0_WP+Bd)
           end if
@@ -2229,7 +2237,8 @@ contains
              Z = sqrt(Wel)/(Rel)
              T = Z*sqrt(Weg)
              OmegaKH = (0.34_WP+0.38_WP*Weg**1.5_WP)/(1.0_WP+Z)/(1.0_WP+1.4_WP*T**0.6_WP)*sqrt(8.0_WP/We/di**3)
-             LambdaKH = (9.02_WP/2.0_WP)*di*(1.0_WP+0.45_WP*sqrt(Z))*(1.0_WP+0.4_WP*T**0.7_WP)/(1.0_WP+0.865_WP*Weg**1.67_WP)**0.6_WP
+             LambdaKH = (9.02_WP/2.0_WP)*di*(1.0_WP+0.45_WP*sqrt(Z))*(1.0_WP+0.4_WP*T**0.7_WP)/&
+                                                                     (1.0_WP+0.865_WP*Weg**1.67_WP)**0.6_WP
              tauKH = (3.726_WP*B1/2.0_WP)*di/(OmegaKH*LambdaKH)
              dKH1 = 2.0_WP*B0*LambdaKH
 
@@ -2324,7 +2333,7 @@ contains
        cmd = "cat "//trim(spray%roi_file)//" | sed '/^\s*#/d;/^\s*$/d' | wc -l > nlines.txt"
        call system(cmd)
        open(unit=104,file='nlines.txt')
-       read(unit=104,fmt='(i)',iostat=ioerr) nlines
+       read(unit=104,fmt='(i6)',iostat=ioerr) nlines
        cmd = 'rm nlines.txt'
        call system(cmd)
        close(unit=104)
@@ -2382,7 +2391,7 @@ contains
        cmd = "cat "//trim(spray%LFPTname)//" | sed '/^\s*#/d;/^\s*$/d' | wc -l > nlfpt.txt"
        call system(cmd)
        open(unit=1040,file='nlfpt.txt')
-       read(unit=1040,fmt='(i)',iostat=ioerr) nlines
+       read(unit=1040,fmt='(i6)',iostat=ioerr) nlines
        cmd = 'rm nlfpt.txt'
        call system(cmd)
        close(unit=1040)
@@ -2396,11 +2405,12 @@ contains
              exit
           end if
 
-          if (index(line,'!') .or. index(line,'#')) then
+          if ( index(line,'!') > 0 .or. index(line,'#') > 0 ) then
              cycle
           end if
           
-          read(line,*)  spray%LFPT(i,1), spray%LFPT(i,2), spray%LFPT(i,3), spray%LFPT(i,4), spray%LFPT(i,5), spray%LFPT(i,6), spray%LFPT(i,7), spray%LFPT(i,8)
+          read(line,*)  spray%LFPT(i,1), spray%LFPT(i,2), spray%LFPT(i,3), spray%LFPT(i,4),&
+                        spray%LFPT(i,5), spray%LFPT(i,6), spray%LFPT(i,7), spray%LFPT(i,8)
 
           !write(*,*) spray%LFPT(i,1), spray%LFPT(i,2), spray%LFPT(i,3), spray%LFPT(i,4), spray%LFPT(i,5), spray%LFPT(i,6), spray%LFPT(i,7), spray%LFPT(i,8)
 
@@ -2435,7 +2445,7 @@ contains
        cmd = "cat "//trim(spray%VFPTname)//" | sed '/^\s*#/d;/^\s*$/d' | wc -l > nlvfpt.txt"
        call system(cmd)
        open(unit=1041,file='nlvfpt.txt')
-       read(unit=1041,fmt='(i)',iostat=ioerr) nlines
+       read(unit=1041,fmt='(i6)',iostat=ioerr) nlines
        cmd = 'rm nlvfpt.txt'
        call system(cmd)
        close(unit=1041)
@@ -2449,7 +2459,7 @@ contains
              exit
           end if
 
-          if (index(line,'!') .or. index(line,'#')) then
+          if ( index(line,'!') > 0 .or. index(line,'#') > 0 ) then
              cycle
           end if
           
@@ -2485,7 +2495,7 @@ contains
 
     spray%b(kmino:kmin-1)   = 0.5_WP
 
-    if(allocated(spray%roi)) then
+    if(associated(spray%roi)) then
        !Interpolate
        do i=1,maxval(shape(spray%roi))-1
           if (spray%ndtime .ge. spray%roi(i,1) .and. spray%ndtime .lt. spray%roi(i+1,1)) then
@@ -2549,11 +2559,19 @@ contains
     open(unit=100,file=trim(fname),form="formatted",status="replace",action="write")
 
     !rowfmth = '(A,A,A,A,A,A,A,A,A,A,A,A)'
-    rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
+    rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
+               ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
+               ES15.5E3  ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
+               ES15.5E3, ES15.5E3, ES15.5E3)"
 
     !write(100,fmt=rowfmth) 'z,', 'rho,', 'Y_l,', 'Y_v,', 'Y_a,', 'Y_g,', 'u_l,', 'u_g,', 'dm,', 'd2,', 'd3,', 'Td,', 'b'
     do k = kmin-1,kmax
-       write(100,FMT=rowfmt) spray%z(k), spray%rho(k), spray%Y_l(k), spray%Y_v(k), spray%Y_a(k), spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%d2(k), spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k),spray%Y_ref(k),spray%solver%W(1,k),spray%solver%W(2,k),spray%solver%W(3,k),spray%solver%W(4,k),spray%solver%W(5,k),spray%solver%W(6,k),spray%solver%W(7,k),spray%solver%W(8,k),spray%solver%W(9,k)
+       write(100,FMT=rowfmt) spray%z(k), spray%rho(k), spray%Y_l(k), spray%Y_v(k), spray%Y_a(k), &
+                             spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%d2(k), &
+                             spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k),spray%Y_ref(k), &
+                             spray%solver%W(1,k),spray%solver%W(2,k),spray%solver%W(3,k), &
+                             spray%solver%W(4,k),spray%solver%W(5,k),spray%solver%W(6,k), &
+                             spray%solver%W(7,k),spray%solver%W(8,k),spray%solver%W(9,k)
     end do
 
     close(unit=100)
@@ -2578,7 +2596,8 @@ contains
     rowfmth = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
 
     do k = kmin-1,kmax
-       write(102,FMT=rowfmth) spray%z(k), spray%dsdlam(1,k), spray%dsdlam(2,k), spray%dsdlam(3,k), spray%dsdlam(4,k), spray%dm(k), spray%d2(k), spray%d3(k)
+       write(102,FMT=rowfmth) spray%z(k), spray%dsdlam(1,k), spray%dsdlam(2,k), spray%dsdlam(3,k), &
+                              spray%dsdlam(4,k), spray%dm(k), spray%d2(k), spray%d3(k)
     end do
 
     close(unit=102)

@@ -28,7 +28,7 @@ contains
                exit
             end if
 
-            if (index(line,'!') .or. index(line,'#')) then
+            if (index(line,'!') > 0 .or. index(line,'#') > 0) then
                cycle
             end if
 

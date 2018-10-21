@@ -87,7 +87,10 @@ contains
     deallocate(solver%divc)
 
     if(associated(solver%weno5p)) then
-       deallocate(solver%weno5p, solver%weno5m, solver%S0_p, solver%S1_p, solver%S2_p, solver%S0_m, solver%S1_m, solver%S2_m, solver%f_p, solver%f_m, solver%f_t)
+       deallocate(solver%weno5p, solver%weno5m, &
+                  solver%S0_p, solver%S1_p, solver%S2_p, &
+                  solver%S0_m, solver%S1_m, solver%S2_m, &
+                  solver%f_p, solver%f_m, solver%f_t)
     end if
 
     deallocate(solver%W, solver%Wold, solver%F, solver%S)

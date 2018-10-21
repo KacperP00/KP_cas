@@ -8,13 +8,13 @@ OBJDIR = ../obj
 # ======================================================================
 
 # The compiler
-FC = gfortran
+FC = ifort
 
 .SUFFIXES:
 .SUFFIXES: .o .f90 .mod
 
 # flags for debugging or for maximum performance, comment as necessary
-DBGFLAGS = -g #-fbounds-check
+DBGFLAGS = -g#-fbounds-check
 
 OPTFLAGS = -O3
 
@@ -24,7 +24,9 @@ OPT_OPTIONS   = "FLAGS_ADD = $(OPTFLAGS)"
 # flags forall (e.g. look for system .mod files, required in gfortran)
 ICFLAGS  = -I $(MODDIR)
 
-MODFLAGS = -J $(MODDIR)
+MODFLAGS = -module $(MODDIR)
+
+OBJFLAGS = -J $(OBJDIR)
 
 # libraries needed for linking, unused in the examples
 #LDFLAGS = -li_need_this_lib
