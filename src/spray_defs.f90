@@ -288,7 +288,7 @@ contains
     allocate(spray%Y_g(spray%nzo)); spray%Y_g = -9999.0_WP
     allocate(spray%u_l(spray%nzo)); spray%u_l = -9999.0_WP
     allocate(spray%u_g(spray%nzo)); spray%u_g = -9999.0_WP
-    allocate(spray%d3(spray%nzo)); spray%d2 = -9999.0_WP
+    allocate(spray%d3(spray%nzo)); spray%d3 = -9999.0_WP
     allocate(spray%d2(spray%nzo)); spray%d2 = -9999.0_WP
     allocate(spray%dm(spray%nzo)); spray%dm = -9999.0_WP
     allocate(spray%Td(spray%nzo)); spray%Td = -9999.0_WP
