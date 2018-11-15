@@ -20,6 +20,7 @@ program cas
 
   !--------------------------------------
   type(spray_t), pointer :: spray
+  type(SolverVec_t), pointer :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
   type(pc_t), pointer :: pc
   character(len=128) :: fname
   !--------------------------------------

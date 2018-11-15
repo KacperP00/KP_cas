@@ -192,7 +192,8 @@ contains
     implicit none
 
     ! ---------------------------------
-    type(spray_t), pointer, intent(inout) :: spray,SolverVecA,SolverVecB,SolverVecC,SolverVecD
+    type(spray_t), pointer, intent(inout) :: spray
+    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
 
     ! ---------------------------------
     integer :: niter
@@ -1283,11 +1284,12 @@ contains
 
   end subroutine updateFlowVariables_org
 
-  subroutine updateFlowVariables(spray)
+  subroutine updateFlowVariables(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
     implicit none
 
     ! ---------------------------------
     type(spray_t), pointer, intent(inout) :: spray
+    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
 
     ! ---------------------------------
     type(pc_t), pointer :: pc_l
@@ -1300,15 +1302,9 @@ contains
     real(WP) :: ndmass, dm_min, d2_min, d3_min
     integer :: k
 
-    IF (MOD(order, 2) .NE. 0) THEN
-    
-    W => SolverVecA%solver%W
- 
-    ELSE
     
     W => SolverVecB%solver%W
      
-    END IF
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
     u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b

@@ -739,7 +739,7 @@ contains
     implicit none
 
     ! ---------------------------------
-    type(spray_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
+    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
 
     ! ---------------------------------
 
