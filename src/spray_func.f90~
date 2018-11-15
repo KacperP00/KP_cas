@@ -224,7 +224,7 @@ contains
 
           call evaporationModel(spray)
           
-          ! Store spray variables in SolverVec
+          ! Store spray variables in SolverVecA
           call assign_SolverVec(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
 
           !do niter = 1,spray%solver%rk%stage

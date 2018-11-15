@@ -9,7 +9,6 @@ module rk_defs
      integer :: stage = 0, niter
      real(WP), pointer :: alpha(:) => null()
      real(WP), pointer :: beta(:) => null()
-     real(WP), pointer :: delta(:) => null()
      real(WP), pointer :: dt_ratio(:) => null()
      real(WP), dimension(:,:), pointer :: RK => null(), dRK=>null()
    end type rk_solver_t
@@ -24,7 +23,6 @@ contains
 
     allocate(solver%alpha(solver%stage), &
          solver%beta(solver%stage), &
-         solver%delta(solver%stage), &
          solver%dt_ratio(solver%stage+1))
     solver%dt_ratio = 1.0_WP
 
@@ -36,7 +34,7 @@ contains
     type(rk_solver_t), pointer, intent(inout) :: solver
     ! ---------------------------------
 
-    deallocate(solver%alpha, solver%beta, solver%delta, solver%dt_ratio)
+    deallocate(solver%alpha, solver%beta, solver%dt_ratio)
   
   end subroutine deallocate_rk
   

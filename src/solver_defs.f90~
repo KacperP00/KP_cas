@@ -105,8 +105,8 @@ contains
 
   end subroutine deallocate_solver
 
-  !subroutine assign_SolverVec(SolverVecA,SolverVecB,spray)
+  subroutine assign_SoverVec(SolverVecA,SolverVecB,spray)
     
-  !end subroutine assign_SolverVec
+  end subroutine assign_SoverVec
 
 end module solver_defs

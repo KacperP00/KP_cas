@@ -37,7 +37,7 @@ program cas
   call allocate_spray(spray)
 
   ! Allocate SolverVec objects for higher order time schemes
-  call allocate_SolverVec(SolverVecA,SolverVecB,SolverVecC,SolverVecD)
+  call allocate_SolverVec(SolverVecA,SolverVecB)
 
   ! Read parameters from input file
   call read_inputs(spray,fname)
@@ -49,13 +49,13 @@ program cas
   !call assign_SolverVec(SolverVecA,spray)
 
   ! Solve the equations
-  call run_spray(spray,SolverVecA,SolverVecB,SolverVecC,SolverVecD) 
+  call run_spray(spray,SolverVecA,SolverVecB) 
 
   ! Write output
   call write_output(spray,spray%step,spray%ndtime)
 
   ! Deallocate spray object
-  call deallocate_SolverVec(SolverVecA,SolverVecB,SolverVecC,SolverVecD)
+  call deallocate_SolverVec(SolverVecA,SolverVecB)
 
   ! Deallocate spray object
   call deallocate_spray(spray)
