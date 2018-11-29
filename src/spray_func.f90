@@ -1185,7 +1185,7 @@ contains
     end function pinv
   end subroutine maximumEntropyFormalism
 
-  subroutine updateFlowVariables_org(spray)
+  subroutine updateFlowVariables(spray)
     implicit none
 
     ! ---------------------------------
@@ -1269,9 +1269,9 @@ contains
 
     spray%Tg = spray%T_a/spray%T_fuel
 
-  end subroutine updateFlowVariables_org
+  end subroutine updateFlowVariables
 
-  subroutine updateFlowVariables(spray)
+  subroutine updateFlowVariables_new(spray)
     implicit none
 
     ! ---------------------------------
@@ -1355,7 +1355,7 @@ contains
 
     spray%Tg = spray%T_a/spray%T_fuel
 
-  end subroutine updateFlowVariables
+  end subroutine updateFlowVariables_new
 
   subroutine updateFlowVariablesOld(spray)
     implicit none
@@ -1937,7 +1937,7 @@ contains
     
   end subroutine entrainmentTerm
 
-  subroutine evaporationModel(spray)
+  subroutine evaporationModel_try(spray)
     implicit none
 
     ! ---------------------------------
@@ -2067,9 +2067,9 @@ contains
 
     end subroutine getDist
 
-  end subroutine evaporationModel
+  end subroutine evaporationModel_try
 
-  subroutine evaporationModelOld(spray)
+  subroutine evaporationModel(spray)
     implicit none
 
     ! ---------------------------------
@@ -2133,7 +2133,7 @@ contains
 
     end do
 
-  end subroutine evaporationModelOld
+  end subroutine evaporationModel
 
   subroutine dragModel(spray)
     implicit none
