@@ -139,6 +139,11 @@ contains
     !spray%Tg = (spray%Y_v*(1.0_WP - spray%De) + spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
     !spray%Tg(kmino:kmin-1) = spray%T_a/spray%T_fuel
 
+    ! Initialize turbulence
+    spray%k_g = 1.0_WP
+    spray%eps_g = 120.0_WP
+    spray%c_k = 7.0_WP; spray%c_mu = 0.09_WP; spray%c_eps1 = 1.44; spray%c_eps2 = 1.82
+    spray%c_zvar = 0.8_WP;
     spray%b = 0.5_WP + spray%z*spray%beta
 
     ! Reference temperature and mass fraction for evaporation model
@@ -223,6 +228,8 @@ contains
           call breakupModel(spray)
 
           call evaporationModel(spray)
+
+          call turbulenceModel(spray)
 
           ! Update State Vector
           call buildStateVector(spray)
@@ -446,6 +453,10 @@ contains
 
     ! Ratio of Heat Capacities at droplet temperature to fuel temperature
     spray%CR = spray%C_l(1)/spray%C_l
+
+    ! Viscosity Ratio liquid to gas phase turbulent viscosity
+    spray%mu_t_g = spray%c_mu*sqrt(spray%rho/spray%DRg)*spray%k_g**2/spray%eps_g
+    spray%VRtg = spray%visc_l/spray%mu_t_g
    
   end subroutine compute_varNonDparams
 
@@ -1185,7 +1196,7 @@ contains
     end function pinv
   end subroutine maximumEntropyFormalism
 
-  subroutine updateFlowVariables_org(spray)
+  subroutine updateFlowVariables(spray)
     implicit none
 
     ! ---------------------------------
@@ -1196,13 +1207,14 @@ contains
     real(WP), dimension(:,:), pointer :: W=>null()
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
                                        u_l=>null(), u_g=>null(), d3=>null(), d2=>null(), dm=>null(), &
-                                       Td=>null(), b=>null()
+                                       Td=>null(), b=>null(), k_g=>null(), eps_g=>null(), mu_t_g=>null()
     real(WP), pointer :: DRv=>null(), DRa=>null()
     real(WP), dimension(spray%nzo) :: T_low, T_high
     integer :: k
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
     u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
+    k_g => spray%k_g; eps_g => spray%eps_g; mu_t_g => spray%mu_t_g
     DRv => spray%DRv; DRa => spray%DRa
     W => spray%solver%W
 
@@ -1256,11 +1268,17 @@ contains
              
           end if
 
+          Y_g(k) = 1.0_WP - Y_l(k)
+
+          if(Y_g(k) > 0.0_WP) then
+             k_g(k) = max(1.0_WP,W(10,k)/rho(k)/Y_g(k)/b(k)**2)
+             eps_g(k) = max(120.0_WP,W(11,k)/rho(k)/Y_g(k)/b(k)**2)
+             mu_t_g(k) = spray%c_mu*sqrt(spray%rho(k)/spray%DRg(k))*spray%k_g(k)**2/spray%eps_g(k)
+          end if
+
        end if
 
     end do
-
-    Y_g = 1.0_WP - Y_l
 
     !spray%Tg = (spray%Y_v*(1.0_WP - spray%De*spray%CR*spray%LR) &
     !         +  spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
@@ -1269,9 +1287,9 @@ contains
 
     spray%Tg = spray%T_a/spray%T_fuel
 
-  end subroutine updateFlowVariables_org
+  end subroutine updateFlowVariables
 
-  subroutine updateFlowVariables(spray)
+  subroutine updateFlowVariables_new(spray)
     implicit none
 
     ! ---------------------------------
@@ -1355,7 +1373,7 @@ contains
 
     spray%Tg = spray%T_a/spray%T_fuel
 
-  end subroutine updateFlowVariables
+  end subroutine updateFlowVariables_new
 
   subroutine updateFlowVariablesOld(spray)
     implicit none
@@ -1934,10 +1952,11 @@ contains
     u_g => spray%u_g; omega_ent => spray%omega_ent;  DRa => spray%DRa
 
     omega_ent(spray%kmin:spray%kmax) = spray%beta*u_g(spray%kmin:spray%kmax)/DRa
+    !omega_ent(spray%kmin:spray%kmax) = spray%c_k/spray%Re*(1.0_WP/spray%VRa+1.0_WP/spray%VRtg(spray%kmin:spray%kmax))
     
   end subroutine entrainmentTerm
 
-  subroutine evaporationModel(spray)
+  subroutine evaporationModel_try(spray)
     implicit none
 
     ! ---------------------------------
@@ -2067,9 +2086,9 @@ contains
 
     end subroutine getDist
 
-  end subroutine evaporationModel
+  end subroutine evaporationModel_try
 
-  subroutine evaporationModelOld(spray)
+  subroutine evaporationModel(spray)
     implicit none
 
     ! ---------------------------------
@@ -2133,7 +2152,7 @@ contains
 
     end do
 
-  end subroutine evaporationModelOld
+  end subroutine evaporationModel
 
   subroutine dragModel(spray)
     implicit none
@@ -2281,6 +2300,25 @@ contains
     spray%omega_bre3 = K_bre3*rho*Y_l
 
   end subroutine breakupModel
+
+  subroutine turbulenceModel(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    real(WP), dimension(spray%nzo) :: factor
+
+    spray%omega_k_g_p = spray%c_k*spray%u_g**2/spray%Re/spray%VRtg
+    spray%omega_k_g_d = spray%rho*spray%eps_g*spray%b**2
+
+    factor = spray%eps_g/spray%k_g
+
+    spray%omega_eps_g_p = factor*spray%c_eps1*spray%omega_k_g_p
+    spray%omega_eps_g_d = factor*spray%c_eps2*spray%omega_k_g_d
+
+  end subroutine turbulenceModel
 
   subroutine computeTimeStep(spray)
     implicit none
@@ -2545,7 +2583,7 @@ contains
     integer, intent(in) :: step
     real(WP), intent(in) :: time
     ! ---------------------------------
-    character(len=256) :: rowfmt, rowfmth, fname, stp, tm
+    character(len=512) :: rowfmt, rowfmth, fname, stp, tm
     integer, pointer :: kmin, kmax, kmino, kmaxo
     integer :: k, s
 
@@ -2562,13 +2600,14 @@ contains
     rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
                ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
                ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
-               ES15.5E3, ES15.5E3, ES15.5E3)"
+               ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
 
     !write(100,fmt=rowfmth) 'z,', 'rho,', 'Y_l,', 'Y_v,', 'Y_a,', 'Y_g,', 'u_l,', 'u_g,', 'dm,', 'd2,', 'd3,', 'Td,', 'b'
     do k = kmin-1,kmax
        write(100,FMT=rowfmt) spray%z(k), spray%rho(k), spray%Y_l(k), spray%Y_v(k), spray%Y_a(k), &
                              spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%d2(k), &
-                             spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k),spray%Y_ref(k), &
+                             spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k), spray%k_g(k), &
+                             spray%eps_g(k), spray%mu_t_g(k), spray%Y_ref(k), &
                              spray%solver%W(1,k),spray%solver%W(2,k),spray%solver%W(3,k), &
                              spray%solver%W(4,k),spray%solver%W(5,k),spray%solver%W(6,k), &
                              spray%solver%W(7,k),spray%solver%W(8,k),spray%solver%W(9,k)
