@@ -37,14 +37,15 @@ program cas
   ! Allocate spray object
   call allocate_spray(spray)
 
-  ! Allocate SolverVec objects for higher order time schemes
-  call allocate_SolverVec(SolverVecA,SolverVecB,SolverVecC,SolverVecD)
 
   ! Read parameters from input file
   call read_inputs(spray,fname)
 
   ! Initialize spray
   call init_spray(spray)
+  
+  ! Allocate SolverVec objects for higher order time schemes
+  call allocate_SolverVec(spray,SolverVecA,SolverVecB,SolverVecC,SolverVecD)
   
   ! Store flow variables in Solver Vector
   !call assign_SolverVec(SolverVecA,spray)

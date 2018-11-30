@@ -242,17 +242,22 @@ contains
   end subroutine allocate_spray
 
   ! Allocate spray with default values
-  subroutine allocate_SolverVec(SolverVecA,SolverVecB,SolverVecC,SolverVecD)
+  subroutine allocate_SolverVec(spray,SolverVecA,SolverVecB,SolverVecC,SolverVecD)
     implicit none
 
     ! ---------------------------------
     type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
-
+    type(spray_t), pointer, intent(inout) :: spray
     ! ---------------------------------
 
-    SolverVecA%dz = SolverVecA%Lz/(SolverVecA%Nz-1)
-    SolverVecA%nzo = SolverVecA%Nz+6
 
+    allocate(SolverVecA)
+    allocate(SolverVecA%dz); SolverVecA%dz = -9999
+    allocate(SolverVecA%nzo); SolverVecA%nzo = -9999
+
+    SolverVecA%dz = spray%Lz/(spray%Nz-1)
+    SolverVecA%nzo = spray%Nz+6
+    
     
     allocate(SolverVecA%z(SolverVecA%nzo)); SolverVecA%z = -9999.0_WP
     allocate(SolverVecA%rho(SolverVecA%nzo)); SolverVecA%rho = -9999.0_WP
@@ -291,9 +296,14 @@ contains
     SolverVecA%solver%nr%alpha = 1.0E-04_WP
     SolverVecA%solver%nr%max_count = 2000
 
-    SolverVecB%dz = SolverVecB%Lz/(SolverVecB%Nz-1)
-    SolverVecB%nzo = SolverVecB%Nz+6
 
+    allocate(SolverVecB)
+    allocate(SolverVecB%dz); SolverVecB%dz = -9999
+    allocate(SolverVecB%nzo); SolverVecB%nzo = -9999
+
+    SolverVecB%dz = spray%Lz/(spray%Nz-1)
+    SolverVecB%nzo = spray%Nz+6
+    
     allocate(SolverVecB%z(SolverVecB%nzo)); SolverVecB%z = -9999.0_WP
     allocate(SolverVecB%rho(SolverVecB%nzo)); SolverVecB%rho = -9999.0_WP
     allocate(SolverVecB%Y_l(SolverVecB%nzo)); SolverVecB%Y_l = -9999.0_WP
@@ -331,8 +341,12 @@ contains
     SolverVecB%solver%nr%alpha = 1.0E-04_WP
     SolverVecB%solver%nr%max_count = 2000
 
-    SolverVecC%dz = SolverVecC%Lz/(SolverVecC%Nz-1)
-    SolverVecC%nzo = SolverVecC%Nz+6
+    allocate(SolverVecC)
+    allocate(SolverVecC%dz); SolverVecC%dz = -9999
+    allocate(SolverVecC%nzo); SolverVecC%nzo = -9999
+
+    SolverVecC%dz = spray%Lz/(spray%Nz-1)
+    SolverVecC%nzo = spray%Nz+6
 
     allocate(SolverVecC%z(SolverVecC%nzo)); SolverVecC%z = -9999.0_WP
     allocate(SolverVecC%rho(SolverVecC%nzo)); SolverVecC%rho = -9999.0_WP
@@ -371,8 +385,12 @@ contains
     SolverVecC%solver%nr%alpha = 1.0E-04_WP
     SolverVecC%solver%nr%max_count = 2000
 
-    SolverVecD%dz = SolverVecD%Lz/(SolverVecD%Nz-1)
-    SolverVecD%nzo = SolverVecD%Nz+6
+    allocate(SolverVecD)
+    allocate(SolverVecD%dz); SolverVecD%dz = -9999
+    allocate(SolverVecD%nzo); SolverVecD%nzo = -9999
+
+    SolverVecD%dz = spray%Lz/(spray%Nz-1)
+    SolverVecD%nzo = spray%Nz+6
 
     allocate(SolverVecD%z(SolverVecD%nzo)); SolverVecD%z = -9999.0_WP
     allocate(SolverVecD%rho(SolverVecD%nzo)); SolverVecD%rho = -9999.0_WP
@@ -411,10 +429,10 @@ contains
     SolverVecD%solver%nr%alpha = 1.0E-04_WP
     SolverVecD%solver%nr%max_count = 2000
 
-    call allocate_solver(SolverVecA%solver,SolverVecA%nzo)
-    call allocate_solver(SolverVecB%solver,SolverVecB%nzo)
-    call allocate_solver(SolverVecC%solver,SolverVecC%nzo)
-    call allocate_solver(SolverVecD%solver,SolverVecD%nzo)
+    call allocate_solver(SolverVecA%solver,spray%nzo)
+    call allocate_solver(SolverVecB%solver,spray%nzo)
+    call allocate_solver(SolverVecC%solver,spray%nzo)
+    call allocate_solver(SolverVecD%solver,spray%nzo)
 
    end subroutine allocate_SolverVec
 
@@ -455,90 +473,90 @@ contains
 
      ELSE IF (spray%solver%rk%niter == 2) THEN
 
-        SolverVecB%z = SolverVecA%z
-        SolverVecB%rho = SolverVecA%rho
-        SolverVecB%Y_l = SolverVecA%Y_l
-        SolverVecB%Y_v = SolverVecA%Y_v
-        SolverVecB%Y_a = SolverVecA%Y_a
-        SolverVecB%Y_g = SolverVecA%Y_g
-        SolverVecB%u_l = SolverVecA%u_l
-        SolverVecB%u_g = SolverVecA%u_g
-        SolverVecB%d3 = SolverVecA%d3
-        SolverVecB%d2 = SolverVecA%d2
-        SolverVecB%dm = SolverVecA%dm
-        SolverVecB%Td = SolverVecA%Td
-        SolverVecB%Tg = SolverVecA%Tg
-        SolverVecB%b = SolverVecA%b
+        SolverVecB%z = spray%z
+        SolverVecB%rho = spray%rho
+        SolverVecB%Y_l = spray%Y_l
+        SolverVecB%Y_v = spray%Y_v
+        SolverVecB%Y_a = spray%Y_a
+        SolverVecB%Y_g = spray%Y_g
+        SolverVecB%u_l = spray%u_l
+        SolverVecB%u_g = spray%u_g
+        SolverVecB%d3 = spray%d3
+        SolverVecB%d2 = spray%d2
+        SolverVecB%dm = spray%dm
+        SolverVecB%Td = spray%Td
+        SolverVecB%Tg = spray%Tg
+        SolverVecB%b = spray%b
 
-        SolverVecB%omega_ent = SolverVecA%omega_ent
-        SolverVecB%omega_vap = SolverVecA%omega_vap
-        SolverVecB%omega_vapdm = SolverVecA%omega_vapdm
-        SolverVecB%omega_vapd2 = SolverVecA%omega_vapd2
-        SolverVecB%omega_vapd3 = SolverVecA%omega_vapd3
-        SolverVecB%f_drag = SolverVecA%f_drag
-        SolverVecB%omega_bre1 = SolverVecA%omega_bre1
-        SolverVecB%omega_bre2 = SolverVecA%omega_bre2
-        SolverVecB%omega_bre3 = SolverVecA%omega_bre3
-        SolverVecB%omega_T = SolverVecA%omega_T
-        SolverVecB%solver = SolverVecA%solver
+        SolverVecB%omega_ent = spray%omega_ent
+        SolverVecB%omega_vap = spray%omega_vap
+        SolverVecB%omega_vapdm = spray%omega_vapdm
+        SolverVecB%omega_vapd2 = spray%omega_vapd2
+        SolverVecB%omega_vapd3 = spray%omega_vapd3
+        SolverVecB%f_drag = spray%f_drag
+        SolverVecB%omega_bre1 = spray%omega_bre1
+        SolverVecB%omega_bre2 = spray%omega_bre2
+        SolverVecB%omega_bre3 = spray%omega_bre3
+        SolverVecB%omega_T = spray%omega_T
+        SolverVecB%solver = spray%solver
 
      ELSE IF (spray%solver%rk%niter == 3) THEN
 
-        SolverVecC%z = SolverVecB%z
-        SolverVecC%rho = SolverVecB%rho
-        SolverVecC%Y_l = SolverVecB%Y_l
-        SolverVecC%Y_v = SolverVecB%Y_v
-        SolverVecC%Y_a = SolverVecB%Y_a
-        SolverVecC%Y_g = SolverVecB%Y_g
-        SolverVecC%u_l = SolverVecB%u_l
-        SolverVecC%u_g = SolverVecB%u_g
-        SolverVecC%d3 = SolverVecB%d3
-        SolverVecC%d2 = SolverVecB%d2
-        SolverVecC%dm = SolverVecB%dm
-        SolverVecC%Td = SolverVecB%Td
-        SolverVecC%Tg = SolverVecB%Tg
-        SolverVecC%b = SolverVecB%b
+        SolverVecC%z = spray%z
+        SolverVecC%rho = spray%rho
+        SolverVecC%Y_l = spray%Y_l
+        SolverVecC%Y_v = spray%Y_v
+        SolverVecC%Y_a = spray%Y_a
+        SolverVecC%Y_g = spray%Y_g
+        SolverVecC%u_l = spray%u_l
+        SolverVecC%u_g = spray%u_g
+        SolverVecC%d3 = spray%d3
+        SolverVecC%d2 = spray%d2
+        SolverVecC%dm = spray%dm
+        SolverVecC%Td = spray%Td
+        SolverVecC%Tg = spray%Tg
+        SolverVecC%b = spray%b
 
-        SolverVecC%omega_ent = SolverVecB%omega_ent
-        SolverVecC%omega_vap = SolverVecB%omega_vap
-        SolverVecC%omega_vapdm = SolverVecB%omega_vapdm
-        SolverVecC%omega_vapd2 = SolverVecB%omega_vapd2
-        SolverVecC%omega_vapd3 = SolverVecB%omega_vapd3
-        SolverVecC%f_drag = SolverVecB%f_drag
-        SolverVecC%omega_bre1 = SolverVecB%omega_bre1
-        SolverVecC%omega_bre2 = SolverVecB%omega_bre2
-        SolverVecC%omega_bre3 = SolverVecB%omega_bre3
-        SolverVecC%omega_T = SolverVecB%omega_T
-        SolverVecC%solver = SolverVecB%solver
+        SolverVecC%omega_ent = spray%omega_ent
+        SolverVecC%omega_vap = spray%omega_vap
+        SolverVecC%omega_vapdm = spray%omega_vapdm
+        SolverVecC%omega_vapd2 = spray%omega_vapd2
+        SolverVecC%omega_vapd3 = spray%omega_vapd3
+        SolverVecC%f_drag = spray%f_drag
+        SolverVecC%omega_bre1 = spray%omega_bre1
+        SolverVecC%omega_bre2 = spray%omega_bre2
+        SolverVecC%omega_bre3 = spray%omega_bre3
+        SolverVecC%omega_T = spray%omega_T
+        SolverVecC%solver = spray%solver
 
      ELSE IF (spray%solver%rk%niter == 4) THEN
 
-        SolverVecD%z = SolverVecC%z
-        SolverVecD%rho = SolverVecC%rho
-        SolverVecD%Y_l = SolverVecC%Y_l
-        SolverVecD%Y_v = SolverVecC%Y_v
-        SolverVecD%Y_a = SolverVecC%Y_a
-        SolverVecD%Y_g = SolverVecC%Y_g
-        SolverVecD%u_l = SolverVecC%u_l
-        SolverVecD%u_g = SolverVecC%u_g
-        SolverVecD%d3 = SolverVecC%d3
-        SolverVecD%d2 = SolverVecC%d2
-        SolverVecD%dm = SolverVecC%dm
-        SolverVecD%Td = SolverVecC%Td
-        SolverVecD%Tg = SolverVecC%Tg
-        SolverVecD%b = SolverVecC%b
+        SolverVecD%z = spray%z
+        SolverVecD%rho = spray%rho
+        SolverVecD%Y_l = spray%Y_l
+        SolverVecD%Y_v = spray%Y_v
+        SolverVecD%Y_a = spray%Y_a
+        SolverVecD%Y_g = spray%Y_g
+        SolverVecD%u_l = spray%u_l
+        SolverVecD%u_g = spray%u_g
+        SolverVecD%d3 = spray%d3
+        SolverVecD%d2 = spray%d2
+        SolverVecD%dm = spray%dm
+        SolverVecD%Td = spray%Td
+        SolverVecD%Tg = spray%Tg
+        SolverVecD%b = spray%b
 
-        SolverVecD%omega_ent = SolverVecC%omega_ent
-        SolverVecD%omega_vap = SolverVecC%omega_vap
-        SolverVecD%omega_vapdm = SolverVecC%omega_vapdm
-        SolverVecD%omega_vapd2 = SolverVecC%omega_vapd2
-        SolverVecD%omega_vapd3 = SolverVecC%omega_vapd3
-        SolverVecD%f_drag = SolverVecC%f_drag
-        SolverVecD%omega_bre1 = SolverVecC%omega_bre1
-        SolverVecD%omega_bre2 = SolverVecC%omega_bre2
-        SolverVecD%omega_bre3 = SolverVecC%omega_bre3
-        SolverVecD%omega_T = SolverVecC%omega_T
-        SolverVecD%solver = SolverVecC%solver
+        SolverVecD%omega_ent = spray%omega_ent
+        SolverVecD%omega_vap = spray%omega_vap
+        SolverVecD%omega_vapdm = spray%omega_vapdm
+        SolverVecD%omega_vapd2 = spray%omega_vapd2
+        SolverVecD%omega_vapd3 = spray%omega_vapd3
+        SolverVecD%f_drag = spray%f_drag
+        SolverVecD%omega_bre1 = spray%omega_bre1
+        SolverVecD%omega_bre2 = spray%omega_bre2
+        SolverVecD%omega_bre3 = spray%omega_bre3
+        SolverVecD%omega_T = spray%omega_T
+        SolverVecD%solver = spray%solver
 
 
      END IF

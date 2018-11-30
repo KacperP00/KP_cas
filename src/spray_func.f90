@@ -223,7 +223,7 @@ contains
 
           call breakupModel(spray)
 
-          call evaporationModel(spray)
+          call evaporationModelOld(spray)
           
           ! Store spray variables in SolverVec
           call assign_SolverVec(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
@@ -279,12 +279,18 @@ contains
        
         end do
 
+       !print *, SolverVecB%solver%W(1,1),SolverVecB%solver%W(2,1),SolverVecB%solver%W(3,1),SolverVecB%solver%W(4,1),SolverVecB%solver%W(5,1),SolverVecB%solver%W(6,1),SolverVecB%solver%W(7,1),SolverVecB%solver%W(8,1),SolverVecB%solver%W(9,1)
+
        spray%step = spray%step + 1
 
        ! Compute Penetration Lengths
        call getPenetration(spray,spray%step)
 
        if (mod(spray%step,spray%outfreq) == 0) call write_output(spray,spray%step,spray%ndtime)
+
+       if (spray%step == 999) then
+          print *, "DEBUG: Stop on index 999"
+       end if
 
     end do
 
@@ -1198,11 +1204,12 @@ contains
     end function pinv
   end subroutine maximumEntropyFormalism
 
-  subroutine updateFlowVariables_org(spray)
+  subroutine updateFlowVariables(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
     implicit none
 
     ! ---------------------------------
     type(spray_t), pointer, intent(inout) :: spray
+    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
 
     ! ---------------------------------
     type(pc_t), pointer :: pc_l
@@ -1217,7 +1224,7 @@ contains
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
     u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
     DRv => spray%DRv; DRa => spray%DRa
-    W => spray%solver%W
+    W => SolverVecB%solver%W
 
     T_high = spray%NBP/spray%T_fuel
     T_low = spray%MP/spray%T_fuel
@@ -1282,9 +1289,9 @@ contains
 
     spray%Tg = spray%T_a/spray%T_fuel
 
-  end subroutine updateFlowVariables_org
+  end subroutine updateFlowVariables
 
-  subroutine updateFlowVariables(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine updateFlowVariables_try(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
     implicit none
 
     ! ---------------------------------
@@ -1372,7 +1379,7 @@ contains
 
     spray%Tg = spray%T_a/spray%T_fuel
 
-  end subroutine updateFlowVariables
+  end subroutine updateFlowVariables_try
 
   subroutine updateFlowVariablesOld(spray)
     implicit none
@@ -2578,7 +2585,7 @@ contains
     !rowfmth = '(A,A,A,A,A,A,A,A,A,A,A,A)'
     rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
                ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
-               ES15.5E3  ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
+               ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
                ES15.5E3, ES15.5E3, ES15.5E3)"
 
     !write(100,fmt=rowfmth) 'z,', 'rho,', 'Y_l,', 'Y_v,', 'Y_a,', 'Y_g,', 'u_l,', 'u_g,', 'dm,', 'd2,', 'd3,', 'Td,', 'b'

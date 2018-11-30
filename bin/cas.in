@@ -3,7 +3,7 @@
 ! Grid and numerical parameters
 Length : 800.0
 Number of grid points : 401
-Maximum CFL : 0.1
+Maximum CFL : 0.2
 
 Maximum time : 1.0e-3
 
@@ -47,11 +47,11 @@ Compressibility factor : 1.0
 ! Spray parameters
 Initial DSD : Rosin-Rammler
 Number of diameter classes : 200
-!Initial Dm : 0.0093 
-!Initial D2 : 1.12e-4
-Spray half-cone angle model : Hiroyasu-Arai
+Initial Dm : 0.0093 
+Initial D2 : 1.12e-4
+Spray half-cone angle model : Constant
 !C_theta : 1.0
-!Spray half-cone angle : 10.0
+Spray half-cone angle : 10.0
 !Tangent of spray half-cone angle : 0.165
 
 ! Injection rate profile, a comma-separated file

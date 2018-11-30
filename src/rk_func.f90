@@ -262,7 +262,7 @@ contains
           write(*,*) '================================================================'
        !end if
 
-       solver%stage = 1
+       solver%stage = 4
        call allocate_rk(solver)
 
        solver%alpha(1) =  0.0_WP
