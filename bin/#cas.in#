@@ -58,10 +58,10 @@ Spray half-cone angle : 10.0
 !ROI profile : roi.txt
 
 ! RK solver parameters
-RK scheme : RK-44
+RK scheme : 1
 
 ! Convective scheme
-!Conv scheme : WENO5
+Conv scheme : WENO5
 
 ! Output
 Data File : data_dsd_2d.out
