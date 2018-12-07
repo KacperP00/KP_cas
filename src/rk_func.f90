@@ -44,6 +44,12 @@ contains
        solver%scheme = 'Wray-33'
     case ('shu33','shu-33','tvd33','tvd-33')
        solver%scheme = 'Shu-33'
+    case ('rk22','RK-22')
+       solver%scheme = 'RungeKutta-22'
+    case ('rk33','RK-33')
+       solver%scheme = 'RungeKutta-33'
+    case ('rk44','RK-44')
+       solver%scheme = 'RungeKutta-44'
     end select
 
     select case (trim(solver%scheme))
@@ -262,8 +268,55 @@ contains
           write(*,*) '================================================================'
        !end if
 
-       solver%stage = 4
+       solver%stage = 1
        call allocate_rk(solver)
+
+       solver%alpha(1) =  0.0_WP
+       solver%beta(1) = 1.0_WP
+       solver%dt_ratio(1) = 0.0_WP
+
+
+    case ('RungeKutta-22')
+       !if (sd%irank == sd%iroot) then
+       write(*,*) '================================================================'
+       write(*,*) 'The 2nd. order Runge-Kutta scheme for time advancement...'
+       write(*,*) ''
+       write(*,*) '================================================================'
+       !end if
+
+       solver%stage = 2
+       call allocate_rk(solver)
+
+       solver%alpha(1) =  0.0_WP
+       solver%beta(1) = 1.0_WP
+       solver%dt_ratio(1) = 0.0_WP
+
+    case ('RungeKutta-33')
+       !if (sd%irank == sd%iroot) then
+       write(*,*) '================================================================'
+       write(*,*) 'The 3rd. order Runge-Kutta scheme for time advancement...'
+       write(*,*) ''
+       write(*,*) '================================================================'
+       !end if
+
+       solver%stage = 3
+       call allocate_rk(solver)
+
+       solver%alpha(1) =  0.0_WP
+       solver%beta(1) = 1.0_WP
+       solver%dt_ratio(1) = 0.0_WP
+
+    case ('RungeKutta-44')
+       !if (sd%irank == sd%iroot) then
+       write(*,*) '================================================================'
+       write(*,*) 'The 4th. order Runge-Kutta scheme for time advancement...'
+       write(*,*) ''
+       write(*,*) '================================================================'
+       !end if
+
+       solver%stage = 4
+
+     call allocate_rk(solver)
 
        solver%alpha(1) =  0.0_WP
        solver%beta(1) = 1.0_WP

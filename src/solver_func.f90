@@ -1034,7 +1034,7 @@ contains
     integer, pointer :: kmino, kmaxo, kmin, kmax
 
 
-    Scheme = 4
+    !Scheme = 4
 
 
     !IF (MOD(kk, 2) .NE. 0) THEN
@@ -1060,7 +1060,7 @@ contains
     ! First Order Schemes
     IF (rks%niter == 1) THEN
 
-       IF (Scheme .NE. 4) THEN
+       IF (spray%solver%rk%stage .NE. 4) THEN
 
           do k = kmin,kmax
 
@@ -1083,7 +1083,7 @@ contains
      ! Second Order Schemes
     ELSE IF (rks%niter == 2) THEN
 
-       IF (Scheme == 2) THEN
+       IF (spray%solver%rk%stage == 2) THEN
           do k = kmin,kmax
 
              !SolverVecB%solver%rk%RK(:,k) = alpha(rks%niter)*SolverVecA%solver%W(:,k) + beta(rks%niter)*SolverVecB%solver%W(:,k) + delta(rks%niter)*SolverVecB%solver%Res(:,k)
@@ -1092,7 +1092,7 @@ contains
 
           end do
 
-       ELSE IF (Scheme == 3) THEN
+       ELSE IF (spray%solver%rk%stage == 3) THEN
 
           do k = kmin,kmax
 
@@ -1102,10 +1102,10 @@ contains
 
           end do
 
-       ELSE IF (Scheme == 4) THEN
+       ELSE IF (spray%solver%rk%stage == 4) THEN
 
           do k = kmin,kmax
-             SolverVecC%solver%W(:,k) = 649.0_WP/1600.0_WP*SolverVecA%solver%W(:,k) + 10890423.0_WP/25193600.0_WP*SolverVecA%solver%Res(:,k)+ 951.0_WP/1600.0_WP*SolverVecB%solver%W(:,k) + 5000.0_WP/7873.0_WP*SolverVecB%solver%Res(:,k) 
+             SolverVecC%solver%W(:,k) = 649.0_WP/1600.0_WP*SolverVecA%solver%W(:,k) - 10890423.0_WP/25193600.0_WP*SolverVecA%solver%Res(:,k)+ 951.0_WP/1600.0_WP*SolverVecB%solver%W(:,k) + 5000.0_WP/7873.0_WP*SolverVecB%solver%Res(:,k) 
           end do
 
        END IF
@@ -1113,12 +1113,12 @@ contains
        ! Third Order Schemes
     ELSE IF (rks%niter == 3) THEN
 
-       IF (Scheme == 3) THEN
+       IF (spray%solver%rk%stage == 3) THEN
           do k = kmin,kmax
-             SolverVecB%solver%W(:,k) = 1.0_WP/3.0_WP*SolverVecA%solver%W(:,k) + 2.0_WP/3.0_WP*SolverVecB%solver%W(:,k) + 2.0_WP/3.0_WP*SolverVecB%solver%Res(:,k)
+             SolverVecB%solver%W(:,k) = 1.0_WP/3.0_WP*SolverVecA%solver%W(:,k) + 2.0_WP/3.0_WP*SolverVecC%solver%W(:,k) + 2.0_WP/3.0_WP*SolverVecC%solver%Res(:,k)
           end do
 
-       ELSE IF (Scheme == 4) THEN
+       ELSE IF (spray%solver%rk%stage == 4) THEN
 
           do k = kmin,kmax
              !SolverVecB%solver%rk%RK(:,k) = alpha(rks%niter)*SolverVecA%solver%W(:,k) + beta(rks%niter)*SolverVecB%solver%W(:,k) + delta(rks%niter)*SolverVecB%solver%Res(:,k)
@@ -1130,7 +1130,7 @@ contains
        ! Fourth Order Schemes
     ELSE IF (rks%niter == 4) THEN
 
-       IF (Scheme == 4) THEN
+       IF (spray%solver%rk%stage == 4) THEN
 
           do k = kmin,kmax
              !SolverVecB%solver%rk%RK(:,k) = alpha(rks%niter)*SolverVecA%solver%W(:,k) + beta(rks%niter)*SolverVecB%solver%W(:,k) + delta(rks%niter)*SolverVecB%solver%Res(:,k)

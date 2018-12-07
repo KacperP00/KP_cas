@@ -254,7 +254,7 @@ contains
     allocate(SolverVecA)
     allocate(SolverVecA%dz); SolverVecA%dz = -9999
     allocate(SolverVecA%nzo); SolverVecA%nzo = -9999
-
+    
     SolverVecA%dz = spray%Lz/(spray%Nz-1)
     SolverVecA%nzo = spray%Nz+6
     
@@ -287,6 +287,8 @@ contains
 
     allocate(SolverVecA%solver)
 
+    !call allocate_solver(SolverVecA%solver,spray%nzo)
+
     allocate(SolverVecA%solver%rk)
 
     allocate(SolverVecA%solver%nr)
@@ -300,7 +302,7 @@ contains
     allocate(SolverVecB)
     allocate(SolverVecB%dz); SolverVecB%dz = -9999
     allocate(SolverVecB%nzo); SolverVecB%nzo = -9999
-
+ 
     SolverVecB%dz = spray%Lz/(spray%Nz-1)
     SolverVecB%nzo = spray%Nz+6
     
@@ -331,6 +333,8 @@ contains
     allocate(SolverVecB%omega_T(SolverVecB%nzo)); SolverVecB%omega_T = -9999.0_WP
 
     allocate(SolverVecB%solver)
+
+    !call allocate_solver(SolverVecB%solver,spray%nzo)
 
     allocate(SolverVecB%solver%rk)
 
@@ -376,6 +380,8 @@ contains
 
     allocate(SolverVecC%solver)
 
+    !call allocate_solver(SolverVecC%solver,spray%nzo)
+
     allocate(SolverVecC%solver%rk)
 
     allocate(SolverVecC%solver%nr)
@@ -419,6 +425,8 @@ contains
     allocate(SolverVecD%omega_T(SolverVecD%nzo)); SolverVecD%omega_T = -9999.0_WP
 
     allocate(SolverVecD%solver)
+
+    !call allocate_solver(SolverVecD%solver,spray%nzo)
 
     allocate(SolverVecD%solver%rk)
 
@@ -469,7 +477,7 @@ contains
         SolverVecA%omega_bre2 = spray%omega_bre2
         SolverVecA%omega_bre3 = spray%omega_bre3
         SolverVecA%omega_T = spray%omega_T
-        SolverVecA%solver = spray%solver
+        !SolverVecA%solver = spray%solver
 
      ELSE IF (spray%solver%rk%niter == 2) THEN
 
@@ -498,7 +506,7 @@ contains
         SolverVecB%omega_bre2 = spray%omega_bre2
         SolverVecB%omega_bre3 = spray%omega_bre3
         SolverVecB%omega_T = spray%omega_T
-        SolverVecB%solver = spray%solver
+        !SolverVecB%solver = spray%solver
 
      ELSE IF (spray%solver%rk%niter == 3) THEN
 
@@ -527,7 +535,7 @@ contains
         SolverVecC%omega_bre2 = spray%omega_bre2
         SolverVecC%omega_bre3 = spray%omega_bre3
         SolverVecC%omega_T = spray%omega_T
-        SolverVecC%solver = spray%solver
+        !SolverVecC%solver = spray%solver
 
      ELSE IF (spray%solver%rk%niter == 4) THEN
 
@@ -556,7 +564,7 @@ contains
         SolverVecD%omega_bre2 = spray%omega_bre2
         SolverVecD%omega_bre3 = spray%omega_bre3
         SolverVecD%omega_T = spray%omega_T
-        SolverVecD%solver = spray%solver
+        !SolverVecD%solver = spray%solver
 
 
      END IF

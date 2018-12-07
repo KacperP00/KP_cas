@@ -147,7 +147,8 @@ contains
     ! Compute initial droplet size distribution
     call compute_DSD(spray)
 
-    call computeTimeStep(spray)
+    !call computeTimeStep(spray)
+    spray%dt = 0.02_WP
 
     ! Post processing
     allocate(spray%time(floor(spray%ndftime/(spray%dt))+10)); spray%time = 0.0_WP
@@ -207,11 +208,12 @@ contains
 
           spray%solver%rk%niter = niter
 
-          ! Compute time step
-          call computeTimeStep(spray)
 
           ! Apply BCs
           call applyBC(spray)
+
+          ! Compute time step
+          call computeTimeStep(spray)
 
           ! Compute DSD
           call compute_DSD(spray)
@@ -273,12 +275,12 @@ contains
 
           ! Update varying Non-dimensional parameters
           call compute_varNonDparams(spray)
-
-          ! Advance time 
-          call advanceTime(spray)
        
         end do
 
+        ! Advance time 
+          call advanceTime(spray)
+        
        !print *, SolverVecB%solver%W(1,1),SolverVecB%solver%W(2,1),SolverVecB%solver%W(3,1),SolverVecB%solver%W(4,1),SolverVecB%solver%W(5,1),SolverVecB%solver%W(6,1),SolverVecB%solver%W(7,1),SolverVecB%solver%W(8,1),SolverVecB%solver%W(9,1)
 
        spray%step = spray%step + 1
@@ -2313,12 +2315,27 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
+    integer :: k
+    real(WP) :: maxU, maxU_step
 
     spray%CFL = spray%MaxCFL
 
-    spray%dt = spray%CFL*spray%dz
+    !spray%dt = spray%CFL*spray%dz
 
-    if (spray%step < 100) spray%dt = 0.1_WP*spray%dt
+    maxU = DMAX1(DABS(spray%u_l(1)),DABS(spray%u_g(1)))
+
+    do k = 1,spray%kmax
+       
+       maxU_step = DMAX1(DABS(spray%u_l(k)),DABS(spray%u_g(k)))
+       if (maxU_step > maxU) then
+          maxU = maxU_step
+       end if
+
+    end do
+
+    spray%dt = spray%CFL*spray%dz/maxU
+
+    !if (spray%step < 100) spray%dt = 0.1_WP*spray%dt
 
     !if (spray%ndtime > 0.15e-3/spray%tau .and. spray%ndtime < 0.25e-3/spray%tau ) spray%dt = 0.1_WP*spray%dt
 
