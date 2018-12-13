@@ -27,19 +27,18 @@ contains
 
        ! Compute Residual
        call init_weno5(spray)
-    
+
     case default
 
     end select
 
   end subroutine solver_init
 
-  subroutine solver_run(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine solver_run(spray)
     implicit none
 
     ! ---------------------------------
     type(spray_t), pointer, intent(inout) :: spray
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
 
     ! ---------------------------------
 
@@ -47,24 +46,24 @@ contains
     case ('UPWIND1')
 
        ! Compute Residual
-       call computeResidual_UPWIND1(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)       
-       
+       call computeResidual_UPWIND1(spray)       
+
     case ('LF')
 
        ! Compute Residual
-       call computeResidual_LF(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+       call computeResidual_LF(spray)
 
     case ('WENO5')
 
        ! Compute Residual
-       call computeResidual_WENO5(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
-    
+       call computeResidual_WENO5(spray)
+
     case default
 
     end select
 
     ! Update solution
-    call updateSolution(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+    call updateSolution(spray)
 
   end subroutine solver_run
 
@@ -121,18 +120,18 @@ contains
     solver%S1_p = 0.0_WP; solver%S1_m = 0.0_WP
     solver%S2_p = 0.0_WP; solver%S2_m = 0.0_WP
 
-    solver%S0_p(-1) = real( 1.0/3.0,WP); solver%S0_p( 0) = real(5.0/6.0,WP); solver%S0_p(+1) = real(-1.0/6.0,WP)
-    solver%S0_m(-2) = real(-1.0/6.0,WP); solver%S0_m(-1) = real(5.0/6.0,WP); solver%S0_m( 0) = real( 1.0/3.0,WP)
+    solver%S0_p(-1) = real( 1.0/3.0,WP); solver%S0_p( 0) = real(5.0/6.0,WP);  solver%S0_p(+1) = real(-1.0/6.0,WP)
+    solver%S0_m(-2) = real(-1.0/6.0,WP); solver%S0_m(-1) = real(5.0/6.0,WP);  solver%S0_m( 0) = real( 1.0/3.0,WP)
 
-    solver%S1_p(-2) = real(-1.0/6.0,WP); solver%S1_p(-1) = real(5.0/6.0,WP); solver%S1_p( 0) = real( 1.0/3.0,WP)
-    solver%S1_m(-1) = real( 1.0/3.0,WP); solver%S1_m( 0) = real(5.0/6.0,WP); solver%S1_m(+1) = real(-1.0/6.0,WP)
+    solver%S1_p(-2) = real(-1.0/6.0,WP); solver%S1_p(-1) = real(5.0/6.0,WP);  solver%S1_p( 0) = real( 1.0/3.0,WP)
+    solver%S1_m(-1) = real( 1.0/3.0,WP); solver%S1_m( 0) = real(5.0/6.0,WP);  solver%S1_m(+1) = real(-1.0/6.0,WP)
 
     solver%S2_p(-3) = real( 1.0/3.0,WP); solver%S2_p(-2) = real(-7.0/6.0,WP); solver%S2_p(-1) = real(11.0/6.0,WP)
     solver%S2_m( 0) = real(11.0/6.0,WP); solver%S2_m(+1) = real(-7.0/6.0,WP); solver%S2_m(+2) = real( 1.0/3.0,WP)
 
     ! Optimal weights
     solver%a0 = 0.3_WP; solver%a1 = 0.6_WP; solver%a2 = 0.1_WP
-      
+
   end subroutine init_weno5
 
   subroutine computeWeno5Coeff(spray)
@@ -142,85 +141,85 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
-    type(solver_t), pointer :: solver=>null()
+    type(solver_t), pointer :: solver => null()
     integer :: i
     real(WP) :: alpha,r,c, a0, a1, a2
     real(WP), parameter :: epsilon = 1.0e-6_WP
     real(WP) :: ISa, ISb, IS0_p, IS1_p, IS2_p,IS0_m, IS1_m, IS2_m, sum_inv
     real(WP), dimension(:), pointer :: F_p=>null(), F_m=>null(), &
-                                       S0_p=>null(), S1_p=>null(), S2_p=>null(), &
-                                       S0_m=>null(), S1_m=>null(), S2_m=>null()
+         S0_p=>null(), S1_p=>null(), S2_p=>null(), &
+         S0_m=>null(), S1_m=>null(), S2_m=>null()
     ! ---------------------------------
 
-     solver => spray%solver    
+    solver => spray%solver
 
-     F_p => solver%f_p; F_m => solver%f_m
-     S0_p => solver%S0_p; S1_p => solver%S1_p; S2_p => solver%S2_p
-     S0_m => solver%S0_m; S1_m => solver%S1_m; S2_m => solver%S2_m
+    F_p => solver%f_p; F_m => solver%f_m
+    S0_p => solver%S0_p; S1_p => solver%S1_p; S2_p => solver%S2_p
+    S0_m => solver%S0_m; S1_m => solver%S1_m; S2_m => solver%S2_m
 
-     ISa = real(13.0/12.0,WP); ISb = real(1.0/4.0,WP)
-  
-     ! compute WENO5 operators...
-     do i=spray%kmin,spray%kmax
+    ISa = real(13.0/12.0,WP); ISb = real(1.0/4.0,WP)
 
-        ! Direction x - U>0
-        ! compute smoothness indicators at regular faces...
-        IS0_p = ISa*(F_p(i+1)-2.0_WP*F_p(i)+F_p(i-1))**2 + ISb*(F_p(i+1)-4.0_WP*F_p(i)+3.0_WP*F_p(i-1))**2
-        IS1_p = ISa*(F_p(i-2)-2.0_WP*F_p(i-1)+F_p(i))**2 + ISb*(F_p(i-2)-F_p(i))**2
-        IS2_p = ISa*(F_p(i-3)-2.0_WP*F_p(i-2)+F_p(i-1))**2 + ISb*(F_p(i-3)-4.0_WP*F_p(i-2)+3.0_WP*F_p(i-1))**2
+    ! compute WENO5 operators...
+    do i=spray%kmin,spray%kmax
 
-        ! Compute new local weights
-        a0 = solver%a0/(epsilon+IS0_p)
-        a1 = solver%a1/(epsilon+IS1_p)
-        a2 = solver%a2/(epsilon+IS2_p)
-        
-        sum_inv = 1.0_WP/(a0+a1+a2)
-        solver%weno5p(:,i) = (a0*S0_p(:)+a1*S1_p(:)+a2*S2_p(:))*sum_inv
+       ! Direction x - U>0
+       ! compute smoothness indicators at regular faces...
+       IS0_p = ISa*(F_p(i+1)-2.0_WP*F_p(i  )+F_p(i-1))**2 + ISb*(F_p(i+1)-4.0_WP*F_p(i)+3.0_WP*F_p(i-1))**2
+       IS1_p = ISa*(F_p(i-2)-2.0_WP*F_p(i-1)+F_p(i  ))**2 + ISb*(F_p(i-2)-F_p(i))**2
+       IS2_p = ISa*(F_p(i-3)-2.0_WP*F_p(i-2)+F_p(i-1))**2 + ISb*(F_p(i-3)-4.0_WP*F_p(i-2)+3.0_WP*F_p(i-1))**2
 
-        ! Direction x - U<0
-        ! compute smoothness indicators at regular faces...
-        IS0_m = ISa*(F_m(i-2)-2.0_WP*F_m(i-1)+F_m(i))**2 + ISb*(F_m(i-2)-4.0_WP*F_m(i-1)+3.0_WP*F_m(i))**2
-        IS1_m = ISa*(F_m(i+1)-2.0_WP*F_m(i)+F_m(i-1))**2 + ISb*(F_m(i+1)-F_m(i-1))**2
-        IS2_m = ISa*(F_m(i+2)-2.0_WP*F_m(i+1)+F_m(i))**2 + ISb*(F_m(i+2)-4.0_WP*F_m(i+1)+3.0_WP*F_m(i))**2
+       ! Compute new local weights
+       a0 = solver%a0/(epsilon+IS0_p)
+       a1 = solver%a1/(epsilon+IS1_p)
+       a2 = solver%a2/(epsilon+IS2_p)
 
-        ! Compute new local weights
-        a0 = solver%a0/(epsilon+IS0_m)
-        a1 = solver%a1/(epsilon+IS1_m)
-        a2 = solver%a2/(epsilon+IS2_m)
-        sum_inv = 1.0_WP/(a0+a1+a2)
-        solver%weno5m(:,i) = (a0*S0_m(:)+a1*S1_m(:)+a2*S2_m(:))*sum_inv
+       sum_inv = 1.0_WP/(a0+a1+a2)
+       solver%weno5p(:,i) = (a0*S0_p(:)+a1*S1_p(:)+a2*S2_p(:))*sum_inv
 
-     end do
-   
-     ! apply boundary treatment to coefficients
-     ! order of scheme is reduced near boundary
-     ! to avoid large stencil size
-     call apply_weno5_bc()
+       ! Direction x - U<0
+       ! compute smoothness indicators at regular faces...
+       IS0_m = ISa*(F_m(i-2)-2.0_WP*F_m(i-1)+F_m(i  ))**2 + ISb*(F_m(i-2)-4.0_WP*F_m(i-1)+3.0_WP*F_m(i))**2
+       IS1_m = ISa*(F_m(i+1)-2.0_WP*F_m(i  )+F_m(i-1))**2 + ISb*(F_m(i+1)-F_m(i-1))**2
+       IS2_m = ISa*(F_m(i+2)-2.0_WP*F_m(i+1)+F_m(i  ))**2 + ISb*(F_m(i+2)-4.0_WP*F_m(i+1)+3.0_WP*F_m(i))**2
 
-   contains
-     
-     subroutine apply_weno5_bc()
-       implicit none
+       ! Compute new local weights
+       a0 = solver%a0/(epsilon+IS0_m)
+       a1 = solver%a1/(epsilon+IS1_m)
+       a2 = solver%a2/(epsilon+IS2_m)
+       sum_inv = 1.0_WP/(a0+a1+a2)
+       solver%weno5m(:,i) = (a0*S0_m(:)+a1*S1_m(:)+a2*S2_m(:))*sum_inv
 
-       ! Reduced to first order scheme at boundaries
-       ! Left boundary
-       solver%weno5p(: ,spray%kmino:spray%kmin-1) = 0.0_WP
-       solver%weno5p(-1,spray%kmino:spray%kmin-1) = 1.0_WP
+    end do
 
-       ! Right boundary
-       solver%weno5p(: ,spray%kmax+1:spray%kmaxo) = 0.0_WP
-       solver%weno5p(-1,spray%kmax+1:spray%kmaxo) = 1.0_WP
-       
-       ! Left boundary
-       solver%weno5m(:,spray%kmino:spray%kmin-1) = 0.0_WP
-       solver%weno5m(0,spray%kmino:spray%kmin-1) = 1.0_WP
+    ! apply boundary treatment to coefficients
+    ! order of scheme is reduced near boundary
+    ! to avoid large stencil size
+    call apply_weno5_bc()
 
-       ! Right boundary
-       solver%weno5m(:,spray%kmax+1:spray%kmaxo) = 0.0_WP
-       solver%weno5m(0,spray%kmax+1:spray%kmaxo) = 1.0_WP
+  contains
 
-     end subroutine apply_weno5_bc
-       
+    subroutine apply_weno5_bc()
+      implicit none
+
+      ! Reduced to first order scheme at boundaries
+      ! Left boundary
+      solver%weno5p(: ,spray%kmino:spray%kmin-1) = 0.0_WP
+      solver%weno5p(-1,spray%kmino:spray%kmin-1) = 1.0_WP
+
+      ! Right boundary
+      solver%weno5p(: ,spray%kmax+1:spray%kmaxo) = 0.0_WP
+      solver%weno5p(-1,spray%kmax+1:spray%kmaxo) = 1.0_WP
+
+      ! Left boundary
+      solver%weno5m(:,spray%kmino:spray%kmin-1) = 0.0_WP
+      solver%weno5m(0,spray%kmino:spray%kmin-1) = 1.0_WP
+
+      ! Right boundary
+      solver%weno5m(:,spray%kmax+1:spray%kmaxo) = 0.0_WP
+      solver%weno5m(0,spray%kmax+1:spray%kmaxo) = 1.0_WP
+
+    end subroutine apply_weno5_bc
+
   end subroutine computeWeno5Coeff
 
   subroutine computeWeno5Flux(spray)
@@ -230,16 +229,16 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
-    type(solver_t), pointer :: solver=>null()
+    type(solver_t), pointer :: solver => null()
     integer :: k
 
     solver => spray%solver
 
     solver%f_t(spray%kmino:spray%kmin) = solver%f_p(spray%kmino:spray%kmin) &
-                                       + solver%f_m(spray%kmino:spray%kmin)
+         + solver%f_m(spray%kmino:spray%kmin)
 
     solver%f_t(spray%kmax+1:spray%kmaxo) = solver%f_p(spray%kmax+1:spray%kmaxo)&
-                                         + solver%f_m(spray%kmax+1:spray%kmaxo)
+         + solver%f_m(spray%kmax+1:spray%kmaxo)
 
     do k=spray%kmin+1,spray%kmax
        solver%f_t(k) = sum(solver%weno5p(:,k)*solver%f_p(k-3:k+1)) &
@@ -248,44 +247,23 @@ contains
 
   end subroutine computeWeno5Flux
 
-  subroutine buildStateVector(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine buildStateVector(spray)
     implicit none
 
     ! ---------------------------------
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
     real(WP), dimension(:,:), pointer :: W=>null()
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
-                                       u_l=>null(), u_g=>null(), d2=>null(), d3=>null(), dm=>null(), &
-                                       Td=>null(), b=>null()
+         u_l=>null(), u_g=>null(), d2=>null(), d3=>null(), dm=>null(), &
+         Td=>null(), b=>null()
     real(WP), dimension(spray%nzo) :: b2
-    
-    IF (spray%solver%rk%niter == 1) THEN
-       rho => SolverVecA%rho; Y_l => SolverVecA%Y_l; Y_v => SolverVecA%Y_v; Y_a => SolverVecA%Y_a; Y_g => SolverVecA%Y_g
-       u_l => SolverVecA%u_l; u_g => SolverVecA%u_g; d3 => SolverVecA%d3; d2 => SolverVecA%d2; dm => SolverVecA%dm; Td => SolverVecA%Td; b => SolverVecA%b
 
-       W => SolverVecA%solver%W
-    ELSE IF (spray%solver%rk%niter == 2) THEN
-       rho => SolverVecB%rho; Y_l => SolverVecB%Y_l; Y_v => SolverVecB%Y_v; Y_a => SolverVecB%Y_a; Y_g => SolverVecB%Y_g
-       u_l => SolverVecB%u_l; u_g => SolverVecB%u_g; d3 => SolverVecB%d3; d2 => SolverVecB%d2; dm => SolverVecB%dm; Td => SolverVecB%Td; b => SolverVecB%b 
+    rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
 
-       W => SolverVecB%solver%W
-
-    ELSE IF (spray%solver%rk%niter == 3) THEN
-       rho => SolverVecC%rho; Y_l => SolverVecC%Y_l; Y_v => SolverVecC%Y_v; Y_a => SolverVecC%Y_a; Y_g => SolverVecC%Y_g
-       u_l => SolverVecC%u_l; u_g => SolverVecC%u_g; d3 => SolverVecC%d3; d2 => SolverVecC%d2; dm => SolverVecC%dm; Td => SolverVecC%Td; b => SolverVecC%b 
-
-       W => SolverVecC%solver%W
-
-    ELSE IF (spray%solver%rk%niter == 4) THEN
-       rho => SolverVecD%rho; Y_l => SolverVecD%Y_l; Y_v => SolverVecD%Y_v; Y_a => SolverVecD%Y_a; Y_g => SolverVecD%Y_g
-       u_l => SolverVecD%u_l; u_g => SolverVecD%u_g; d3 => SolverVecD%d3; d2 => SolverVecD%d2; dm => SolverVecD%dm; Td => SolverVecD%Td; b => SolverVecD%b 
-
-       W => SolverVecD%solver%W
-
-    END IF
+    W => spray%solver%W
 
     W = 0.0_WP
 
@@ -304,45 +282,24 @@ contains
 
   end subroutine buildStateVector
 
-  subroutine buildFluxVector(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine buildFluxVector(spray)
     implicit none
 
     ! ---------------------------------
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
     real(WP), dimension(:,:), pointer :: F=>null()
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
-                                       u_l=>null(), u_g=>null(), d3=>null(), d2=>null(), dm=>null(), &
-                                       Td=>null(), b=>null()
+         u_l=>null(), u_g=>null(), d3=>null(), d2=>null(), dm=>null(), &
+         Td=>null(), b=>null()
     real(WP), dimension(spray%nzo) :: b2
 
-    IF (spray%solver%rk%niter == 1) THEN
-       rho => SolverVecA%rho; Y_l => SolverVecA%Y_l; Y_v => SolverVecA%Y_v; Y_a => SolverVecA%Y_a; Y_g => SolverVecA%Y_g
-       u_l => SolverVecA%u_l; u_g => SolverVecA%u_g; d3 => SolverVecA%d3; d2 => SolverVecA%d2; dm => SolverVecA%dm; Td => SolverVecA%Td; b => SolverVecA%b
-       
-       F => SolverVecA%solver%F
-    ELSE IF (spray%solver%rk%niter == 2) THEN
-       rho => SolverVecB%rho; Y_l => SolverVecB%Y_l; Y_v => SolverVecB%Y_v; Y_a => SolverVecB%Y_a; Y_g => SolverVecB%Y_g
-       u_l => SolverVecB%u_l; u_g => SolverVecB%u_g; d3 => SolverVecB%d3; d2 => SolverVecB%d2; dm => SolverVecB%dm; Td => SolverVecB%Td; b => SolverVecB%b 
+    rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
 
-       F => SolverVecB%solver%F
+    F => spray%solver%F
 
-    ELSE IF (spray%solver%rk%niter == 3) THEN
-       rho => SolverVecC%rho; Y_l => SolverVecC%Y_l; Y_v => SolverVecC%Y_v; Y_a => SolverVecC%Y_a; Y_g => SolverVecC%Y_g
-       u_l => SolverVecC%u_l; u_g => SolverVecC%u_g; d3 => SolverVecC%d3; d2 => SolverVecC%d2; dm => SolverVecC%dm; Td => SolverVecC%Td; b => SolverVecC%b
-
-       F => SolverVecC%solver%F
-
-    ELSE IF (spray%solver%rk%niter == 4) THEN
-       rho => SolverVecD%rho; Y_l => SolverVecD%Y_l; Y_v => SolverVecD%Y_v; Y_a => SolverVecD%Y_a; Y_g => SolverVecD%Y_g
-       u_l => SolverVecD%u_l; u_g => SolverVecD%u_g; d3 => SolverVecD%d3; d2 => SolverVecD%d2; dm => SolverVecD%dm; Td => SolverVecD%Td; b => SolverVecD%b
-
-       F => SolverVecD%solver%F
-
-    END IF
-    
     Y_g = 1.0_WP - Y_l
 
     F = 0.0_WP
@@ -361,360 +318,29 @@ contains
 
   end subroutine buildFluxVector
 
-!!$  subroutine buildSourceVector(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
-!!$    implicit none
-!!$
-!!$    ! ---------------------------------
-!!$    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
-!!$    type(spray_t), pointer, intent(inout) :: spray
-!!$
-!!$    ! ---------------------------------
-!!$    real(WP), dimension(:,:), pointer :: W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null(), divc=>null()
-!!$    real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_g=>null(), alpha_l=>null(), &
-!!$                                       d2=>null(), d3=>null(), dm=>null(), Td=>null(), b=>null(), &
-!!$                                       omega_ent=>null(), omega_vap=>null(), omega_vapdm=>null(), &
-!!$                                       omega_vapd2=>null(), omega_vapd3=>null(), f_drag=>null(), &
-!!$                                       omega_bre1=>null(), omega_bre2=>null(), omega_bre3=>null(), &
-!!$                                       omega_T=>null()
-!!$    real(WP), dimension(spray%nzo) :: b2
-!!$    type(solver_t), pointer :: solver
-!!$    integer, pointer :: kmino, kmaxo, kmin, kmax
-!!$    integer :: i, k
-!!$
-!!$    IF (spray%solver%rk%niter ==  1) THEN
-!!$
-!!$       solver => SolverVecA%solver
-!!$
-!!$       W => SolverVecA%solver%W; Wold => SolverVecA%solver%Wold; 
-!!$       F => SolverVecA%solver%F; S => SolverVecA%solver%S
-!!$
-!!$       u_l => SolverVecA%u_l; u_g => SolverVecA%u_g; alpha_l => SolverVecA%solver%alpha_l; alpha_g => SolverVecA%solver%alpha_g
-!!$
-!!$    ELSE IF (spray%solver%rk%niter ==  2) THEN
-!!$
-!!$       solver => SolverVecB%solver
-!!$
-!!$       W => SolverVecB%solver%W; Wold => SolverVecB%solver%Wold; 
-!!$       F => SolverVecB%solver%F; S => SolverVecB%solver%S
-!!$
-!!$       u_l => SolverVecB%u_l; u_g => SolverVecB%u_g; alpha_l => SolverVecB%solver%alpha_l; alpha_g => SolverVecB%solver%alpha_g
-!!$
-!!$    ELSE IF (spray%solver%rk%niter ==  3) THEN
-!!$
-!!$       solver => SolverVecC%solver
-!!$
-!!$       W => SolverVecC%solver%W; Wold => SolverVecC%solver%Wold; 
-!!$       F => SolverVecC%solver%F; S => SolverVecC%solver%S
-!!$
-!!$       u_l => SolverVecC%u_l; u_g => SolverVecC%u_g; alpha_l => SolverVecC%solver%alpha_l; alpha_g => SolverVecC%solver%alpha_g
-!!$
-!!$    ELSE IF (spray%solver%rk%niter ==  4) THEN
-!!$
-!!$       solver => SolverVecD%solver
-!!$
-!!$       W => SolverVecD%solver%W; Wold => SolverVecD%solver%Wold; 
-!!$       F => SolverVecD%solver%F; S => SolverVecD%solver%S
-!!$
-!!$       u_l => SolverVecD%u_l; u_g => SolverVecD%u_g; alpha_l => SolverVecD%solver%alpha_l; alpha_g => SolverVecD%solver%alpha_g
-!!$
-!!$    END IF
-!!$
-!!$    divc => spray%solver%divc; 
-!!$    kmin => spray%kmin; kmax => spray%kmax
-!!$    kmino => spray%kmino; kmaxo => spray%kmaxo
-!!$
-!!$
-!!$    do i = 1,3
-!!$
-!!$       do k = kmin,kmax
-!!$       
-!!$          Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
-!!$
-!!$       end do
-!!$
-!!$    end do
-!!$
-!!$   do i = 4,9
-!!$
-!!$      do k = kmin,kmax
-!!$      
-!!$         Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
-!!$
-!!$      end do
-!!$
-!!$   end do
-!!$
-!!$   Wold = W
-!!$
-!!$  end subroutine buildSourceVector
-
-!!$  subroutine computeResidual_LF(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
-!!$    implicit none
-!!$
-!!$    ! ---------------------------------
-!!$    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
-!!$    type(spray_t), pointer, intent(inout) :: spray
-!!$
-!!$    ! ---------------------------------
-!!$    integer :: i, k
-!!$    integer, pointer :: kmin, kmax, kmino, kmaxo
-!!$    real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
-!!$    real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
-!!$                                       Flux=>null()
-!!$    real(WP) :: a_l, a_r, FL, FR
-!!$
-!!$    kmin => spray%kmin; kmax => spray%kmax
-!!$    kmino => spray%kmino; kmaxo => spray%kmaxo
-!!$    divc => spray%solver%divc;
-!!$    
-!!$
-!!$    if (spray%solver%rk%niter == 1) then
-!!$
-!!$       W => SolverVecA%solver%W; Wold => SolverVecA%solver%Wold; 
-!!$       F => SolverVecA%solver%F; S => SolverVecA%solver%S
-!!$
-!!$       u_l => SolverVecA%u_l; u_g => SolverVecA%u_g; alpha_l => SolverVecA%solver%alpha_l; alpha_g => SolverVecA%solver%alpha_g
-!!$       Flux => SolverVecA%solver%Flux; Res => SolverVecA%solver%Res
-!!$
-!!$    else if (spray%solver%rk%niter ==  2) then
-!!$
-!!$       W => SolverVecB%solver%W; Wold => SolverVecB%solver%Wold; 
-!!$       F => SolverVecB%solver%F; S => SolverVecB%solver%S
-!!$
-!!$       u_l => SolverVecB%u_l; u_g => SolverVecB%u_g; alpha_l => SolverVecB%solver%alpha_l; alpha_g => SolverVecB%solver%alpha_g
-!!$       Flux => SolverVecB%solver%Flux; Res => SolverVecB%solver%Res
-!!$
-!!$    else if (spray%solver%rk%niter ==  3) then
-!!$
-!!$       W => SolverVecC%solver%W; Wold => SolverVecC%solver%Wold; 
-!!$       F => SolverVecC%solver%F; S => SolverVecC%solver%S
-!!$
-!!$       u_l => SolverVecC%u_l; u_g => SolverVecC%u_g; alpha_l => SolverVecC%solver%alpha_l; alpha_g => SolverVecC%solver%alpha_g
-!!$       Flux => SolverVecC%solver%Flux; Res => SolverVecC%solver%Res 
-!!$
-!!$    else if (spray%solver%rk%niter ==  4) then
-!!$
-!!$       W => SolverVecD%solver%W; Wold => SolverVecD%solver%Wold; 
-!!$       F => SolverVecD%solver%F; S => SolverVecD%solver%S
-!!$
-!!$       u_l => SolverVecD%u_l; u_g => SolverVecD%u_g; alpha_l => SolverVecD%solver%alpha_l; alpha_g => SolverVecD%solver%alpha_g
-!!$       Flux => SolverVecD%solver%Flux; Res => SolverVecD%solver%Res
-!!$
-!!$    end if
-!!$    
-!!$    
-!!$
-!!$    do k=kmino+1,kmaxo
-!!$
-!!$       alpha_l(k) = max(abs(u_l(k-1)),abs(u_l(k))); !hx/dt;%max(abs(u_l(i-1)),abs(u_l(i)));
-!!$       alpha_g(k) = max(abs(u_g(k-1)),abs(u_g(k))); !hx/dt;%max(abs(u_l(i)),abs(u_l(i+1)));
-!!$      
-!!$    end do
-!!$
-!!$    do i = 1,3
-!!$
-!!$       Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_g*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
-!!$
-!!$       do k = kmin,kmax
-!!$       
-!!$          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
-!!$
-!!$       end do
-!!$
-!!$    end do
-!!$
-!!$    do i = 4,9
-!!$
-!!$       Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_l*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
-!!$       
-!!$       do k = kmin,kmax
-!!$       
-!!$          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
-!!$
-!!$       end do
-!!$
-!!$    end do
-!!$
-!!$    Wold = W
-!!$
-!!$  end subroutine computeResidual_LF
-!!$
-!!$  subroutine computeResidual_WENO5(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
-!!$    implicit none
-!!$
-!!$    ! ---------------------------------
-!!$    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
-!!$    type(spray_t), pointer, intent(inout) :: spray
-!!$
-!!$    ! ---------------------------------
-!!$    integer :: i, k
-!!$    integer, pointer :: kmin, kmax, kmino, kmaxo
-!!$    real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
-!!$    real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
-!!$                                       Flux=>null()
-!!$    real(WP) :: a_l, a_r, FL, FR
-!!$    type(solver_t), pointer :: solver=>null()
-!!$
-!!$    IF (spray%solver%rk%niter ==  1) THEN
-!!$
-!!$       solver => SolverVecA%solver
-!!$       
-!!$       W => SolverVecA%solver%W; Wold => SolverVecA%solver%Wold; 
-!!$       F => SolverVecA%solver%F; S => SolverVecA%solver%S
-!!$
-!!$       u_l => SolverVecA%u_l; u_g => SolverVecA%u_g; alpha_l => SolverVecA%solver%alpha_l; alpha_g => SolverVecA%solver%alpha_g
-!!$       Flux => SolverVecA%solver%Flux; Res => SolverVecA%solver%Res
-!!$
-!!$    ELSE IF (spray%solver%rk%niter ==  2) THEN
-!!$
-!!$       solver => SolverVecB%solver
-!!$
-!!$       W => SolverVecB%solver%W; Wold => SolverVecB%solver%Wold; 
-!!$       F => SolverVecB%solver%F; S => SolverVecB%solver%S
-!!$
-!!$       u_l => SolverVecB%u_l; u_g => SolverVecB%u_g; alpha_l => SolverVecB%solver%alpha_l; alpha_g => SolverVecB%solver%alpha_g
-!!$       Flux => SolverVecB%solver%Flux; Res => SolverVecB%solver%Res
-!!$
-!!$    ELSE IF (spray%solver%rk%niter ==  3) THEN
-!!$       
-!!$       solver => SolverVecC%solver
-!!$
-!!$       W => SolverVecC%solver%W; Wold => SolverVecC%solver%Wold; 
-!!$       F => SolverVecC%solver%F; S => SolverVecC%solver%S
-!!$
-!!$       u_l => SolverVecC%u_l; u_g => SolverVecC%u_g; alpha_l => SolverVecC%solver%alpha_l; alpha_g => SolverVecC%solver%alpha_g
-!!$       Flux => SolverVecC%solver%Flux; Res => SolverVecC%solver%Res 
-!!$
-!!$    ELSE IF (spray%solver%rk%niter ==  4) THEN
-!!$
-!!$       solver => SolverVecD%solver
-!!$
-!!$       W => SolverVecD%solver%W; Wold => SolverVecD%solver%Wold; 
-!!$       F => SolverVecD%solver%F; S => SolverVecD%solver%S
-!!$
-!!$       u_l => SolverVecD%u_l; u_g => SolverVecD%u_g; alpha_l => SolverVecD%solver%alpha_l; alpha_g => SolverVecD%solver%alpha_g
-!!$       Flux => SolverVecD%solver%Flux; Res => SolverVecD%solver%Res
-!!$
-!!$    END IF
-!!$
-!!$    
-!!$    divc => spray%solver%divc;
-!!$    kmin => spray%kmin; kmax => spray%kmax
-!!$    kmino => spray%kmino; kmaxo => spray%kmaxo
-!!$
-!!$    ! Global LF splitting
-!!$    alpha_l = maxval(u_l); alpha_g = maxval(u_g)
-!!$
-!!$    do i = 1,3
-!!$
-!!$       solver%f_p = 0.5_WP*(F(i,:) + alpha_g*W(i,:))
-!!$       solver%f_m = 0.5_WP*(F(i,:) - alpha_g*W(i,:))
-!!$
-!!$       call computeWeno5Coeff(spray)
-!!$
-!!$       call computeWeno5Flux(spray)
-!!$
-!!$       !where(solver%f_t < 0.0_WP) solver%f_t = 0.0_WP
-!!$
-!!$       do k = kmin,kmax
-!!$       
-!!$          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k-1:k)) - S(i,k))
-!!$          !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
-!!$
-!!$       end do
-!!$
-!!$    end do
-!!$
-!!$    do i = 4,9
-!!$
-!!$       solver%f_p = 0.5_WP*(F(i,:) + alpha_l*W(i,:))
-!!$       solver%f_m = 0.5_WP*(F(i,:) - alpha_l*W(i,:))
-!!$
-!!$       call computeWeno5Coeff(spray)
-!!$
-!!$       call computeWeno5Flux(spray)
-!!$
-!!$       !where(solver%f_t < 0.0_WP) solver%f_t = 0.0_WP
-!!$       
-!!$       do k = kmin,kmax
-!!$       
-!!$          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k-1:k)) - S(i,k))
-!!$          !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
-!!$
-!!$       end do
-!!$
-!!$    end do
-!!$
-!!$    Wold = W
-!!$
-!!$  end subroutine computeResidual_WENO5
-
-  subroutine buildSourceVector(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine buildSourceVector(spray)
     implicit none
 
     ! ---------------------------------
     type(spray_t), pointer, intent(inout) :: spray
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
 
     ! ---------------------------------
     real(WP), dimension(:,:), pointer :: S=>null()
     real(WP), dimension(:), pointer :: u_l=>null(), d2=>null(), d3=>null(), dm=>null(), Td=>null(), b=>null(), &
-                                       omega_ent=>null(), omega_vap=>null(), omega_vapdm=>null(), &
-                                       omega_vapd2=>null(), omega_vapd3=>null(), f_drag=>null(), &
-                                       omega_bre1=>null(), omega_bre2=>null(), omega_bre3=>null(), &
-                                       omega_T=>null()
+         omega_ent=>null(), omega_vap=>null(), omega_vapdm=>null(), &
+         omega_vapd2=>null(), omega_vapd3=>null(), f_drag=>null(), &
+         omega_bre1=>null(), omega_bre2=>null(), omega_bre3=>null(), &
+         omega_T=>null()
     real(WP), dimension(spray%nzo) :: b2
 
-    !Scheme = 4
+    u_l => spray%u_l; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
 
+    omega_ent => spray%omega_ent; omega_vap => spray%omega_vap; omega_vapdm => spray%omega_vapdm; 
+    omega_vapd2 => spray%omega_vapd2; omega_vapd3 => spray%omega_vapd3; f_drag => spray%f_drag; 
+    omega_bre1 => spray%omega_bre1; omega_bre2 => spray%omega_bre2; omega_bre3 => spray%omega_bre3;
+    omega_T => spray%omega_T
 
-    IF (spray%solver%rk%niter ==  1) THEN
-
-       u_l => SolverVecA%u_l; d2 => SolverVecA%d2; dm => SolverVecA%dm; Td => SolverVecA%Td; b => SolverVecA%b
-
-       omega_ent => SolverVecA%omega_ent; omega_vap => SolverVecA%omega_vap; omega_vapdm => SolverVecA%omega_vapdm; 
-       omega_vapd2 => SolverVecA%omega_vapd2; omega_vapd3 => SolverVecA%omega_vapd3; f_drag => SolverVecA%f_drag; 
-       omega_bre1 => SolverVecA%omega_bre1; omega_bre2 => SolverVecA%omega_bre2; omega_bre3 => SolverVecA%omega_bre3;
-       omega_T => SolverVecA%omega_T
-
-       S => SolverVecA%solver%S 
-
-    ELSE IF (spray%solver%rk%niter ==  2) THEN
-
-       u_l => SolverVecB%u_l; d2 => SolverVecB%d2; dm => SolverVecB%dm; Td => SolverVecB%Td; b => SolverVecB%b
-
-       omega_ent => SolverVecB%omega_ent; omega_vap => SolverVecB%omega_vap; omega_vapdm => SolverVecB%omega_vapdm; 
-       omega_vapd2 => SolverVecB%omega_vapd2; omega_vapd3 => SolverVecB%omega_vapd3; f_drag => SolverVecB%f_drag; 
-       omega_bre1 => SolverVecB%omega_bre1; omega_bre2 => SolverVecB%omega_bre2; omega_bre3 => SolverVecB%omega_bre3;
-       omega_T => SolverVecB%omega_T
-
-       S => SolverVecB%solver%S
-
-    ELSE IF (spray%solver%rk%niter ==  3) THEN
-       
-       u_l => SolverVecC%u_l; d2 => SolverVecC%d2; dm => SolverVecC%dm; Td => SolverVecC%Td; b => SolverVecC%b
-
-       omega_ent => SolverVecC%omega_ent; omega_vap => SolverVecC%omega_vap; omega_vapdm => SolverVecC%omega_vapdm; 
-       omega_vapd2 => SolverVecC%omega_vapd2; omega_vapd3 => SolverVecC%omega_vapd3; f_drag => SolverVecC%f_drag; 
-       omega_bre1 => SolverVecC%omega_bre1; omega_bre2 => SolverVecC%omega_bre2; omega_bre3 => SolverVecC%omega_bre3;
-       omega_T => SolverVecC%omega_T
-
-       S => SolverVecC%solver%S
-
-    ELSE IF (spray%solver%rk%niter ==  4) THEN
-
-       u_l => SolverVecD%u_l; d2 => SolverVecD%d2; dm => SolverVecD%dm; Td => SolverVecD%Td; b => SolverVecD%b
-
-       omega_ent => SolverVecD%omega_ent; omega_vap => SolverVecD%omega_vap; omega_vapdm => SolverVecD%omega_vapdm; 
-       omega_vapd2 => SolverVecD%omega_vapd2; omega_vapd3 => SolverVecD%omega_vapd3; f_drag => SolverVecD%f_drag; 
-       omega_bre1 => SolverVecD%omega_bre1; omega_bre2 => SolverVecD%omega_bre2; omega_bre3 => SolverVecD%omega_bre3;
-       omega_T => SolverVecD%omega_T
-
-       S => SolverVecD%solver%S
-       
-       
-    END IF
-    
+    S => spray%solver%S
 
     S = 0.0_WP
 
@@ -732,11 +358,10 @@ contains
 
   end subroutine buildSourceVector
 
-  subroutine computeResidual_UPWIND1(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine computeResidual_UPWIND1(spray)
     implicit none
 
     ! ---------------------------------
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
@@ -744,60 +369,25 @@ contains
     integer, pointer :: kmin, kmax, kmino, kmaxo
     real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
     real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
-                                       Flux=>null()
+         Flux=>null()
     real(WP) :: a_l, a_r, FL, FR
     type(solver_t), pointer :: solver=>null()
 
-    IF (spray%solver%rk%niter ==  1) THEN
+    solver => spray%solver
 
-       solver => SolverVecA%solver
-
-       W => SolverVecA%solver%W; Wold => SolverVecA%solver%Wold; 
-       F => SolverVecA%solver%F; S => SolverVecA%solver%S
-
-       u_l => SolverVecA%u_l; u_g => SolverVecA%u_g; alpha_l => SolverVecA%solver%alpha_l; alpha_g => SolverVecA%solver%alpha_g
-       Flux => SolverVecA%solver%Flux; Res => SolverVecA%solver%Res
-
-    ELSE IF (spray%solver%rk%niter ==  2) THEN
-
-       solver => SolverVecB%solver
-
-       W => SolverVecB%solver%W; Wold => SolverVecB%solver%Wold; 
-       F => SolverVecB%solver%F; S => SolverVecB%solver%S
-
-       u_l => SolverVecB%u_l; u_g => SolverVecB%u_g; alpha_l => SolverVecB%solver%alpha_l; alpha_g => SolverVecB%solver%alpha_g
-       Flux => SolverVecB%solver%Flux; Res => SolverVecB%solver%Res
-
-    ELSE IF (spray%solver%rk%niter ==  3) THEN
-
-       solver => SolverVecC%solver
-
-       W => SolverVecC%solver%W; Wold => SolverVecC%solver%Wold; 
-       F => SolverVecC%solver%F; S => SolverVecC%solver%S
-
-       u_l => SolverVecC%u_l; u_g => SolverVecC%u_g; alpha_l => SolverVecC%solver%alpha_l; alpha_g => SolverVecC%solver%alpha_g
-
-    ELSE IF (spray%solver%rk%niter ==  4) THEN
-
-       solver => SolverVecD%solver
-
-       W => SolverVecD%solver%W; Wold => SolverVecD%solver%Wold; 
-       F => SolverVecD%solver%F; S => SolverVecD%solver%S
-
-       u_l => SolverVecD%u_l; u_g => SolverVecD%u_g; alpha_l => SolverVecD%solver%alpha_l; alpha_g => SolverVecD%solver%alpha_g
-
-    END IF
-
-
-    divc => spray%solver%divc; 
     kmin => spray%kmin; kmax => spray%kmax
     kmino => spray%kmino; kmaxo => spray%kmaxo
 
+    divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
+    F => spray%solver%F; S => spray%solver%S
+
+    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g
+    Flux => spray%solver%Flux; Res => spray%solver%Res
 
     do i = 1,3
 
        do k = kmin,kmax
-       
+
           Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -807,7 +397,7 @@ contains
     do i = 4,9
 
        do k = kmin,kmax
-       
+
           Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -818,11 +408,10 @@ contains
 
   end subroutine computeResidual_UPWIND1
 
-  subroutine computeResidual_LF(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine computeResidual_LF(spray)
     implicit none
 
     ! ---------------------------------
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
@@ -830,55 +419,23 @@ contains
     integer, pointer :: kmin, kmax, kmino, kmaxo
     real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
     real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
-                                       Flux=>null()
+         Flux=>null()
     real(WP) :: a_l, a_r, FL, FR
 
-    divc => spray%solver%divc; 
     kmin => spray%kmin; kmax => spray%kmax
     kmino => spray%kmino; kmaxo => spray%kmaxo
-    
 
-    IF (spray%solver%rk%niter == 1) THEN
+    divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
+    F => spray%solver%F; S => spray%solver%S
 
-       W => SolverVecA%solver%W; Wold => SolverVecA%solver%Wold; 
-       F => SolverVecA%solver%F; S => SolverVecA%solver%S
-
-       u_l => SolverVecA%u_l; u_g => SolverVecA%u_g; alpha_l => SolverVecA%solver%alpha_l; alpha_g => SolverVecA%solver%alpha_g
-       Flux => SolverVecA%solver%Flux; Res => SolverVecA%solver%Res
-
-    ELSE IF (spray%solver%rk%niter ==  2) THEN
-
-       W => SolverVecB%solver%W; Wold => SolverVecB%solver%Wold; 
-       F => SolverVecB%solver%F; S => SolverVecB%solver%S
-
-       u_l => SolverVecB%u_l; u_g => SolverVecB%u_g; alpha_l => SolverVecB%solver%alpha_l; alpha_g => SolverVecB%solver%alpha_g
-       Flux => SolverVecB%solver%Flux; Res => SolverVecB%solver%Res
-
-    ELSE IF (spray%solver%rk%niter ==  3) THEN
-
-       W => SolverVecC%solver%W; Wold => SolverVecC%solver%Wold; 
-       F => SolverVecC%solver%F; S => SolverVecC%solver%S
-
-       u_l => SolverVecC%u_l; u_g => SolverVecC%u_g; alpha_l => SolverVecC%solver%alpha_l; alpha_g => SolverVecC%solver%alpha_g
-       Flux => SolverVecC%solver%Flux; Res => SolverVecC%solver%Res 
-
-    ELSE IF (spray%solver%rk%niter ==  4) THEN
-
-       W => SolverVecD%solver%W; Wold => SolverVecD%solver%Wold; 
-       F => SolverVecD%solver%F; S => SolverVecD%solver%S
-
-       u_l => SolverVecD%u_l; u_g => SolverVecD%u_g; alpha_l => SolverVecD%solver%alpha_l; alpha_g => SolverVecD%solver%alpha_g
-       Flux => SolverVecD%solver%Flux; Res => SolverVecD%solver%Res
-
-    END IF
-    
-    
+    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g
+    Flux => spray%solver%Flux; Res => spray%solver%Res
 
     do k=kmino+1,kmaxo
 
        alpha_l(k) = max(abs(u_l(k-1)),abs(u_l(k))); !hx/dt;%max(abs(u_l(i-1)),abs(u_l(i)));
        alpha_g(k) = max(abs(u_g(k-1)),abs(u_g(k))); !hx/dt;%max(abs(u_l(i)),abs(u_l(i+1)));
-      
+
     end do
 
     do i = 1,3
@@ -886,7 +443,7 @@ contains
        Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_g*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
 
        do k = kmin,kmax
-       
+
           Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
 
        end do
@@ -896,9 +453,9 @@ contains
     do i = 4,9
 
        Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_l*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
-       
+
        do k = kmin,kmax
-       
+
           Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
 
        end do
@@ -907,13 +464,15 @@ contains
 
     Wold = W
 
+    spray%solver%rktvd%RK(spray%solver%rktvd%niter,:,:) = W
+    spray%solver%rktvd%Res(spray%solver%rktvd%niter,:,:) = Res
+
   end subroutine computeResidual_LF
 
-  subroutine computeResidual_WENO5(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine computeResidual_WENO5(spray)
     implicit none
 
     ! ---------------------------------
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
@@ -921,55 +480,20 @@ contains
     integer, pointer :: kmin, kmax, kmino, kmaxo
     real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
     real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
-                                       Flux=>null()
+         Flux=>null()
     real(WP) :: a_l, a_r, FL, FR
     type(solver_t), pointer :: solver=>null()
 
-    IF (spray%solver%rk%niter ==  1) THEN
+    solver => spray%solver
 
-       solver => SolverVecA%solver
-       
-       W => SolverVecA%solver%W; Wold => SolverVecA%solver%Wold; 
-       F => SolverVecA%solver%F; S => SolverVecA%solver%S
-
-       u_l => SolverVecA%u_l; u_g => SolverVecA%u_g; alpha_l => SolverVecA%solver%alpha_l; alpha_g => SolverVecA%solver%alpha_g
-       Flux => SolverVecA%solver%Flux; Res => SolverVecA%solver%Res
-
-    ELSE IF (spray%solver%rk%niter ==  2) THEN
-
-       solver => SolverVecB%solver
-
-       W => SolverVecB%solver%W; Wold => SolverVecB%solver%Wold; 
-       F => SolverVecB%solver%F; S => SolverVecB%solver%S
-
-       u_l => SolverVecB%u_l; u_g => SolverVecB%u_g; alpha_l => SolverVecB%solver%alpha_l; alpha_g => SolverVecB%solver%alpha_g
-       Flux => SolverVecB%solver%Flux; Res => SolverVecB%solver%Res
-
-    ELSE IF (spray%solver%rk%niter ==  3) THEN
-       
-       solver => SolverVecC%solver
-
-       W => SolverVecC%solver%W; Wold => SolverVecC%solver%Wold; 
-       F => SolverVecC%solver%F; S => SolverVecC%solver%S
-
-       u_l => SolverVecC%u_l; u_g => SolverVecC%u_g; alpha_l => SolverVecC%solver%alpha_l; alpha_g => SolverVecC%solver%alpha_g
-       Flux => SolverVecC%solver%Flux; Res => SolverVecC%solver%Res 
-
-    ELSE IF (spray%solver%rk%niter ==  4) THEN
-
-       solver => SolverVecD%solver
-
-       W => SolverVecD%solver%W; Wold => SolverVecD%solver%Wold; 
-       F => SolverVecD%solver%F; S => SolverVecD%solver%S
-
-       u_l => SolverVecD%u_l; u_g => SolverVecD%u_g; alpha_l => SolverVecD%solver%alpha_l; alpha_g => SolverVecD%solver%alpha_g
-       Flux => SolverVecD%solver%Flux; Res => SolverVecD%solver%Res
-
-    END IF
-
-    divc => spray%solver%divc;
     kmin => spray%kmin; kmax => spray%kmax
     kmino => spray%kmino; kmaxo => spray%kmaxo
+
+    divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
+    F => spray%solver%F; S => spray%solver%S
+
+    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g
+    Flux => spray%solver%Flux; Res => spray%solver%Res
 
     ! Global LF splitting
     alpha_l = maxval(u_l); alpha_g = maxval(u_g)
@@ -986,8 +510,8 @@ contains
        !where(solver%f_t < 0.0_WP) solver%f_t = 0.0_WP
 
        do k = kmin,kmax
-       
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k-1:k)) - S(i,k))
+
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1)) - S(i,k))
           !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -1004,10 +528,10 @@ contains
        call computeWeno5Flux(spray)
 
        !where(solver%f_t < 0.0_WP) solver%f_t = 0.0_WP
-       
+
        do k = kmin,kmax
-       
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k-1:k)) - S(i,k))
+
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1)) - S(i,k))
           !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -1016,135 +540,123 @@ contains
 
     Wold = W
 
+    spray%solver%rktvd%RK(spray%solver%rktvd%niter,:,:) = W
+    spray%solver%rktvd%Res(spray%solver%rktvd%niter,:,:) = Res
+
   end subroutine computeResidual_WENO5
 
-  subroutine updateSolution(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine updateSolution(spray)
     implicit none
 
     ! ---------------------------------
     type(spray_t), pointer, intent(inout) :: spray
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
 
     ! ---------------------------------
-    type(rk_solver_t), pointer :: rks
-    real(WP), dimension(:,:), pointer :: RK=>null(), dRK=>null()
-    real(WP), dimension(:,:), pointer :: W=>null(), Wold=>null(), Res=>null()
-    real(WP), dimension(:), pointer :: alpha, beta, delta, dt_ratio
-    integer :: k,Scheme
+    type(rktvd_solver_t), pointer :: rktvd
+    real(WP), dimension(:,:,:), pointer :: RK=>null(), Res=>null()
+    real(WP), dimension(:,:), pointer :: W=>null()
+    real(WP), dimension(:,:), pointer :: coeff
+    integer :: k, istage
     integer, pointer :: kmino, kmaxo, kmin, kmax
-
-
-    !Scheme = 4
-
-
-    !IF (MOD(kk, 2) .NE. 0) THEN
-
-    !W => SolverVecA%solver%W; Wold => SolverVecA%solver%Wold; Res => SolverVecA%solver%Res
-
-    rks => spray%solver%rk
-
-    RK => rks%RK; dRK => rks%dRK; alpha => rks%alpha; beta => rks%beta; delta => rks%delta; dt_ratio => rks%dt_ratio
-
-    !ELSE
-
-    !W => SolverVecB%solver%W; Wold => SolverVecB%solver%Wold; Res => SolverVecB%solver%Res
-    !rks => SolverVecB%solver%rk
-
-    !RK => rks%RK; dRK => rks%dRK; alpha => rks%alpha; beta => rks%beta; dt_ratio => rks%dt_ratio
-
-    !END IF
 
     kmin => spray%kmin; kmax => spray%kmax; kmino => spray%kmino; kmaxo => spray%kmaxo
 
+    W => spray%solver%W
+    rktvd => spray%solver%rktvd
 
-    ! First Order Schemes
-    IF (rks%niter == 1) THEN
+    RK => rktvd%RK; Res => rktvd%Res; coeff => rktvd%coeff
 
-       IF (spray%solver%rk%stage .NE. 4) THEN
+    istage = rktvd%niter
 
+    select case (rktvd%order)
+
+    case(1)
+
+       do k = kmin,kmax
+
+          W(:,k) = coeff(istage,1)*RK(istage,:,k) + coeff(istage,2)*Res(istage,:,k)
+
+       end do
+
+    case(2)
+
+       if(istage == 1) then
           do k = kmin,kmax
 
-             SolverVecA%solver%rk%RK(:,k) = SolverVecA%solver%W(:,k) + SolverVecA%solver%Res(:,k)
-             SolverVecB%solver%W(:,k) = SolverVecA%solver%rk%RK(:,k)
+             W(:,k) = coeff(istage,1)*RK(istage,:,k) + coeff(istage,2)*Res(istage,:,k)
 
           end do
-
-       ELSE
-
+       else
           do k = kmin,kmax
 
-             SolverVecA%solver%rk%RK(:,k) = SolverVecA%solver%W(:,k) + 0.5_WP*SolverVecA%solver%Res(:,k)
-             SolverVecB%solver%W(:,k) = SolverVecA%solver%rk%RK(:,k)
+             W(:,k) = coeff(istage,1)*RK(istage-1,:,k) + coeff(istage,2)*RK(istage,:,k) &
+                  + coeff(istage,3)*Res(istage,:,k)
 
           end do
+       end if
 
-       END IF
+    case(3)
 
-     ! Second Order Schemes
-    ELSE IF (rks%niter == 2) THEN
-
-       IF (spray%solver%rk%stage == 2) THEN
+       if(istage == 1) then
           do k = kmin,kmax
 
-             !SolverVecB%solver%rk%RK(:,k) = alpha(rks%niter)*SolverVecA%solver%W(:,k) + beta(rks%niter)*SolverVecB%solver%W(:,k) + delta(rks%niter)*SolverVecB%solver%Res(:,k)
-             SolverVecB%solver%rk%RK(:,k) = 0.5_WP*SolverVecA%solver%W(:,k) + 0.5_WP*SolverVecB%solver%W(:,k) + 0.5_WP*SolverVecB%solver%Res(:,k)
-             SolverVecB%solver%W(:,k) = SolverVecB%solver%rk%RK(:,k)
+             W(:,k) = coeff(istage,1)*RK(istage,:,k) + coeff(istage,2)*Res(istage,:,k)
 
           end do
-
-       ELSE IF (spray%solver%rk%stage == 3) THEN
-
+       else if(istage == 2) then
           do k = kmin,kmax
 
-             !SolverVecB%solver%rk%RK(:,k) = alpha(rks%niter)*SolverVecA%solver%W(:,k) + beta(rks%niter)*SolverVecB%solver%W(:,k) + delta(rks%niter)*SolverVecB%solver%Res(:,k)
-             SolverVecB%solver%rk%RK(:,k) = 0.75_WP*SolverVecA%solver%W(:,k) + 0.25_WP*SolverVecB%solver%W(:,k) + 0.25_WP*SolverVecB%solver%Res(:,k)
-             SolverVecC%solver%W(:,k) = SolverVecB%solver%rk%RK(:,k)
+             W(:,k) = coeff(istage,1)*RK(istage-1,:,k) + coeff(istage,2)*RK(istage,:,k) &
+                  + coeff(istage,3)*Res(istage,:,k)
 
           end do
-
-       ELSE IF (spray%solver%rk%stage == 4) THEN
-
+       else
           do k = kmin,kmax
-             SolverVecC%solver%W(:,k) = 649.0_WP/1600.0_WP*SolverVecA%solver%W(:,k) - 10890423.0_WP/25193600.0_WP*SolverVecA%solver%Res(:,k)+ 951.0_WP/1600.0_WP*SolverVecB%solver%W(:,k) + 5000.0_WP/7873.0_WP*SolverVecB%solver%Res(:,k) 
+
+             W(:,k) = coeff(istage,1)*RK(istage-2,:,k) + coeff(istage,2)*RK(istage,:,k) &
+                  + coeff(istage,3)*Res(istage,:,k)
+
           end do
+       end if
 
-       END IF
-
-       ! Third Order Schemes
-    ELSE IF (rks%niter == 3) THEN
-
-       IF (spray%solver%rk%stage == 3) THEN
+    case(4)
+       write(*,*) 'Warning! Scheme not working properly...'
+       if(istage == 1) then
           do k = kmin,kmax
-             SolverVecB%solver%W(:,k) = 1.0_WP/3.0_WP*SolverVecA%solver%W(:,k) + 2.0_WP/3.0_WP*SolverVecC%solver%W(:,k) + 2.0_WP/3.0_WP*SolverVecC%solver%Res(:,k)
+
+             W(:,k) = coeff(istage,1)*RK(istage,:,k) + coeff(istage,2)*Res(istage,:,k)
+
           end do
-
-       ELSE IF (spray%solver%rk%stage == 4) THEN
-
+       else if(istage == 2) then
           do k = kmin,kmax
-             !SolverVecB%solver%rk%RK(:,k) = alpha(rks%niter)*SolverVecA%solver%W(:,k) + beta(rks%niter)*SolverVecB%solver%W(:,k) + delta(rks%niter)*SolverVecB%solver%Res(:,k)
-             SolverVecD%solver%W(:,k)= 53989.0_WP/2500000.0_WP*SolverVecA%solver%W(:,k) - 102261.0_WP/5000000.0_WP*SolverVecA%solver%Res(:,k) + 4806213.0_WP/20000000.0_WP*SolverVecB%solver%W(:,k) - 5121.0_WP/20000.0_WP*SolverVecB%solver%Res(:,k)+23619.0_WP/32000.0_WP*SolverVecC%solver%W(:,k) + 7873.0_WP/10000.0_WP*SolverVecC%solver%Res(:,k)
+
+             W(:,k) = coeff(istage,1)*RK(istage-1,:,k) - coeff(istage,2)*Res(istage-1,:,k) &
+                  + coeff(istage,3)*RK(istage,:,k)   + coeff(istage,4)*Res(istage,:,k)
+
           end do
-
-       END IF
-
-       ! Fourth Order Schemes
-    ELSE IF (rks%niter == 4) THEN
-
-       IF (spray%solver%rk%stage == 4) THEN
-
+       else if(istage == 3) then
           do k = kmin,kmax
-             !SolverVecB%solver%rk%RK(:,k) = alpha(rks%niter)*SolverVecA%solver%W(:,k) + beta(rks%niter)*SolverVecB%solver%W(:,k) + delta(rks%niter)*SolverVecB%solver%Res(:,k)
-             SolverVecB%solver%W(:,k) = 0.2_WP*SolverVecA%solver%W(:,k) + 0.1_WP*SolverVecA%solver%Res(:,k) + 6127.0_WP/30000.0_WP*SolverVecB%solver%W(:,k) + 1.0_WP/6.0_WP*SolverVecB%solver%Res(:,k) + 7873.0_WP/30000.0_WP*SolverVecC%solver%W(:,k)+1.0_WP/3.0_WP*SolverVecD%solver%W(:,k) + 1.0_WP/6.0_WP*SolverVecD%solver%Res(:,k)
+
+             W(:,k) = coeff(istage,1)*RK(istage-2,:,k) - coeff(istage,2)*Res(istage-2,:,k) &
+                  + coeff(istage,3)*RK(istage-1,:,k) - coeff(istage,4)*Res(istage-1,:,k) &
+                  + coeff(istage,5)*RK(istage,:,k)   + coeff(istage,6)*Res(istage,:,k)
+
           end do
+       else 
+          do k = kmin,kmax
 
-       ELSE
+             W(:,k) = coeff(istage,1)*RK(istage-3,:,k) + coeff(istage,2)*Res(istage-3,:,k) &
+                  + coeff(istage,3)*RK(istage-2,:,k) + coeff(istage,4)*Res(istage-2,:,k) &
+                  + coeff(istage,5)*RK(istage-1,:,k)                                     &
+                  + coeff(istage,6)*RK(istage,:,k)   + coeff(istage,7)*Res(istage,:,k)
 
-          print *, 'Error: Scheme order does not match scheme'
+          end do
+       end if
 
-       END IF
-
-    END IF
+    case default
+       write(*,*) 'Scheme not implemented. Order of the scheme: ',rktvd%order
+    end select
 
   end subroutine updateSolution
-  
+
 end module solver_func

@@ -126,7 +126,7 @@ contains
 
     spray%rho = 1.0_WP/(spray%DRa-spray%Y_l*(spray%DRa-1.0_WP))
 
-    spray%u_l(kmino:kmin-1) = 0.0_WP; spray%u_l(kmin:kmaxo) = 0.0_WP
+    spray%u_l(kmino:kmin-1) = 1.0_WP; spray%u_l(kmin:kmaxo) = 0.0_WP
     spray%u_g = 0.0_WP
 
     spray%d3(kmino:kmin-1) = spray%init_d3; spray%d3(kmin:kmaxo) = 0.0_WP
@@ -147,8 +147,7 @@ contains
     ! Compute initial droplet size distribution
     call compute_DSD(spray)
 
-    !call computeTimeStep(spray)
-    spray%dt = 0.02_WP
+    call computeTimeStep(spray)
 
     ! Post processing
     allocate(spray%time(floor(spray%ndftime/(spray%dt))+10)); spray%time = 0.0_WP
@@ -189,12 +188,11 @@ contains
 
   end subroutine init_spray
 
-  subroutine run_spray(spray,SolverVecA,SolverVecB,SolverVecC,SolverVecD)
+  subroutine run_spray(spray)
     implicit none
 
     ! ---------------------------------
     type(spray_t), pointer, intent(inout) :: spray
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
 
     ! ---------------------------------
     integer :: niter
@@ -204,10 +202,9 @@ contains
        
        write(*,*) 'step: ', spray%step, 'Time: ', spray%ndtime, 'dt: ', spray%dt!, 'End: ', spray%ndftime
 
-         do niter = 1,spray%solver%rk%stage
+       do niter = 1,spray%solver%rktvd%stage
 
-          spray%solver%rk%niter = niter
-
+          spray%solver%rktvd%niter = niter
 
           ! Apply BCs
           call applyBC(spray)
@@ -225,34 +222,22 @@ contains
 
           call breakupModel(spray)
 
-          call evaporationModelOld(spray)
-          
-          ! Store spray variables in SolverVec
-          call assign_SolverVec(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
-
-          !do niter = 1,spray%solver%rk%stage
-
-          !spray%solver%rk%niter = niter
+          call evaporationModel(spray)
 
           ! Update State Vector
-          call buildStateVector(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+          call buildStateVector(spray)
 
           ! Update Flux Vector
-          call buildFluxVector(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+          call buildFluxVector(spray)
 
           ! Update Source Vector
-          call buildSourceVector(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+          call buildSourceVector(spray)
 
           ! Solve hyperbolic system of equations
-          call solver_run(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
-          
-          ! end do
+          call solver_run(spray)
 
           ! Update flow variables
-          call updateFlowVariables(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
-
-          ! Pass updated flow variables back to spray
-          !call Store_SolverVec(SolverVecA,SolverVecB,spray)
+          call updateFlowVariables(spray)
 
           ! Update reference temperature
           call computeRefTemperature(spray)
@@ -275,13 +260,11 @@ contains
 
           ! Update varying Non-dimensional parameters
           call compute_varNonDparams(spray)
-       
-        end do
 
-        ! Advance time 
-          call advanceTime(spray)
-        
-       !print *, SolverVecB%solver%W(1,1),SolverVecB%solver%W(2,1),SolverVecB%solver%W(3,1),SolverVecB%solver%W(4,1),SolverVecB%solver%W(5,1),SolverVecB%solver%W(6,1),SolverVecB%solver%W(7,1),SolverVecB%solver%W(8,1),SolverVecB%solver%W(9,1)
+       end do
+
+       ! Advance time 
+       call advanceTime(spray)
 
        spray%step = spray%step + 1
 
@@ -289,10 +272,6 @@ contains
        call getPenetration(spray,spray%step)
 
        if (mod(spray%step,spray%outfreq) == 0) call write_output(spray,spray%step,spray%ndtime)
-
-       if (spray%step == 999) then
-          print *, "DEBUG: Stop on index 999"
-       end if
 
     end do
 
@@ -1206,12 +1185,11 @@ contains
     end function pinv
   end subroutine maximumEntropyFormalism
 
-  subroutine updateFlowVariables(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine updateFlowVariables(spray)
     implicit none
 
     ! ---------------------------------
     type(spray_t), pointer, intent(inout) :: spray
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
 
     ! ---------------------------------
     type(pc_t), pointer :: pc_l
@@ -1226,7 +1204,7 @@ contains
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
     u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
     DRv => spray%DRv; DRa => spray%DRa
-    W => SolverVecB%solver%W
+    W => spray%solver%W
 
     T_high = spray%NBP/spray%T_fuel
     T_low = spray%MP/spray%T_fuel
@@ -1293,12 +1271,11 @@ contains
 
   end subroutine updateFlowVariables
 
-  subroutine updateFlowVariables_try(SolverVecA,SolverVecB,SolverVecC,SolverVecD,spray)
+  subroutine updateFlowVariables_new(spray)
     implicit none
 
     ! ---------------------------------
     type(spray_t), pointer, intent(inout) :: spray
-    type(SolverVec_t), pointer, intent(inout) :: SolverVecA,SolverVecB,SolverVecC,SolverVecD
 
     ! ---------------------------------
     type(pc_t), pointer :: pc_l
@@ -1311,13 +1288,10 @@ contains
     real(WP) :: ndmass, dm_min, d2_min, d3_min
     integer :: k
 
-    
-    W => SolverVecB%solver%W
-     
-
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
     u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
     DRv => spray%DRv; DRa => spray%DRa
+    W => spray%solver%W
 
     T_high = spray%NBP/spray%T_fuel
     T_low = spray%MP/spray%T_fuel
@@ -1381,7 +1355,7 @@ contains
 
     spray%Tg = spray%T_a/spray%T_fuel
 
-  end subroutine updateFlowVariables_try
+  end subroutine updateFlowVariables_new
 
   subroutine updateFlowVariablesOld(spray)
     implicit none
@@ -1963,7 +1937,7 @@ contains
     
   end subroutine entrainmentTerm
 
-  subroutine evaporationModel(spray)
+  subroutine evaporationModel_try(spray)
     implicit none
 
     ! ---------------------------------
@@ -2093,9 +2067,9 @@ contains
 
     end subroutine getDist
 
-  end subroutine evaporationModel
+  end subroutine evaporationModel_try
 
-  subroutine evaporationModelOld(spray)
+  subroutine evaporationModel(spray)
     implicit none
 
     ! ---------------------------------
@@ -2159,7 +2133,7 @@ contains
 
     end do
 
-  end subroutine evaporationModelOld
+  end subroutine evaporationModel
 
   subroutine dragModel(spray)
     implicit none
@@ -2315,27 +2289,14 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
-    integer :: k
-    real(WP) :: maxU, maxU_step
 
     spray%CFL = spray%MaxCFL
 
     !spray%dt = spray%CFL*spray%dz
 
-    maxU = DMAX1(DABS(spray%u_l(1)),DABS(spray%u_g(1)))
-
-    do k = 1,spray%kmax
-       
-       maxU_step = DMAX1(DABS(spray%u_l(k)),DABS(spray%u_g(k)))
-       if (maxU_step > maxU) then
-          maxU = maxU_step
-       end if
-
-    end do
-
-    spray%dt = spray%CFL*spray%dz/maxU
-
     !if (spray%step < 100) spray%dt = 0.1_WP*spray%dt
+
+    spray%dt =  spray%CFL*spray%dz/max(maxval(spray%u_l),maxval(spray%u_g))
 
     !if (spray%ndtime > 0.15e-3/spray%tau .and. spray%ndtime < 0.25e-3/spray%tau ) spray%dt = 0.1_WP*spray%dt
 
@@ -2609,7 +2570,7 @@ contains
     do k = kmin-1,kmax
        write(100,FMT=rowfmt) spray%z(k), spray%rho(k), spray%Y_l(k), spray%Y_v(k), spray%Y_a(k), &
                              spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%d2(k), &
-                             spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k),spray%Y_ref(k), &
+                             spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k),spray%Y_ref(k) , &
                              spray%solver%W(1,k),spray%solver%W(2,k),spray%solver%W(3,k), &
                              spray%solver%W(4,k),spray%solver%W(5,k),spray%solver%W(6,k), &
                              spray%solver%W(7,k),spray%solver%W(8,k),spray%solver%W(9,k)

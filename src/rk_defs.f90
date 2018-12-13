@@ -4,40 +4,37 @@ module rk_defs
 
   implicit none
 
-  type rk_solver_t
+  type rktvd_solver_t
      character(len=32) :: scheme = 'noname'
-     integer :: stage = 0, niter
-     real(WP), pointer :: alpha(:) => null()
-     real(WP), pointer :: beta(:) => null()
-     real(WP), pointer :: delta(:) => null()
-     real(WP), pointer :: dt_ratio(:) => null()
-     real(WP), dimension(:,:), pointer :: RK => null(), dRK=>null()
-   end type rk_solver_t
+     integer :: stage = 0, order = 0, niter, nzo, neq
+     real(WP), dimension(:,:), pointer :: coeff(:,:) => null()
+     real(WP), dimension(:,:,:), pointer :: RK => null(), Res => null()
+   end type rktvd_solver_t
 
 contains
 
-  subroutine allocate_rk(solver)
+  subroutine allocate_rktvd(solver)
     implicit none
 
-    type(rk_solver_t), pointer, intent(inout) :: solver
+    type(rktvd_solver_t), pointer, intent(inout) :: solver
     ! ---------------------------------
 
-    allocate(solver%alpha(solver%stage), &
-         solver%beta(solver%stage), &
-         solver%delta(solver%stage), &
-         solver%dt_ratio(solver%stage+1))
-    solver%dt_ratio = 1.0_WP
+    allocate(solver%coeff(solver%stage,2*solver%order))
+    allocate(solver%RK(solver%stage,solver%neq,solver%nzo))
+    allocate(solver%Res(solver%stage,solver%neq,solver%nzo))
 
-  end subroutine allocate_rk
+  end subroutine allocate_rktvd
 
-  subroutine deallocate_rk(solver)
+  subroutine deallocate_rktvd(solver)
     implicit none
 
-    type(rk_solver_t), pointer, intent(inout) :: solver
+    type(rktvd_solver_t), pointer, intent(inout) :: solver
     ! ---------------------------------
 
-    deallocate(solver%alpha, solver%beta, solver%delta, solver%dt_ratio)
-  
-  end subroutine deallocate_rk
-  
+    deallocate(solver%coeff)
+    deallocate(solver%RK)
+    deallocate(solver%Res)
+
+  end subroutine deallocate_rktvd  
+
 end module rk_defs
