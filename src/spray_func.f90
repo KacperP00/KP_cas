@@ -126,7 +126,7 @@ contains
 
     spray%rho = 1.0_WP/(spray%DRa-spray%Y_l*(spray%DRa-1.0_WP))
 
-    spray%u_l(kmino:kmin-1) = 0.0_WP; spray%u_l(kmin:kmaxo) = 0.0_WP
+    spray%u_l(kmino:kmin-1) = 1.0_WP; spray%u_l(kmin:kmaxo) = 0.0_WP
     spray%u_g = 0.0_WP
 
     spray%d3(kmino:kmin-1) = spray%init_d3; spray%d3(kmin:kmaxo) = 0.0_WP
@@ -202,15 +202,15 @@ contains
        
        write(*,*) 'step: ', spray%step, 'Time: ', spray%ndtime, 'dt: ', spray%dt!, 'End: ', spray%ndftime
 
-       do niter = 1,spray%solver%rk%stage
+       do niter = 1,spray%solver%rktvd%stage
 
-          spray%solver%rk%niter = niter
-
-          ! Compute time step
-          call computeTimeStep(spray)
+          spray%solver%rktvd%niter = niter
 
           ! Apply BCs
           call applyBC(spray)
+
+          ! Compute time step
+          call computeTimeStep(spray)
 
           ! Compute DSD
           call compute_DSD(spray)
@@ -261,10 +261,10 @@ contains
           ! Update varying Non-dimensional parameters
           call compute_varNonDparams(spray)
 
-          ! Advance time 
-          call advanceTime(spray)
-       
        end do
+
+       ! Advance time 
+       call advanceTime(spray)
 
        spray%step = spray%step + 1
 
@@ -2292,9 +2292,11 @@ contains
 
     spray%CFL = spray%MaxCFL
 
-    spray%dt = spray%CFL*spray%dz
+    !spray%dt = spray%CFL*spray%dz
 
-    if (spray%step < 100) spray%dt = 0.1_WP*spray%dt
+    !if (spray%step < 100) spray%dt = 0.1_WP*spray%dt
+
+    spray%dt =  spray%CFL*spray%dz/max(maxval(spray%u_l),maxval(spray%u_g))
 
     !if (spray%ndtime > 0.15e-3/spray%tau .and. spray%ndtime < 0.25e-3/spray%tau ) spray%dt = 0.1_WP*spray%dt
 
@@ -2568,7 +2570,7 @@ contains
     do k = kmin-1,kmax
        write(100,FMT=rowfmt) spray%z(k), spray%rho(k), spray%Y_l(k), spray%Y_v(k), spray%Y_a(k), &
                              spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%d2(k), &
-                             spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k),spray%Y_ref(k), &
+                             spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k),spray%Y_ref(k) , &
                              spray%solver%W(1,k),spray%solver%W(2,k),spray%solver%W(3,k), &
                              spray%solver%W(4,k),spray%solver%W(5,k),spray%solver%W(6,k), &
                              spray%solver%W(7,k),spray%solver%W(8,k),spray%solver%W(9,k)
