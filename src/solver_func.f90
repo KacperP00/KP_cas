@@ -220,7 +220,7 @@ contains
 
      end subroutine apply_weno5_bc
        
-  end subroutine computeWeno5Coeff
+   end subroutine computeWeno5Coeff
 
   subroutine computeWeno5Flux(spray)
     implicit none
@@ -257,12 +257,12 @@ contains
     real(WP), dimension(:,:), pointer :: W=>null()
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
                                        u_l=>null(), u_g=>null(), d2=>null(), d3=>null(), dm=>null(), &
-                                       Td=>null(), b=>null(), k_g=>null(), eps_g=>null()
+                                       Td=>null(), b=>null(), k_g=>null(), eps_g=>null(), zvar_g=>null()
     real(WP), dimension(spray%nzo) :: b2
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
     u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
-    k_g => spray%k_g; eps_g => spray%eps_g;
+    k_g => spray%k_g; eps_g => spray%eps_g; zvar_g=>spray%zvar_g
     W => spray%solver%W
 
     W = 0.0_WP
@@ -280,7 +280,7 @@ contains
     W(9,:) = rho*Y_l*d3*b2
     W(10,:) = rho*Y_g*k_g*b2
     W(11,:) = rho*Y_g*eps_g*b2
-    W(12,:) = 0.0_WP
+    W(12,:) = rho*Y_g*zvar_g*b2
 
   end subroutine buildStateVector
 
@@ -294,12 +294,12 @@ contains
     real(WP), dimension(:,:), pointer :: F=>null()
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
                                        u_l=>null(), u_g=>null(), d3=>null(), d2=>null(), dm=>null(), &
-                                       Td=>null(), b=>null(), k_g=>null(), eps_g=>null()
+                                       Td=>null(), b=>null(), k_g=>null(), eps_g=>null(), zvar_g=>null()
     real(WP), dimension(spray%nzo) :: b2
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
     u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
-    k_g => spray%k_g; eps_g => spray%eps_g;
+    k_g => spray%k_g; eps_g => spray%eps_g; zvar_g => spray%zvar_g
 
     F => spray%solver%F
     
@@ -320,7 +320,7 @@ contains
     F(9,:) = rho*Y_l*d3*u_l*b2
     F(10,:) = rho*Y_g*k_g*u_g*b2
     F(11,:) = rho*Y_g*eps_g*u_g*b2
-    F(12,:) = 0.0_WP
+    F(12,:) = rho*Y_g*zvar_g*u_g*b2
 
   end subroutine buildFluxVector
 
@@ -337,7 +337,8 @@ contains
                                        omega_vapd2=>null(), omega_vapd3=>null(), f_drag=>null(), &
                                        omega_bre1=>null(), omega_bre2=>null(), omega_bre3=>null(), &
                                        omega_T=>null(), omega_k_g_p=>null(), omega_k_g_d=>null(), &
-                                       omega_eps_g_p=>null(), omega_eps_g_d=>null()
+                                       omega_eps_g_p=>null(), omega_eps_g_d=>null(), omega_zvar_g_p, &
+                                       omega_zvar_g_d
     real(WP), dimension(spray%nzo) :: b2
 
     u_l => spray%u_l; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
@@ -347,6 +348,7 @@ contains
     omega_bre1 => spray%omega_bre1; omega_bre2 => spray%omega_bre2; omega_bre3 => spray%omega_bre3;
     omega_T => spray%omega_T; omega_k_g_p => spray%omega_k_g_p; omega_k_g_d => spray%omega_k_g_d
     omega_eps_g_p => spray%omega_eps_g_p; omega_eps_g_d => spray%omega_eps_g_d
+    omega_zvar_g_p => spray%omega_zvar_g_p; omega_zvar_g_d => spray%omega_zvar_g_d
 
     S => spray%solver%S
 
@@ -365,7 +367,7 @@ contains
     S(9,:) = (-omega_bre3 - 2.0_WP       *omega_vapd3)*b2
     S(10,:) = omega_k_g_p - omega_k_g_d
     S(11,:) = omega_eps_g_p - omega_eps_g_d
-    S(12,:) = 0.0_WP
+    S(12,:) = omega_zvar_g_p - omega_zvar_g_d
 
   end subroutine buildSourceVector
 
@@ -455,6 +457,18 @@ contains
 
        do k = kmin,kmax
        
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
+
+       end do
+
+    end do
+
+    do i = 10,12
+
+       Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_g*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
+
+       do k = kmin,kmax
+
           Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
 
        end do

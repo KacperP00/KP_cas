@@ -25,12 +25,14 @@ module spray_defs
      real(WP), pointer :: noz_D, noz_LD, noz_rD, noz_Dsac
      
      ! Flow variables
-     real(WP), dimension(:), pointer :: z, rho, Y_l, Y_v, Y_a, Y_g, u_l, u_g, d2, dm, d3, Td, b, Tg, k_g, eps_g, mu_t_g
+     real(WP), dimension(:), pointer :: z, rho, Y_l, Y_v, Y_a, Y_g, u_l, u_g, d2, dm, d3, Td, b, Tg, &
+                                        k_g, eps_g, mu_t_g, zmix_g, zvar_g
 
      ! Source terms
      real(WP), dimension(:), pointer :: omega_ent, omega_vap, omega_vapdm, omega_vapd2, omega_vapd3, &
                                         f_drag, omega_bre1, omega_bre2, omega_bre3, omega_T, omega_k_g_p, &
-                                        omega_k_g_d, omega_eps_g_p, omega_eps_g_d
+                                        omega_k_g_d, omega_eps_g_p, omega_eps_g_d, &
+                                        omega_zvar_g_p, omega_zvar_g_d
 
      ! Fuel name
      character(len=128), pointer :: Fuel
@@ -307,6 +309,8 @@ contains
     allocate(spray%k_g(spray%nzo)); spray%k_g = -9999.0_WP
     allocate(spray%eps_g(spray%nzo)); spray%eps_g = -9999.0_WP
     allocate(spray%mu_t_g(spray%nzo)); spray%mu_t_g = -9999.0_WP
+    allocate(spray%zmix_g(spray%nzo)); spray%zmix_g = -9999.0_WP
+    allocate(spray%zvar_g(spray%nzo)); spray%zvar_g = -9999.0_WP
     allocate(spray%b(spray%nzo)); spray%b = -9999.0_WP
 
     allocate(spray%dsd(spray%nd,spray%nzo)); spray%dsd = -9999.0_WP
@@ -333,6 +337,9 @@ contains
     allocate(spray%omega_k_g_d(spray%nzo)); spray%omega_k_g_d = -9999.0_WP
     allocate(spray%omega_eps_g_p(spray%nzo)); spray%omega_eps_g_p = -9999.0_WP
     allocate(spray%omega_eps_g_d(spray%nzo)); spray%omega_eps_g_d = -9999.0_WP
+    allocate(spray%omega_zvar_g_p(spray%nzo)); spray%omega_zvar_g_p = -9999.0_WP
+    allocate(spray%omega_zvar_g_d(spray%nzo)); spray%omega_zvar_g_d = -9999.0_WP
+
   end subroutine allocate_spray_grid_vars
 
   subroutine deallocate_spray(spray)
@@ -364,8 +371,9 @@ contains
     deallocate(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g, &
                spray%u_l,spray%u_g, &
                spray%d3,spray%d2,spray%dm, &
-               spray%Td,spray%b,spray%Tg,&
-               spray%k_g,spray%eps_g,spray%mu_t_g)
+               spray%Td,spray%b,spray%Tg, &
+               spray%k_g,spray%eps_g,spray%mu_t_g, &
+               spray%zmix_g, spray%zvar_g)
 
     deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l, &
                spray%p_vap,spray%MW_f,spray%L_f,spray%MP,spray%NBP)
@@ -417,8 +425,9 @@ contains
     call deallocate_solver(spray%solver)
 
     deallocate(spray%omega_ent, spray%omega_vap, spray%omega_vapdm, spray%omega_vapd2, spray%omega_vapd3, &
-               spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_bre3, spray%omega_T,&
-               spray%omega_k_g_p, spray%omega_k_g_d, spray%omega_eps_g_p, spray%omega_eps_g_d)
+               spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_bre3, spray%omega_T, &
+               spray%omega_k_g_p, spray%omega_k_g_d, spray%omega_eps_g_p, spray%omega_eps_g_d, &
+               spray%omega_zvar_g_p, spray%omega_zvar_g_d)
 
     deallocate(spray%outfreq)
 
