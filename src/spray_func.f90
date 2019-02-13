@@ -139,7 +139,7 @@ contains
     !spray%Tg = (spray%Y_v*(1.0_WP - spray%De) + spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
     !spray%Tg(kmino:kmin-1) = spray%T_a/spray%T_fuel
 
-    spray%b = 0.5_WP + spray%z*spray%beta
+    spray%b = 0.5_WP !+ spray%z*spray%beta
 
     ! Reference temperature and mass fraction for evaporation model
     call computeRefTemperature(spray)
@@ -1247,7 +1247,7 @@ contains
              Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k));
              rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
              Td(k) = 0.0_WP
-             b(k) = sqrt(max(0.0_WP,(W(1,k)+W(2,k)+W(4,k)))/rho(k))
+             !b(k) = sqrt(max(0.0_WP,(W(1,k)+W(2,k)+W(4,k)))/rho(k))
           end if
 
           if( dm(k) > 0.0_WP .and. d2(k) > 0.0_WP ) then !.and. d3(k) > 0.0_WP ) then
