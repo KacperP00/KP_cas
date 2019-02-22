@@ -2149,7 +2149,7 @@ contains
 
   end subroutine evaporationModel_try
 
-  subroutine evaporationModel(spray)
+  subroutine evaporationModelOld(spray)
     implicit none
 
     ! ---------------------------------
@@ -2213,7 +2213,7 @@ contains
 
     end do
 
-  end subroutine evaporationModel
+  end subroutine evaporationModelOld
 
   subroutine evaporationModel(spray)
     implicit none
