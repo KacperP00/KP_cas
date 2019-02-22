@@ -27,7 +27,7 @@ contains
 
        ! Compute Residual
        call init_weno5(spray)
-    
+
     case default
 
     end select
@@ -47,7 +47,7 @@ contains
 
        ! Compute Residual
        call computeResidual_UPWIND1(spray)       
-       
+
     case ('LF')
 
        ! Compute Residual
@@ -57,7 +57,7 @@ contains
 
        ! Compute Residual
        call computeResidual_WENO5(spray)
-    
+
     case default
 
     end select
@@ -120,18 +120,18 @@ contains
     solver%S1_p = 0.0_WP; solver%S1_m = 0.0_WP
     solver%S2_p = 0.0_WP; solver%S2_m = 0.0_WP
 
-    solver%S0_p(-1) = real( 1.0/3.0,WP); solver%S0_p( 0) = real(5.0/6.0,WP); solver%S0_p(+1) = real(-1.0/6.0,WP)
-    solver%S0_m(-2) = real(-1.0/6.0,WP); solver%S0_m(-1) = real(5.0/6.0,WP); solver%S0_m( 0) = real( 1.0/3.0,WP)
+    solver%S0_p(-1) = real( 1.0/3.0,WP); solver%S0_p( 0) = real(5.0/6.0,WP);  solver%S0_p(+1) = real(-1.0/6.0,WP)
+    solver%S0_m(-2) = real(-1.0/6.0,WP); solver%S0_m(-1) = real(5.0/6.0,WP);  solver%S0_m( 0) = real( 1.0/3.0,WP)
 
-    solver%S1_p(-2) = real(-1.0/6.0,WP); solver%S1_p(-1) = real(5.0/6.0,WP); solver%S1_p( 0) = real( 1.0/3.0,WP)
-    solver%S1_m(-1) = real( 1.0/3.0,WP); solver%S1_m( 0) = real(5.0/6.0,WP); solver%S1_m(+1) = real(-1.0/6.0,WP)
+    solver%S1_p(-2) = real(-1.0/6.0,WP); solver%S1_p(-1) = real(5.0/6.0,WP);  solver%S1_p( 0) = real( 1.0/3.0,WP)
+    solver%S1_m(-1) = real( 1.0/3.0,WP); solver%S1_m( 0) = real(5.0/6.0,WP);  solver%S1_m(+1) = real(-1.0/6.0,WP)
 
     solver%S2_p(-3) = real( 1.0/3.0,WP); solver%S2_p(-2) = real(-7.0/6.0,WP); solver%S2_p(-1) = real(11.0/6.0,WP)
     solver%S2_m( 0) = real(11.0/6.0,WP); solver%S2_m(+1) = real(-7.0/6.0,WP); solver%S2_m(+2) = real( 1.0/3.0,WP)
 
     ! Optimal weights
     solver%a0 = 0.3_WP; solver%a1 = 0.6_WP; solver%a2 = 0.1_WP
-      
+
   end subroutine init_weno5
 
   subroutine computeWeno5Coeff(spray)
@@ -141,14 +141,14 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
-    type(solver_t), pointer :: solver=>null()
+    type(solver_t), pointer :: solver => null()
     integer :: i
     real(WP) :: alpha,r,c, a0, a1, a2
     real(WP), parameter :: epsilon = 1.0e-6_WP
     real(WP) :: ISa, ISb, IS0_p, IS1_p, IS2_p,IS0_m, IS1_m, IS2_m, sum_inv
     real(WP), dimension(:), pointer :: F_p=>null(), F_m=>null(), &
-                                       S0_p=>null(), S1_p=>null(), S2_p=>null(), &
-                                       S0_m=>null(), S1_m=>null(), S2_m=>null()
+         S0_p=>null(), S1_p=>null(), S2_p=>null(), &
+         S0_m=>null(), S1_m=>null(), S2_m=>null()
     ! ---------------------------------
 
      solver => spray%solver    
@@ -220,7 +220,7 @@ contains
 
      end subroutine apply_weno5_bc
        
-   end subroutine computeWeno5Coeff
+  end subroutine computeWeno5Coeff
 
   subroutine computeWeno5Flux(spray)
     implicit none
@@ -229,16 +229,16 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
-    type(solver_t), pointer :: solver=>null()
+    type(solver_t), pointer :: solver => null()
     integer :: k
 
     solver => spray%solver
 
     solver%f_t(spray%kmino:spray%kmin) = solver%f_p(spray%kmino:spray%kmin) &
-                                       + solver%f_m(spray%kmino:spray%kmin)
+         + solver%f_m(spray%kmino:spray%kmin)
 
     solver%f_t(spray%kmax+1:spray%kmaxo) = solver%f_p(spray%kmax+1:spray%kmaxo)&
-                                         + solver%f_m(spray%kmax+1:spray%kmaxo)
+         + solver%f_m(spray%kmax+1:spray%kmaxo)
 
     do k=spray%kmin+1,spray%kmax
        solver%f_t(k) = sum(solver%weno5p(:,k)*solver%f_p(k-3:k+1)) &
@@ -302,7 +302,7 @@ contains
     k_g => spray%k_g; eps_g => spray%eps_g; zvar_g => spray%zvar_g
 
     F => spray%solver%F
-    
+
     Y_g = 1.0_WP - Y_l
 
     F = 0.0_WP
@@ -382,7 +382,7 @@ contains
     integer, pointer :: kmin, kmax, kmino, kmaxo
     real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
     real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
-                                       Flux=>null()
+         Flux=>null()
     real(WP) :: a_l, a_r, FL, FR
     type(solver_t), pointer :: solver=>null()
 
@@ -390,7 +390,7 @@ contains
 
     kmin => spray%kmin; kmax => spray%kmax
     kmino => spray%kmino; kmaxo => spray%kmaxo
-    
+
     divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
     F => spray%solver%F; S => spray%solver%S
 
@@ -400,7 +400,7 @@ contains
     do i = 1,3
 
        do k = kmin,kmax
-       
+
           Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -410,7 +410,7 @@ contains
     do i = 4,9
 
        do k = kmin,kmax
-       
+
           Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -432,12 +432,12 @@ contains
     integer, pointer :: kmin, kmax, kmino, kmaxo
     real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
     real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
-                                       Flux=>null()
+         Flux=>null()
     real(WP) :: a_l, a_r, FL, FR
 
     kmin => spray%kmin; kmax => spray%kmax
     kmino => spray%kmino; kmaxo => spray%kmaxo
-    
+
     divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
     F => spray%solver%F; S => spray%solver%S
 
@@ -448,7 +448,7 @@ contains
 
        alpha_l(k) = max(abs(u_l(k-1)),abs(u_l(k))); !hx/dt;%max(abs(u_l(i-1)),abs(u_l(i)));
        alpha_g(k) = max(abs(u_g(k-1)),abs(u_g(k))); !hx/dt;%max(abs(u_l(i)),abs(u_l(i+1)));
-      
+
     end do
 
     do i = 1,3
@@ -456,7 +456,7 @@ contains
        Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_g*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
 
        do k = kmin,kmax
-       
+
           Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
 
        end do
@@ -478,9 +478,9 @@ contains
     do i = 4,9
 
        Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_l*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
-       
+
        do k = kmin,kmax
-       
+
           Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
 
        end do
@@ -488,6 +488,9 @@ contains
     end do
 
     Wold = W
+
+    spray%solver%rktvd%RK(spray%solver%rktvd%niter,:,:) = W
+    spray%solver%rktvd%Res(spray%solver%rktvd%niter,:,:) = Res
 
   end subroutine computeResidual_LF
 
@@ -502,7 +505,7 @@ contains
     integer, pointer :: kmin, kmax, kmino, kmaxo
     real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
     real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
-                                       Flux=>null()
+         Flux=>null()
     real(WP) :: a_l, a_r, FL, FR
     type(solver_t), pointer :: solver=>null()
 
@@ -510,7 +513,7 @@ contains
 
     kmin => spray%kmin; kmax => spray%kmax
     kmino => spray%kmino; kmaxo => spray%kmaxo
-    
+
     divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
     F => spray%solver%F; S => spray%solver%S
 
@@ -532,8 +535,8 @@ contains
        !where(solver%f_t < 0.0_WP) solver%f_t = 0.0_WP
 
        do k = kmin,kmax
-       
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k-1:k)) - S(i,k))
+
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1)) - S(i,k))
           !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -550,10 +553,10 @@ contains
        call computeWeno5Flux(spray)
 
        !where(solver%f_t < 0.0_WP) solver%f_t = 0.0_WP
-       
+
        do k = kmin,kmax
-       
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k-1:k)) - S(i,k))
+
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1)) - S(i,k))
           !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -561,6 +564,9 @@ contains
     end do
 
     Wold = W
+
+    spray%solver%rktvd%RK(spray%solver%rktvd%niter,:,:) = W
+    spray%solver%rktvd%Res(spray%solver%rktvd%niter,:,:) = Res
 
   end subroutine computeResidual_WENO5
 
@@ -571,39 +577,111 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
-    type(rk_solver_t), pointer :: rks
-    real(WP), dimension(:,:), pointer :: RK=>null(), dRK=>null()
-    real(WP), dimension(:,:), pointer :: W=>null(), Wold=>null(), Res=>null()
-    real(WP), dimension(:), pointer :: alpha, beta, dt_ratio
-    integer :: k
+    type(rktvd_solver_t), pointer :: rktvd
+    real(WP), dimension(:,:,:), pointer :: RK=>null(), Res=>null()
+    real(WP), dimension(:,:), pointer :: W=>null()
+    real(WP), dimension(:,:), pointer :: coeff
+    integer :: k, istage
     integer, pointer :: kmino, kmaxo, kmin, kmax
 
     kmin => spray%kmin; kmax => spray%kmax; kmino => spray%kmino; kmaxo => spray%kmaxo
 
-    W => spray%solver%W; Wold => spray%solver%Wold; Res => spray%solver%Res
-    rks => spray%solver%rk
+    W => spray%solver%W
+    rktvd => spray%solver%rktvd
 
-    RK => rks%RK; dRK => rks%dRK; alpha => rks%alpha; beta => rks%beta; dt_ratio => rks%dt_ratio
+    RK => rktvd%RK; Res => rktvd%Res; coeff => rktvd%coeff
 
-    do k = kmin,kmax
+    istage = rktvd%niter
 
-       RK(:,k) = alpha(rks%niter)*RK(:,k) + Res(:,k)
-       dRK(:,k) = beta(rks%niter)*RK(:,k)
-       W(:,k) = W(:,k) + dRK(:,k)
-       
-       select case (trim(rks%scheme))
-       case ('Wray-33')
-          if (rks%niter == 2) then
-             RK(:,k) = Res(:,k)
-          end if
-       case ('Shu-33')
-          if (rks%niter /= 3) then
-             RK(:,k) = W(:,k) - Wold(:,k)
-          end if
-       end select
-    end do
+    select case (rktvd%order)
 
+    case(1)
+
+       do k = kmin,kmax
+
+          W(:,k) = coeff(istage,1)*RK(istage,:,k) + coeff(istage,2)*Res(istage,:,k)
+
+       end do
+
+    case(2)
+
+       if(istage == 1) then
+          do k = kmin,kmax
+
+             W(:,k) = coeff(istage,1)*RK(istage,:,k) + coeff(istage,2)*Res(istage,:,k)
+
+          end do
+       else
+          do k = kmin,kmax
+
+             W(:,k) = coeff(istage,1)*RK(istage-1,:,k) + coeff(istage,2)*RK(istage,:,k) &
+                  + coeff(istage,3)*Res(istage,:,k)
+
+          end do
+       end if
+
+    case(3)
+
+       if(istage == 1) then
+          do k = kmin,kmax
+
+             W(:,k) = coeff(istage,1)*RK(istage,:,k) + coeff(istage,2)*Res(istage,:,k)
+
+          end do
+       else if(istage == 2) then
+          do k = kmin,kmax
+
+             W(:,k) = coeff(istage,1)*RK(istage-1,:,k) + coeff(istage,2)*RK(istage,:,k) &
+                  + coeff(istage,3)*Res(istage,:,k)
+
+          end do
+       else
+          do k = kmin,kmax
+
+             W(:,k) = coeff(istage,1)*RK(istage-2,:,k) + coeff(istage,2)*RK(istage,:,k) &
+                  + coeff(istage,3)*Res(istage,:,k)
+
+          end do
+       end if
+
+    case(4)
+       write(*,*) 'Warning! Scheme not working properly...'
+       if(istage == 1) then
+          do k = kmin,kmax
+
+             W(:,k) = coeff(istage,1)*RK(istage,:,k) + coeff(istage,2)*Res(istage,:,k)
+
+          end do
+       else if(istage == 2) then
+          do k = kmin,kmax
+
+             W(:,k) = coeff(istage,1)*RK(istage-1,:,k) - coeff(istage,2)*Res(istage-1,:,k) &
+                  + coeff(istage,3)*RK(istage,:,k)   + coeff(istage,4)*Res(istage,:,k)
+
+          end do
+       else if(istage == 3) then
+          do k = kmin,kmax
+
+             W(:,k) = coeff(istage,1)*RK(istage-2,:,k) - coeff(istage,2)*Res(istage-2,:,k) &
+                  + coeff(istage,3)*RK(istage-1,:,k) - coeff(istage,4)*Res(istage-1,:,k) &
+                  + coeff(istage,5)*RK(istage,:,k)   + coeff(istage,6)*Res(istage,:,k)
+
+          end do
+       else 
+          do k = kmin,kmax
+
+             W(:,k) = coeff(istage,1)*RK(istage-3,:,k) + coeff(istage,2)*Res(istage-3,:,k) &
+                  + coeff(istage,3)*RK(istage-2,:,k) + coeff(istage,4)*Res(istage-2,:,k) &
+                  + coeff(istage,5)*RK(istage-1,:,k)                                     &
+                  + coeff(istage,6)*RK(istage,:,k)   + coeff(istage,7)*Res(istage,:,k)
+
+          end do
+       end if
+
+    case default
+       write(*,*) 'Scheme not implemented. Order of the scheme: ',rktvd%order
+    end select
 
   end subroutine updateSolution
-  
+
 end module solver_func

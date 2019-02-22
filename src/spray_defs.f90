@@ -102,6 +102,29 @@ module spray_defs
      real(WP), pointer :: fixed_Re, fixed_We, fixed_DRa, fixed_DRv, fixed_VRa, fixed_VRv, fixed_De
   end type spray_t
 
+
+  ! Definition of SolverVec object
+  type SolverVec_t
+
+     ! Flow variables
+     real(WP), dimension(:), pointer :: z, rho, Y_l, Y_v, Y_a, Y_g, u_l, u_g, d2, dm, d3, Td, b, Tg
+
+     ! Source terms
+     real(WP), dimension(:), pointer :: omega_ent, omega_vap, omega_vapdm, omega_vapd2, omega_vapd3, &
+                                        f_drag, omega_bre1, omega_bre2, omega_bre3, omega_T
+
+     ! Solver
+     type(solver_t), pointer :: solver
+
+     ! Number of grid points
+     integer, pointer :: Nz, nzo, step
+     integer, pointer :: kmin, kmax, kmino, kmaxo
+
+     ! Numerics
+     real(WP), pointer :: dz, Lz
+
+  end type SolverVec_t   
+
 contains
 
   ! Allocate spray with default values
@@ -209,7 +232,7 @@ contains
 
     allocate(spray%solver)
 
-    allocate(spray%solver%rk)
+    allocate(spray%solver%rktvd)
 
     allocate(spray%solver%nr)
     ! Default initialization

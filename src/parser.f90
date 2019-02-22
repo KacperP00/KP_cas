@@ -110,7 +110,7 @@ contains
                else if(param .eq. 'ROI profile') then
                   read(line(idx+1:len(line)),*) spray%roi_file
                else if(param .eq. 'RK scheme') then
-                  read(line(idx+1:len(line)),*) spray%solver%rk%scheme
+                  read(line(idx+1:len(line)),*) spray%solver%rktvd%scheme
                else if(param .eq. 'Conv scheme') then
                   read(line(idx+1:len(line)),*) spray%solver%scheme
                else if(param .eq. 'Data File') then

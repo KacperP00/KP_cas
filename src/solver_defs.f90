@@ -20,7 +20,7 @@ module solver_defs
      integer :: order = 1
 
      ! RK Solver
-     type(rk_solver_t), pointer :: rk
+     type(rktvd_solver_t), pointer :: rktvd
      
      ! Convective scheme
      real(WP), dimension(:,:), pointer :: divc, weno5p, weno5m
@@ -30,7 +30,10 @@ module solver_defs
 
      ! Stencils for weno5
      real(WP), dimension(:), pointer :: S0_p, S1_p, S2_p, S0_m, S1_m, S2_m, f_p, f_m, f_t
-     
+
+     ! Number of equations
+     integer :: neq = 9
+ 
      ! State and flux vectors
      real(WP), dimension(:,:), pointer :: W, Wold, F, S, Res
 
@@ -82,7 +85,7 @@ contains
 
     ! ---------------------------------
 
-    call deallocate_rk(solver%rk)
+    call deallocate_rktvd(solver%rktvd)
 
     deallocate(solver%divc)
 
@@ -97,12 +100,14 @@ contains
     
     deallocate(solver%Flux, solver%Res, solver%alpha_l, solver%alpha_g)
     
-    deallocate(solver%rk%RK, solver%rk%dRK)
-    
     deallocate(solver%nr)
 
     deallocate(solver)
 
   end subroutine deallocate_solver
+
+  !subroutine assign_SolverVec(SolverVecA,SolverVecB,spray)
+    
+  !end subroutine assign_SolverVec
 
 end module solver_defs

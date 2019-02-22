@@ -21,6 +21,7 @@ program cas
   type(spray_t), pointer :: spray
   type(pc_t), pointer :: pc
   character(len=128) :: fname
+  real(WP) :: tstart, tend
   !--------------------------------------
   
   ! Get input filename from command line if present
@@ -41,8 +42,14 @@ program cas
   ! Initialize spray
   call init_spray(spray)
 
+  call cpu_time(tstart)
+
   ! Solve the equations
   call run_spray(spray) 
+
+  call cpu_time(tend)
+
+  write(*,*) 'Runtime: ',tend-tstart,' seconds'
 
   ! Write output
   call write_output(spray,spray%step,spray%ndtime)

@@ -226,17 +226,17 @@ contains
        
        write(*,*) 'step: ', spray%step, 'Time: ', spray%ndtime, 'dt: ', spray%dt!, 'End: ', spray%ndftime
 
-       do niter = 1,spray%solver%rk%stage
+       do niter = 1,spray%solver%rktvd%stage
 
-          spray%solver%rk%niter = niter
-
-          ! Compute time step
-          call computeTimeStep(spray)
+          spray%solver%rktvd%niter = niter
 
           ! Apply BCs
           call applyBC(spray)
 
-          ! Compute droplet size distribution
+          ! Compute time step
+          call computeTimeStep(spray)
+
+          ! Compute Droplet Size Distribution
           call compute_DSD(spray)
 
           ! Update models: Entrainment, Drag, Breakup, Evaporation and heating
@@ -2149,7 +2149,7 @@ contains
 
   end subroutine evaporationModel_try
 
-  subroutine evaporationModelOld(spray)
+  subroutine evaporationModel(spray)
     implicit none
 
     ! ---------------------------------
@@ -2213,7 +2213,7 @@ contains
 
     end do
 
-  end subroutine evaporationModelOld
+  end subroutine evaporationModel
 
   subroutine evaporationModel(spray)
     implicit none
