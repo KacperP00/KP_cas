@@ -1274,10 +1274,10 @@ contains
 
     rho = 0.0_WP; u_l = 0.0_WP; 
  
-    Y_l = 0.0_WP; Y_a = 1.0_WP; Y_v = 0.0_WP;
+    Y_l = 0.0_WP; Y_a = 0.0_WP; Y_v = 0.0_WP;
     dm = 0.0_WP; d2 = 0.0_WP; Td = 0.0_WP
 
-    do k = spray%kmin,spray%kmax
+    do k = spray%kmino,spray%kmaxo
 
        if ( (W(1,k)+W(2,k)) .gt. 0.0_WP ) then
           u_g(k) = max(0.0_WP,W(3,k)/(W(1,k)+W(2,k)))

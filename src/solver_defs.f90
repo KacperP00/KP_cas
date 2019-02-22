@@ -33,7 +33,7 @@ module solver_defs
                                         S2_m, f_p, f_m, f_t
 
      ! Number of equations
-     integer :: neq = 9
+     integer :: neq = 12
  
      ! State and flux vectors
      real(WP), dimension(:,:), pointer :: W, Wold, F, S, Res
@@ -65,11 +65,11 @@ contains
 !!$            solver%W, solver%Wold, solver%F, solver%S, solver%Res, &
 !!$            solver%Flux, solver%alpha_l, solver%alpha_g)
 
-    allocate(solver%W(9,nzo)); solver%W = 0.0_WP
-    allocate(solver%Wold(9,nzo)); solver%Wold = 0.0_WP
-    allocate(solver%F(9,nzo)); solver%F = 0.0_WP
-    allocate(solver%S(9,nzo)); solver%S = 0.0_WP
-    allocate(solver%Res(9,nzo)); solver%Res = 0.0_WP
+    allocate(solver%W(12,nzo)); solver%W = 0.0_WP
+    allocate(solver%Wold(12,nzo)); solver%Wold = 0.0_WP
+    allocate(solver%F(12,nzo)); solver%F = 0.0_WP
+    allocate(solver%S(12,nzo)); solver%S = 0.0_WP
+    allocate(solver%Res(12,nzo)); solver%Res = 0.0_WP
 
     allocate(solver%Flux(nzo)); solver%Flux = 0.0_WP
     allocate(solver%alpha_l(nzo)); solver%alpha_l = 0.0_WP
