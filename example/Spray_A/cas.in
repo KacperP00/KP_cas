@@ -2,8 +2,8 @@
 
 ! Grid and numerical parameters
 Length : 800.0
-Number of grid points : 401
-Maximum CFL : 0.1
+Number of grid points : 801
+Maximum CFL : 0.05
 
 Maximum time : 1.0e-3
 
@@ -17,7 +17,7 @@ Fuel : ndodecane
 !Melting point: 263.57       
 
 ! Nozzle parameters
-Injection pressure : 1500e5
+Injection pressure : 1560e5
 
 Fuel temperature : 363.0
 
@@ -27,7 +27,7 @@ Nozzle LD ratio : 11.0
 
 Nozzle rD ratio : 0.256
 
-Nozzle sac diameter : 660e-9
+Nozzle sac diameter : 660e-6
 
 Nozzle K inlet : 0.035
 
@@ -42,20 +42,22 @@ Ambient temperature : 900.0
 
 Ambient molecular weight : 28.97e-3
 
-Compressibility factor : 1.0
+Compressibility factor : 1.016
 
 ! Spray parameters
 Initial DSD : Rosin-Rammler
 Number of diameter classes : 200
-!Initial Dm : 0.0093 
-!Initial D2 : 1.12e-4
+Initial Dm : 0.00936934411888
+Initial D2 : 0.000111640235498
+
 Spray half-cone angle model : Hiroyasu-Arai
 !C_theta : 1.0
-!Spray half-cone angle : 10.0
-!Tangent of spray half-cone angle : 0.165
+!Spray half-cone angle : 9.8
+!9.8694
+!Tangent of spray half-cone angle : 0.109
 
 ! Injection rate profile, a comma-separated file
-!ROI profile : roi.txt
+ROI profile : roi.txt
 
 ! RK solver parameters
 RK scheme : 1
