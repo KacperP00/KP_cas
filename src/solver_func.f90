@@ -256,12 +256,12 @@ contains
     ! ---------------------------------
     real(WP), dimension(:,:), pointer :: W=>null()
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
-                                       u_l=>null(), u_g=>null(), d2=>null(), d3=>null(), dm=>null(), &
+                                       u_l=>null(), u_g=>null(), d2=>null(), d3=>null(), dm=>null(), dvar=>null(), &
                                        Td=>null(), b=>null(), k_g=>null(), eps_g=>null(), zvar_g=>null()
     real(WP), dimension(spray%nzo) :: b2
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
-    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar; Td => spray%Td; b => spray%b
     k_g => spray%k_g; eps_g => spray%eps_g; zvar_g=>spray%zvar_g
     W => spray%solver%W
 
@@ -272,15 +272,18 @@ contains
     W(1,:) = rho*Y_a*b2
     W(2,:) = rho*Y_v*b2
     W(3,:) = rho*Y_g*u_g*b2
-    W(4,:) = rho*Y_l*b2
-    W(5,:) = rho*Y_l*u_l*b2
-    W(6,:) = rho*Y_l*Td*b2
-    W(7,:) = rho*Y_l*dm*b2
-    W(8,:) = rho*Y_l*d2*b2
-    W(9,:) = rho*Y_l*d3*b2
-    W(10,:) = rho*Y_g*k_g*b2
-    W(11,:) = rho*Y_g*eps_g*b2
-    W(12,:) = rho*Y_g*zvar_g*b2
+    W(4,:) = rho*Y_g*k_g*b2
+    W(5,:) = rho*Y_g*eps_g*b2
+    W(6,:) = rho*Y_g*zvar_g*b2
+
+    W(7,:) = rho*Y_l*b2
+    W(8,:) = rho*Y_l*u_l*b2
+    W(9,:) = rho*Y_l*Td*b2
+    W(10,:) = rho*Y_l*dm*b2
+    W(11,:) = rho*Y_l*dvar*b2
+    W(12,:) = rho*Y_l*d2*b2
+    W(13,:) = rho*Y_l*d3*b2
+
 
   end subroutine buildStateVector
 
@@ -293,12 +296,12 @@ contains
     ! ---------------------------------
     real(WP), dimension(:,:), pointer :: F=>null()
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
-                                       u_l=>null(), u_g=>null(), d3=>null(), d2=>null(), dm=>null(), &
+                                       u_l=>null(), u_g=>null(), d3=>null(), d2=>null(), dm=>null(), dvar=>null(), &
                                        Td=>null(), b=>null(), k_g=>null(), eps_g=>null(), zvar_g=>null()
     real(WP), dimension(spray%nzo) :: b2
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
-    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; Td => spray%Td; b => spray%b
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar; Td => spray%Td; b => spray%b
     k_g => spray%k_g; eps_g => spray%eps_g; zvar_g => spray%zvar_g
 
     F => spray%solver%F
@@ -312,15 +315,17 @@ contains
     F(1,:) = rho*Y_a*u_g*b2
     F(2,:) = rho*Y_v*u_g*b2
     F(3,:) = rho*Y_g*u_g*u_g*b2
-    F(4,:) = rho*Y_l*u_l*b2
-    F(5,:) = rho*Y_l*u_l*u_l*b2
-    F(6,:) = rho*Y_l*Td*u_l*b2
-    F(7,:) = rho*Y_l*dm*u_l*b2
-    F(8,:) = rho*Y_l*d2*u_l*b2
-    F(9,:) = rho*Y_l*d3*u_l*b2
-    F(10,:) = rho*Y_g*k_g*u_g*b2
-    F(11,:) = rho*Y_g*eps_g*u_g*b2
-    F(12,:) = rho*Y_g*zvar_g*u_g*b2
+    F(4,:) = rho*Y_g*k_g*u_g*b2
+    F(5,:) = rho*Y_g*eps_g*u_g*b2
+    F(6,:) = rho*Y_g*zvar_g*u_g*b2
+
+    F(7,:) = rho*Y_l*u_l*b2
+    F(8,:) = rho*Y_l*u_l*u_l*b2
+    F(9,:) = rho*Y_l*Td*u_l*b2
+    F(10,:) = rho*Y_l*dm*u_l*b2
+    F(11,:) = rho*Y_l*dvar*u_l*b2
+    F(12,:) = rho*Y_l*d2*u_l*b2
+    F(13,:) = rho*Y_l*d3*u_l*b2
 
   end subroutine buildFluxVector
 
@@ -359,15 +364,18 @@ contains
     S(1,:) = omega_ent*b
     S(2,:) = omega_vap*b2
     S(3,:) = (-f_drag + omega_vap*u_l)*b2
-    S(4,:) = -omega_vap*b2
-    S(5,:) = (f_drag - omega_vap*u_l)*b2
-    S(6,:) = (omega_T - omega_vap*Td)*b2
-    S(7,:) = (-omega_bre1 - 4.0_WP/3.0_WP*omega_vapdm)*b2
-    S(8,:) = (-omega_bre2 - 5.0_WP/3.0_WP*omega_vapd2)*b2
-    S(9,:) = (-omega_bre3 - 2.0_WP       *omega_vapd3)*b2
-    S(10,:) = omega_k_g_p - omega_k_g_d
-    S(11,:) = omega_eps_g_p - omega_eps_g_d
-    S(12,:) = omega_zvar_g_p - omega_zvar_g_d
+    S(4,:) = omega_k_g_p - omega_k_g_d
+    S(5,:) = omega_eps_g_p - omega_eps_g_d
+    S(6,:) = omega_zvar_g_p - omega_zvar_g_d
+
+    S(7,:) = -omega_vap*b2
+    S(8,:) = (f_drag - omega_vap*u_l)*b2
+    S(9,:) = (omega_T - omega_vap*Td)*b2
+    S(10,:) = (-omega_bre1 - 4.0_WP/3.0_WP*omega_vapdm)*b2
+    S(11,:) = (-omega_bre2 - 5.0_WP/3.0_WP*omega_vapd2)*b2 &
+            - 2.0_WP*dm*S(10,:) + S(7,:)*dm**2
+    S(12,:) = (-omega_bre2 - 5.0_WP/3.0_WP*omega_vapd2)*b2
+    S(13,:) = (-omega_bre3 - 2.0_WP       *omega_vapd3)*b2
 
   end subroutine buildSourceVector
 
@@ -397,7 +405,9 @@ contains
     u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g
     Flux => spray%solver%Flux; Res => spray%solver%Res
 
-    do i = 1,3
+    do i = 1,6
+
+       if(i >= abs(spray%skip_turb)) cycle
 
        do k = kmin,kmax
 
@@ -407,7 +417,11 @@ contains
 
     end do
 
-    do i = 4,9
+    do i = 7,13
+
+       if(i == spray%skip_d2) cycle
+       
+       if(i == spray%skip_d3) cycle
 
        do k = kmin,kmax
 
@@ -451,7 +465,9 @@ contains
 
     end do
 
-    do i = 1,3
+    do i = 1,6
+
+       if(i >= abs(spray%skip_turb)) cycle
 
        Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_g*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
 
@@ -463,19 +479,11 @@ contains
 
     end do
 
-    do i = 10,12
+    do i = 7,13
 
-       Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_g*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
+       if(i == spray%skip_d2) cycle
 
-       do k = kmin,kmax
-
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
-
-       end do
-
-    end do
-
-    do i = 4,9
+       if(i == spray%skip_d3) cycle
 
        Flux = 0.5_WP*(F(i,1:kmaxo-1)+F(i,2:kmaxo)) + 0.5_WP*alpha_l*(W(i,1:kmaxo-1)-W(i,2:kmaxo))
 
@@ -523,7 +531,9 @@ contains
     ! Global LF splitting
     alpha_l = maxval(u_l); alpha_g = maxval(u_g)
 
-    do i = 1,3
+    do i = 1,6
+
+       if(i >= abs(spray%skip_turb)) cycle
 
        solver%f_p = 0.5_WP*(F(i,:) + alpha_g*W(i,:))
        solver%f_m = 0.5_WP*(F(i,:) - alpha_g*W(i,:))
@@ -543,7 +553,11 @@ contains
 
     end do
 
-    do i = 4,9
+    do i = 7,13
+
+       if(i == spray%skip_d2) cycle
+
+       if(i == spray%skip_d3) cycle
 
        solver%f_p = 0.5_WP*(F(i,:) + alpha_l*W(i,:))
        solver%f_m = 0.5_WP*(F(i,:) - alpha_l*W(i,:))

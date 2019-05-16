@@ -24,6 +24,22 @@ module math
 
 contains
   
+  ! Returns the beta distribution
+  real(WP) function betaDist(xx, alpha, beta)
+    implicit none
+
+    real(WP), intent(in) :: xx, alpha, beta
+    real(WP) :: tmp, fgam
+
+    fgam = gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta);
+    tmp = (alpha-1.0_WP)*log(xx) + (beta-1.0_WP)*log(1.0_WP-xx) + fgam;
+    
+    betaDist = exp(tmp)
+
+    return
+
+  end function betaDist
+
   ! Returns the gamma function
   function gamma(xx)
     implicit none
@@ -1061,5 +1077,399 @@ contains
     end function pythag
     
   end subroutine tqli
+
+  ! Adapted from MDUC
+  subroutine betaPDF(mean,var,nzz,zz,bpdf,pdfBound)
+    implicit none
+
+    ! ---------------------------------
+    real(WP), intent(inout) :: mean, var
+    real(WP), dimension(:), intent(out) :: zz, bpdf
+    integer, intent(inout) :: nzz
+    integer, dimension(:), intent(inout) :: pdfBound
+    ! ---------------------------------
+    real(WP) :: tmp, alpha, beta, fgam, sumPDF, sumPDFI, truncate = 1.0E-06_WP
+    real(WP) :: dzz, dzz0, dzzN, dzzI
+    integer :: i, j, j0, j1, jMean, pdf_flag
+
+    bpdf = 0.0_WP
+
+    dzz0 = 0.5*(zz(2)-zz(1));     ! for boundary approximation
+    dzzN = 0.5*(zz(nzz)-zz(nzz-1));
+
+    ! Ensure that the mean and variance are properly bounded
+    call clipMoments(mean,var)
+
+    pdf_flag = 0
+    ! Check for special cases of pdf, e.g. delta function
+    call checkPDF(nzz, zz, mean, var, bpdf, pdfbound, pdf_flag)
+
+    ! If pdfFlag is greater than zero, special case was found, so exit
+    if (pdf_flag > 0) then
+       zz(1) = 1.0E-10_WP
+       return
+    end if
+
+    ! Compute the shape parameters for the beta distribution
+    tmp = mean*(1.0_WP-mean)/var - 1.0_WP
+    alpha = mean*tmp
+    beta  = (1.0_WP-mean)*tmp
+    if (abs(alpha - 1.0_WP) < 1.0E-09_WP) alpha = 1.0_WP
+    if (abs(beta - 1.0_WP) < 1.0E-09_WP) beta = 1.0_WP
+
+    ! ----- compute a beta distribution based on alpha and beta ----- 
+    sumPDF  = 0.0_WP
+    if (alpha == 1.0_WP .and. beta == 1.0_WP) then ! uniform distribution (not likely)
+       j0 = 1
+       j1 = nzz
+       dzzI = 1.0_WP / (zz(j1)-zz(j0))
+       bpdf(j0) = 0.5_WP*(zz(2)-zz(1))*dzzI
+       bpdf(j1) = 0.5_WP*(zz(j1+1)-zz(j1))*dzzI
+       sumPDF = bpdf(j0) + bpdf(j1)
+       do j=j0+1,j1-1
+
+          dzz = 0.5_WP*(zz(j+1)-zz(j-1))
+          bpdf(j) = dzz*dzzI
+          sumPDF = sumPDF + bpdf(j)
+
+       end do
+
+       ! U shaped distribution
+    else if ( (alpha < 1.0_WP .and. beta < 1.0_WP) ) then
+
+       ! Need to calculate over whole domain, ignore the ends
+       j0 = 1
+       j1 = nzz
+
+       ! Compute the PDF over all the interior points
+       do j=j0+1,j1-1
+
+          dzz = 0.5_WP*(zz(j+1)-zz(j-1));
+          bpdf(j) = betaDist(zz(j), alpha, beta)*dzz;
+          sumPDF = sumPDF + bpdf(j)
+
+       end do
+
+       ! Decreasing distribution
+    else if ( (alpha < 1.0_WP .and. beta >= 1.0_WP) &
+         .or.(  alpha == 1.0_WP .and. beta > 1.0_WP) ) then
+
+       ! Start at the left boundary and march till less than truncate
+       j0 = 1
+       do j = j0+1, nzz-1
+
+          dzz = 0.5_WP*(zz(j+1)-zz(j-1))
+          bpdf(j) = betaDist(zz(j), alpha, beta)*dzz
+
+          if (bpdf(j) < truncate) then
+             bpdf(j) = 0.0_WP
+             exit
+          end if
+
+          j1 = j
+          sumPDF = sumPDF + bpdf(j)
+
+       end do
+
+       ! Increasing distribution
+    else if ( (alpha > 1.0_WP .and. beta <= 1.0_WP) &
+         .or. (  alpha == 1.0_WP .and. beta < 1.0_WP) ) then
+
+       ! Start at the right boundary and march till less than truncate
+       j1 = nzz
+       j = j1-1
+       do while (j>1)
+          dzz = 0.5_WP*(zz(j+1)-zz(j-1))
+          bpdf(j) = betaDist(zz(j), alpha, beta)*dzz
+
+          if (bpdf(j) < truncate) then
+
+             bpdf(j) = 0.0_WP
+             exit
+          end if
+
+          j0 = j
+          sumPDF = sumPDF + bpdf(j)
+          j = j -1
+       end do
+
+       ! Unimodal distribution
+    else
+
+       j0 = 1
+       j1 = nzz
+
+       ! Find the location of the mesh point before the mean
+       jMean = 1
+       do while (zz(jMean) <= mean) 
+          jMean = jMean + 1
+       end do
+       jMean = jMean -1
+
+       ! Start from the mean and decrease zz till the pdf is negligible
+       j = jMean
+       do while(j>1)
+
+          dzz = 0.5_WP*(zz(j+1)-zz(j-1))
+          bpdf(j) = betaDist(zz(j), alpha, beta)*dzz
+
+          if (bpdf(j) < truncate) then
+
+             bpdf(j) = 0.0
+             exit
+          end if
+
+          j0 = j
+          sumPDF = sumPDF + bpdf(j)
+          j = j - 1
+
+       end do
+
+       ! Start from the mean and increase zz till the pdf is negligible
+       j = jMean+1
+       do j=jMean+1,nzz-1
+
+          dzz = 0.5_WP*(zz(j+1)-zz(j-1))
+          bpdf(j) = betaDist(zz(j), alpha, beta)*dzz
+
+          if (bpdf(j) < truncate) then
+
+             bpdf(j) = 0.0_WP
+             exit
+          end if
+
+          j1 = j
+          sumPDF = sumPDF + bpdf(j)
+       end do
+
+    end if ! End different cases
+
+    ! Compute the boundary points explicitly if necessary using approximate expansion 
+    if (.not.(alpha == 1.0_WP .and. beta == 1.0_WP)) then
+
+       fgam = gammaln(alpha+beta) - gammaln(alpha) - gammaln(beta)
+       if (j0 == 1 .or. j0 == 2) then
+          j0 = 1
+          bpdf(j0) = exp(alpha*log(dzz0) + fgam)/alpha
+          sumPDF = sumPDF + bpdf(j0)
+       end if
+
+       if (j1 == nzz .or. j1 == nzz-1) then
+          j1 = nzz
+          bpdf(j1) = exp(beta*log(dzzN) + fgam)/beta
+          sumPDF = sumPDF + bpdf(j1)
+       end if
+    end if
+
+    sumPDFI = 1.0_WP / sumPDF
+    ! Normalize the PDF
+    bpdf = bpdf*sumPDFI
+
+
+    ! Store the limits of the non-zero pdf
+    pdfBound(1) = j0
+    pdfBound(2) = j1
+
+    zz(1) = 1.0E-10_WP
+
+  contains
+
+    ! Subroutine based on MDUC function clipMoments1D
+    subroutine clipMoments(mean, var)
+      implicit none
+      real(WP), intent(inout) :: mean, var
+      ! ---------------------------------
+
+      mean = min(1.0_WP, max(0.0_WP, mean))
+      var  = max(0.0_WP, min(var, mean*(1.0_WP-mean)))
+
+    end subroutine clipMoments
+
+    ! Subroutine based on MDUC function checkPDF_1D
+    subroutine checkPDF(n, x, mean, var, pdf, pdfbound, pdf_flag)
+      implicit none
+      integer, intent(inout) :: n, pdf_flag
+      real(WP), intent(inout) :: mean, var
+      real(WP), dimension(:), intent(inout) :: x, pdf
+      integer, dimension(:), intent(inout) :: pdfbound
+      ! ---------------------------------
+
+      integer :: j0, j1, jjMean
+      real(WP) :: dx, sigma, sumPDF
+
+      ! delta at x = 0
+      if (mean <= 1.0E-10_WP) then
+
+         pdf(1)      = 1.0_WP
+         pdfBound(1) = 1
+         pdfBound(2) = 1
+         pdf_flag    = 1
+
+      end if
+
+      ! delta at x = 1
+      if (mean >= (1.0_WP - 1.0E-10_WP) ) then
+
+         pdf(n)      = 1.0_WP
+         pdfBound(1) = n
+         pdfBound(2) = n
+         pdf_flag    = 1
+
+      end if
+
+      ! double delta function
+      if (var >= mean*(1.0_WP-mean)) then
+
+         pdf(1)      = 1.0_WP - mean
+         pdf(n)      = mean
+         pdfBound(1) = 1
+         pdfBound(2) = n
+         pdf_flag    = 1
+
+      end if
+
+      ! find the location of the mesh point before the mean
+      jjMean = 1
+      do while (x(jjMean) <= mean)
+         jjMean = jjMean + 1
+      end do
+      jjMean = jjMean - 1
+
+      sigma = sqrt(var)    ! compute the standard deviation
+
+      !if the mesh size about the mean is less than 1.5 standard deviations
+      !compute at two points about the mean such that the mean is conserved
+      if (x(jjMean+1) - x(jjMean) > 1.5_WP*sigma) then
+
+         j0 = jjMean
+         j1 = jjMean + 1
+
+         dx = (x(j1)-x(j0))
+         bpdf(j0) = abs(x(j1) - mean)/dx
+         bpdf(j1) = abs(mean - x(j0))/dx
+
+         ! normalise the PDF
+         sumPDF  = bpdf(j0)+bpdf(j1)
+         bpdf(j0) = bpdf(j0)/sumPDF
+         bpdf(j1) = bpdf(j1)/sumPDF
+
+         ! store bounds of non-zero PDF values
+         pdfBound(1) = j0
+         pdfBound(2) = j1
+         pdf_flag    = 1
+
+      end if
+
+    end subroutine checkPDF
+
+  end subroutine betaPDF
   
+  subroutine RosinRammlerPDF(xm,x2,xmax,nx,x,f)
+    implicit none
+
+    ! ---------------------------------
+    real(WP), intent(in) :: xm, x2, xmax
+    integer, intent(in) :: nx
+    real(WP), dimension(:), intent(out) :: x, f
+    ! ---------------------------------
+    
+    real(WP), dimension(nx+1) :: x_
+    real(WP), dimension(nx) :: dx_, dx, dx_adapt
+    real(WP), dimension(nx-1) :: invdiff
+    real(WP) :: dxx, xbar, r_min, r_max, q, ratio, norm
+    integer :: i
+    
+    xbar = 0.0_WP
+
+    dxx = 2.0_WP*xmax/(2.0_WP*nx-1.0_WP)
+
+    x_ = (/ (dxx*real(i,WP),i=0,nx,1) /)
+    f = (/ (real(0.0,WP),i=1,nx,1) /)
+    x = (x_(:nx)+0.5_WP*dxx)
+
+    r_min = 1.05_WP; r_max = 1.9_WP
+    ratio = x2/xm**2
+
+    if (xm > 0.0_WP .and. x2 > 0.0_WP) then
+
+       if (ratio > r_min ) then
+          ratio = min(r_max,ratio)
+          call bisection(q,ratio)
+       else
+          q = 5.1334_WP
+       end if
+
+       xbar = xm/gamma(1.0_WP+1.0_WP/q)
+
+       f = (q/xbar**q)*x**(q-1.0_WP)*exp(-(x/xbar)**q)
+
+       norm = sum(f)
+       if (norm > 0.0_WP) then
+          f = f/norm;
+       end if
+
+       ! Adapt 
+       invdiff = 1.0_WP/abs(f(:nx-1)-f(2:nx))
+
+       dx_adapt(2:nx) = invdiff/maxval(invdiff)
+       dx_adapt(1) = dx_adapt(2)
+       
+       dx_ = dx_adapt/sum(dx_adapt)
+       
+       x_ = 0.0_WP
+       do i=2,nx+1
+          x_(i) = x_(i-1) + dx_(i-1) 
+       end do
+      
+       x_ = xmax*x_
+
+       dx = x_(2:nx+1)-x_(1:nx)
+
+       x = x_(:nx)+0.5_WP*dx
+
+       f = (q/xbar**q)*x**(q-1.0_WP)*exp(-(x/xbar)**q)
+
+       norm = sum(f*dx)
+       if (norm > 0.0_WP) then
+          f = f*dx/norm;
+       end if
+
+    end if
+  contains
+
+    subroutine bisection(q_final,ratio)
+      implicit none
+
+      real(WP), intent(inout) :: q_final
+      real(WP), intent(in) :: ratio
+      ! -------------------------------
+      real(WP), parameter :: ql0 = 1.0, qh0 = 10.0_WP, tol = 1E-06
+      real(WP) :: fs, fl, fh, qs, ql, qh, err
+      integer :: iter
+      ! -------------------------------
+
+      iter = 0
+      err = 1.0_WP
+      ql = ql0; qh = qh0; qs = 0.5_WP*(ql+qh)
+      do while ( err > tol)
+         iter = iter + 1
+         fs = gamma(1.0_WP+2.0_WP/qs)/(gamma(1.0_WP+1.0_WP/qs))**2 - ratio
+         fl = gamma(1.0_WP+2.0_WP/ql)/(gamma(1.0_WP+1.0_WP/ql))**2 - ratio
+         fh = gamma(1.0_WP+2.0_WP/qh)/(gamma(1.0_WP+1.0_WP/qh))**2 - ratio
+
+         if (fl*fs < 0.0_WP) then
+            qh = qs; qs = 0.5_WP*(ql+qh)
+         elseif (fs*fh < 0.0_WP) then
+            ql = qs; qs = 0.5_WP*(ql+qh)
+         end if
+
+         err = abs(fs)
+
+      end do
+      !write(*,*) 'Bisection iters:', iter
+      q_final = qs
+    end subroutine bisection
+
+  end subroutine RosinRammlerPDF
+
 end module math

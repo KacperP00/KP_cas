@@ -3,7 +3,7 @@
 ! Grid and numerical parameters
 Length : 800.0
 Number of grid points : 801
-Maximum CFL : 0.05
+Maximum CFL : 0.01
 
 Maximum time : 1.0e-3
 
@@ -17,6 +17,8 @@ Fuel : ndodecane
 !Melting point: 263.57       
 
 ! Nozzle parameters
+Use nozzle flow model : .true.
+
 Injection pressure : 1560e5
 
 Fuel temperature : 363.0
@@ -45,10 +47,27 @@ Ambient molecular weight : 28.97e-3
 Compressibility factor : 1.016
 
 ! Spray parameters
-Initial DSD : Rosin-Rammler
-Number of diameter classes : 200
-Initial Dm : 0.00936934411888
-Initial D2 : 0.000111640235498
+!Initial DSD : Blob
+!Number of diameter classes : 100
+
+Initial DSD : Delta
+Initial Dm : 1.0
+Initial Dvar : 0.0
+Number of diameter classes : 1
+
+!Initial DSD : Rosin-Rammler
+!Number of diameter classes : 20
+!Initial Dm : 0.00936934411888
+!0.31622776601
+!0.00936934411888
+!Initial D2 : 0.000111640235498
+
+! Break-up parameters
+B0 : 0.61
+B1 : 10.0
+C3 : 0.1
+Crel : 1.0
+Cevap : 0.3333333333
 
 Spray half-cone angle model : Hiroyasu-Arai
 !C_theta : 1.0
@@ -66,9 +85,14 @@ RK scheme : 1
 !Conv scheme : WENO5
 
 ! Output
-Data File : data_dsd_2d.out
-PL File : PL_dsd_2d.out
+Data File : data.out
+Datafile frequency : 1000
+PL File : spray_PL.out
 Output frequency : 1000
+
+! Combustion
+!Combustion model : RIF
+!RIF Input File : mduc.inp
 
 ! Fixed Non-dimensional parameters
 !Fixed Re : 1000

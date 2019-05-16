@@ -3,12 +3,11 @@ module parser
    use spray_defs
 contains
 
-   subroutine read_inputs(spray,fname)
+   subroutine read_inputs(spray)
       implicit none
 
       ! ---------------------------------
       type(spray_t), intent(inout) :: spray
-      character(len=128), intent(in) :: fname
 
       ! ---------------------------------
       logical :: exist_file
@@ -16,10 +15,10 @@ contains
       integer :: ioerr, i, idx
       character(len=128) :: param
 
-      inquire(file=fname, exist=exist_file)
+      inquire(file=spray%inp_fname, exist=exist_file)
       
       if(exist_file) then
-         open(unit=100,file=fname,form="formatted",status="old",action="read")
+         open(unit=100,file=spray%inp_fname,form="formatted",status="old",action="read")
          write(*,*) 'Reading input parameters...'
          do while (.true.)
             read(unit=100,fmt='(a)',iostat=ioerr) line
@@ -57,6 +56,8 @@ contains
                   read(line(idx+1:len(line)),*) spray%VFPTname
                else if(param .eq. 'Fuel molecular weight') then
                   read(line(idx+1:len(line)),*) spray%MW_f
+               else if(param .eq. 'Use nozzle flow model') then
+                  read(line(idx+1:len(line)),*) spray%noz_flow_model
                else if(param .eq. 'Injection pressure') then
                   read(line(idx+1:len(line)),*) spray%P_inj
                else if(param .eq. 'Nozzle exit diameter') then
@@ -73,6 +74,14 @@ contains
                   read(line(idx+1:len(line)),*) spray%K_exp
                else if(param .eq. 'Constant injection velocity') then
                   read(line(idx+1:len(line)),*) spray%const_inj_vel
+               else if(param .eq. 'Injected mass') then
+                  read(line(idx+1:len(line)),*) spray%inj_mass
+               else if(param .eq. 'Area of nozzle') then
+                  read(line(idx+1:len(line)),*) spray%Anoz
+               else if(param .eq. 'Discharge coefficient of nozzle') then
+                  read(line(idx+1:len(line)),*) spray%C_d
+               else if(param .eq. 'Number of nozzles') then
+                  read(line(idx+1:len(line)),*) spray%num_noz
                else if(param .eq. 'Number of grid points') then
                   read(line(idx+1:len(line)),*) spray%Nz
                else if(param .eq. 'Length') then
@@ -91,6 +100,20 @@ contains
                   read(line(idx+1:len(line)),*) spray%init_d2
                else if(param .eq. 'Initial D3') then
                   read(line(idx+1:len(line)),*) spray%init_d3
+               else if(param .eq. 'Initial Dvar') then
+                  read(line(idx+1:len(line)),*) spray%init_dvar
+               else if(param .eq. 'B0') then
+                  read(line(idx+1:len(line)),*) spray%B0
+               else if(param .eq. 'B1') then
+                  read(line(idx+1:len(line)),*) spray%B1
+               else if(param .eq. 'C3') then
+                  read(line(idx+1:len(line)),*) spray%C3
+               else if(param .eq. 'Crel') then
+                  read(line(idx+1:len(line)),*) spray%Crel
+               else if(param .eq. 'Cevap') then
+                  read(line(idx+1:len(line)),*) spray%Cevap
+               else if(param .eq. 'C_chi') then
+                  read(line(idx+1:len(line)),*) spray%C_chi
                else if(param .eq. 'Tolerance for Newton solver') then
                   read(line(idx+1:len(line)),*) spray%solver%nr%tol
                else if(param .eq. 'Initial relaxation coefficient for Newton solver') then
@@ -115,10 +138,16 @@ contains
                   read(line(idx+1:len(line)),*) spray%solver%scheme
                else if(param .eq. 'Data File') then
                   read(line(idx+1:len(line)),*) spray%datafilename
+               else if(param .eq. 'Datafile frequency') then
+                  read(line(idx+1:len(line)),*) spray%datafreq
                else if(param .eq. 'PL File') then
                   read(line(idx+1:len(line)),*) spray%plfilename
                else if(param .eq. 'Output frequency') then
                   read(line(idx+1:len(line)),*) spray%outfreq
+               else if(param .eq. 'Combustion model') then
+                  read(line(idx+1:len(line)),*) spray%combustion_model
+               else if(param .eq. 'Y_O2') then
+                  read(line(idx+1:len(line)),*) spray%Y_O2
                else if(param .eq. 'Fixed Re') then
                   read(line(idx+1:len(line)),*) spray%fixed_Re
                else if(param .eq. 'Fixed We') then
@@ -141,5 +170,148 @@ contains
       end if
 
     end subroutine read_inputs
+
+   subroutine read_param(fname,input,val,default)
+      implicit none
+
+      ! ---------------------------------
+      character(len=*), intent(in) :: fname, input, default
+      character(len=*), intent(out) :: val
+
+      ! ---------------------------------
+      logical :: exist_file
+      character(len=128) :: line
+      integer :: ioerr, i, idx
+      character(len=128) :: param
+
+      inquire(file=fname, exist=exist_file)
+      
+      if(exist_file) then
+         open(unit=100,file=fname,form="formatted",status="old",action="read")
+         write(*,*) 'Reading ',trim(input),' ...'
+         do while (.true.)
+            read(unit=100,fmt='(a)',iostat=ioerr) line
+            
+            if (ioerr .ne. 0) then
+               exit
+            end if
+
+            if (index(line,'!') > 0 .or. index(line,'#') > 0) then
+               cycle
+            end if
+
+            if (index(line,':') > 0) then
+               idx = index(line,':')
+               param = trim(line(1:idx-1))
+               if(param .eq. trim(input)) then
+                  read(line(idx+1:len(line)),*) val
+               else
+                  val = default
+               end if
+            end if
+         end do
+         close(unit=100)
+      end if
+
+    end subroutine read_param
+
+   subroutine modify_inputs(spray)
+      implicit none
+
+      ! ---------------------------------
+      type(spray_t), intent(inout) :: spray
+
+      ! ---------------------------------
+      logical :: exist_file
+      character(len=128) :: fname, line, param, tmp_char
+      integer :: ioerr, i, idx
+
+      fname = 'modify.in'
+
+      inquire(file=fname, exist=exist_file)
+      
+      if(exist_file) then
+         open(unit=100,file=fname,form="formatted",status="old",action="read")
+         do while (.true.)
+            read(unit=100,fmt='(a)',iostat=ioerr) line
+            
+            if (ioerr .ne. 0) then
+               exit
+            end if
+
+            if (index(line,'!') > 0 .or. index(line,'#') > 0) then
+               cycle
+            end if
+
+            ! End simulation
+            if(trim(line) .eq. 'END') then
+               spray%end = .true.
+               write(*,*) 'Spray simulation ended by user...'
+               exit
+            end if
+
+            ! Save data file 
+            if(trim(line) .eq. 'SAVE_DATA_FILE') then
+               spray%saveDataFile = .true.
+               write(*,*) 'Data file written...'
+               exit
+            end if
+
+            if (index(line,':') > 0) then
+               idx = index(line,':')
+               param = trim(line(1:idx-1))
+               if(param .eq. 'Maximum CFL') then
+                  write(tmp_char,*) spray%MaxCFL
+                  write(*,*) 'Modifying '//param//' from '//tmp_char//' to '//line(idx+1:len(line))
+                  read(line(idx+1:len(line)),*) spray%MaxCFL
+               else if(param .eq. 'Maximum time') then
+                  write(tmp_char,*) spray%final_time
+                  write(*,*) 'Modifying '//param//' from '//tmp_char//' to '//line(idx+1:len(line))
+                  read(line(idx+1:len(line)),*) spray%final_time
+               else if(param .eq. 'Number of diameter classes') then
+                  write(tmp_char,*) spray%nd
+                  write(*,*) 'Modifying '//param//' from '//tmp_char//' to '//line(idx+1:len(line))
+                  read(line(idx+1:len(line)),*) spray%nd
+               else if(param .eq. 'Tolerance for Newton solver') then
+                  write(tmp_char,*) spray%solver%nr%tol
+                  write(*,*) 'Modifying '//param//' from '//tmp_char//' to '//line(idx+1:len(line))
+                  read(line(idx+1:len(line)),*) spray%solver%nr%tol
+               else if(param .eq. 'Initial relaxation coefficient for Newton solver') then
+                  write(tmp_char,*) spray%solver%nr%relax_coeff
+                  write(*,*) 'Modifying '//param//' from '//tmp_char//' to '//line(idx+1:len(line))
+                  read(line(idx+1:len(line)),*) spray%solver%nr%relax_coeff
+               else if(param .eq. 'Alpha for Newton solver') then
+                  write(tmp_char,*) spray%solver%nr%alpha
+                  write(*,*) 'Modifying '//param//' from '//tmp_char//' to '//line(idx+1:len(line))
+                  read(line(idx+1:len(line)),*) spray%solver%nr%alpha
+               else if(param .eq. 'Maximum iterations for Newton solver') then
+                  write(tmp_char,*) spray%solver%nr%max_count
+                  write(*,*) 'Modifying '//param//' from '//tmp_char//' to '//line(idx+1:len(line))
+                  read(line(idx+1:len(line)),*) spray%solver%nr%max_count
+               else if(param .eq. 'Data File') then
+                  write(tmp_char,*) spray%datafilename
+                  write(*,*) 'Modifying '//param//' from '//tmp_char//' to '//line(idx+1:len(line))
+                  read(line(idx+1:len(line)),*) spray%datafilename
+               else if(param .eq. 'PL File') then
+                  write(tmp_char,*) spray%plfilename
+                  write(*,*) 'Modifying '//param//' from '//tmp_char//' to '//line(idx+1:len(line))
+                  read(line(idx+1:len(line)),*) spray%plfilename
+               else if(param .eq. 'Output frequency') then
+                  write(tmp_char,*) spray%outfreq
+                  write(*,*) 'Modifying '//param//' from '//tmp_char//' to '//line(idx+1:len(line))
+                  read(line(idx+1:len(line)),*) spray%outfreq
+               else
+                  write(*,*) param//' is not modified. Continuing with the old value...'
+               end if
+            else
+               write(*,*) 'Unknown keyword '//trim(line)//' !!! Nothing changed...'
+            end if
+         end do
+         close(unit=100)
+
+         call system('rm '//trim(fname))
+      end if
+
+    end subroutine modify_inputs
 
 end module parser
