@@ -257,6 +257,9 @@ contains
     ! Output important parameters
     if(spray%irank .eq. 0) call write_params(spray)
 
+    ! Write initial output file 
+    if(spray%irank .eq. 0) call write_output(spray,spray%step,spray%ndtime)
+
   end subroutine init_spray
 
   subroutine run_spray(spray)
@@ -382,8 +385,8 @@ contains
         write(*,*) 'Log-Normal DSD will be used in the limit of zero variance...'
         write(*,*) 'For non-zero variance, computation will be continued with Log-Normal DSD...'
        spray%dsd_type = type_log_normal
-       spray%init_dm = 1.0_WP
-       spray%init_d2 = 1.0_WP
+       !spray%init_dm = 1.0_WP
+       !spray%init_dvar = 0.001_WP
     ! Delta distribution
     case ('Delta','delta')
        write(*,*) 'Initializing delta (mono-dispersed) distribution for droplet sizes...'
@@ -3021,19 +3024,19 @@ contains
     if (mod(spray%step,spray%datafreq) == 0 .or. spray%saveDataFile .or. spray%end) then
        write(fname,"(A,A1,I0.6)") trim(spray%datafilename), '_', step
 
-       open(unit=100,file=trim(fname),form="formatted",status="replace",action="write")
+       open(unit=100,file=trim(fname),form="formatted",status="unknown",action="write")
 
-       !rowfmth = '(A,A,A,A,A,A,A,A,A,A,A,A)'
-       rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
-            ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
-            ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, I2, ES15.5E3, ES15.5E3)"
+       rowfmth = '(A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A)'
+       rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
+                  ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
+                  ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, I2)"
 
-       !write(100,fmt=rowfmth) 'z,', 'rho,', 'Y_l,', 'Y_v,', 'Y_a,', 'Y_g,', 'u_l,', 'u_g,', 'dm,', 'd2,', 'd3,', 'Td,', 'b'
+       write(100,FMT=rowfmth) '# z<1> ', 'rho<2> ', 'Y_l<3> ', 'Y_v<4> ', 'Y_a<5> ', 'Y_g<6> ', 'u_l<7> ', 'u_g<8> ', 'dm<9> ', 'dvar<10> ', 'd2<11> ', 'd3<12> ', 'Td<13> ', 'Tg<14> ', 'b<15> ', 'k_g<16> ', 'eps_g<17> ', 'mu_t_g<18> ', 'zvar_g<19> ', 'zmix_g<20> ', 'chi_g<21> ', 'chi_g_stl<22> ', 'dsd_type<23> '
        do k = kmin,kmax
           write(100,FMT=rowfmt) spray%z(k), spray%rho(k), spray%Y_l(k), spray%Y_v(k), spray%Y_a(k), &
-               spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%d2(k), &
+               spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%dvar(k), spray%d2(k), &
                spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k), spray%k_g(k), &
-               spray%eps_g(k), spray%mu_t_g(k), spray%zvar_g(k), spray%zmix_g(k),spray%dsd_type(k), spray%chi_g(k), spray%chi_g_stl(k)
+               spray%eps_g(k), spray%mu_t_g(k), spray%zvar_g(k), spray%zmix_g(k), spray%chi_g(k), spray%chi_g_stl(k), spray%dsd_type(k)
        end do
 
        close(unit=100)
@@ -3051,13 +3054,18 @@ contains
           open(unit=101,file=trim(fname),form="formatted",status="old",position="append",action="write")
        else
           open(unit=101,file=trim(fname),form="formatted",status="new",action="write")
+
+          rowfmth = '(A,A,A,A,A)'
+
+          write(101,fmt=rowfmth) '# step<1> ', 'time<2> ', 'LPL<3> ', 'VPL<4> ', 'Chi_st<5>'
+
        end if
 
-       rowfmth = "(I0.6,ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
+       rowfmt = "(I0.6,ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
 
        !do s = 1,step
        s = 1
-       write(101,FMT=rowfmth) spray%step, spray%time(s), spray%LPL(s), spray%VPL(s), spray%chi_st(s)
+       write(101,FMT=rowfmt) spray%step, spray%time(s), spray%LPL(s), spray%VPL(s), spray%chi_st(s)
        !end do
 
        close(unit=101)
@@ -3066,12 +3074,12 @@ contains
     if (mod(spray%step,spray%datafreq) == 0 .and. maxval(spray%dsd_type) == 7 .or. spray%end) then
        write(fname,"(A,A1,I0.6)") 'dsd.out', '_', step
 
-       open(unit=102,file=trim(fname),form="formatted",status="replace",action="write")
+       open(unit=102,file=trim(fname),form="formatted",status="unknown",action="write")
 
-       rowfmth = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
+       rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
 
        do k = kmin-1,kmax
-          write(102,FMT=rowfmth) spray%z(k), spray%dsdlam(1,k), spray%dsdlam(2,k), spray%dsdlam(3,k), &
+          write(102,FMT=rowfmt) spray%z(k), spray%dsdlam(1,k), spray%dsdlam(2,k), spray%dsdlam(3,k), &
                spray%dsdlam(4,k), spray%dm(k), spray%d2(k), spray%d3(k)
        end do
 
@@ -3081,12 +3089,16 @@ contains
     if (mod(spray%step,spray%datafreq) == 0 .or. spray%end) then
        write(fname,"(A,A1,I0.6)") 'omega.out', '_', step
 
-       open(unit=103,file=trim(fname),form="formatted",status="replace",action="write")
+       open(unit=103,file=trim(fname),form="formatted",status="unknown",action="write")
 
-       rowfmth = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
+       rowfmth = '(A,A,A,A,A,A,A,A,A,A,A,A,A)'
+
+       write(103,fmt=rowfmth) '# z<1> ', 'omega_ent<2> ', 'omega_drag<3> ', 'omega_bre1<4> ', 'omega_bre2<5> ', 'omega_vap<6> ', 'omega_T<7> ', 'omega_k_g_p<8> ', 'omega_k_g_d<9> ', 'omega_eps_g_p<10> ', 'omega_eps_g_d<11> ', 'omega_zvar_g_p<12> ', 'omega_zvar_g_d<13> '
+
+       rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
 
        do k = kmin,kmax
-          write(103,FMT=rowfmth) spray%z(k), spray%omega_ent(k), spray%f_drag(k), spray%omega_bre1(k), spray%omega_bre2(k), spray%omega_vap(k), spray%omega_T(k), spray%omega_k_g_p(k), spray%omega_k_g_d(k)/spray%b(k)**2, spray%omega_eps_g_p(k), spray%omega_eps_g_d(k)/spray%b(k)**2, spray%omega_zvar_g_p(k), spray%omega_zvar_g_d(k)/spray%b(k)**2
+          write(103,FMT=rowfmt) spray%z(k), spray%omega_ent(k), spray%f_drag(k), spray%omega_bre1(k), spray%omega_bre2(k), spray%omega_vap(k), spray%omega_T(k), spray%omega_k_g_p(k), spray%omega_k_g_d(k)/spray%b(k)**2, spray%omega_eps_g_p(k), spray%omega_eps_g_d(k)/spray%b(k)**2, spray%omega_zvar_g_p(k), spray%omega_zvar_g_d(k)/spray%b(k)**2
        end do
 
        close(unit=103)

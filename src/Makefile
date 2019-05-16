@@ -4,7 +4,7 @@ MODDIR = ../mod
 OBJDIR = ../obj
 
 
-withMDUC = YES
+#withMDUC = YES
 
 ifeq ($(withMDUC),YES)
 
