@@ -139,14 +139,17 @@ contains
 
       mduc => mduc_
 
-      if(spray%chi_st(1) == 0.0_WP) return
+      !if(spray%chi_st(1) == 0.0_WP) return
 
       Zmix_st = 1.0_WP/(1.0_WP+spray%stoic_coeff/spray%Y_O2)
       Zmix_max = 1.0_WP !maxval(spray%Zmix_g)
 
       chi = spray%C_chi*spray%chi_st(1)*(x/Zmix_st)**2*(log(x/Zmix_max)/log(Zmix_st/Zmix_max))
-      
+
       where(chi/=chi) chi = 0.0_WP
+      where(chi<0.0_WP) chi = 0.0_WP
+
+      !write(*,*) 'chi ', chi
 
       Pavg = spray%P_a
       Hmin = 0.0_WP
@@ -172,7 +175,7 @@ contains
 
          open(unit=100,file=trim(fname),form="formatted",status="replace",action="write")
 
-         write(100,'(<nspec+2>(A))') '#z','Temperature',(species(i), i=1,nspec)
+         write(100,'(<nspec+2>(A))') '#z ','Temperature',(species(i), i=1,nspec)
          do k = spray%kmin,spray%kmax
 
             ! Convolute
