@@ -841,11 +841,11 @@ contains
 
     do k=spray%kmino,spray%kmaxo
 
-       if(spray%init_dsd_name .eq. 'blob' .or. spray%init_dsd_name .eq. 'Blob') then
-          if(D2(k)/Dm(k)**2 > 1.05_WP .and. D2(k)/Dm(k)**2 < 1.9_WP) then
-             spray%dsd_type(k) = type_rosin_rammler
-          end if
-       end if
+       !if(spray%init_dsd_name .eq. 'blob' .or. spray%init_dsd_name .eq. 'Blob') then
+       !   if(D2(k)/Dm(k)**2 > 1.05_WP .and. D2(k)/Dm(k)**2 < 1.9_WP) then
+       !      spray%dsd_type(k) = type_rosin_rammler
+       !   end if
+       !end if
        
        select case(spray%dsd_type(k))
        case (type_rosin_rammler)
@@ -1445,12 +1445,13 @@ contains
        Y_l(k) = W(7,k)/(W(1,k)+W(2,k)+W(7,k))
        if ( Y_l(k) < eps ) Y_l(k) = 0.0_WP
        Y_v(k) = max(0.0_WP,W(2,k)/(W(1,k)+W(2,k)+W(7,k)))
-       if ( Y_v(k) < eps ) Y_v(k) = 0.0_WP
+       !if ( Y_v(k) < eps ) Y_v(k) = 0.0_WP
        Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k))
+       Y_g(k) = 1.0_WP - Y_l(k)
        rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
        b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(7,k))/rho(k)))
 
-       if(Y_l(k) > eps) then
+       if(Y_l(k) >= eps) then
 
           u_l(k) = W(8,k)/rho(k)/Y_l(k)/b(k)**2
 
@@ -1464,6 +1465,8 @@ contains
 
           d2(k) = dm(k)**2 + dvar(k)
 
+          Td(k) = max(T_low(k),min(T_high(k),W(9,k)/rho(k)/Y_l(k)/b(k)**2))
+
           if( dm(k) == 0.0_WP .or. d2(k) == 0.0_WP ) then !.or. d3(k) == 0.0_WP ) then
              dm(k) = 0.0_WP
              d2(k) = 0.0_WP
@@ -1471,23 +1474,17 @@ contains
              dvar(k) = 0.0_WP
              u_l(k) = 0.0_WP
              Y_l(k) = 0.0_WP
-             Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k));
-             rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
+             !Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k))
+             !Y_g(k) = 1.0_WP - Y_l(k)
+             !rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
              Td(k) = 0.0_WP
-             b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(4,k))/rho(k)))
+             !b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(4,k))/rho(k)))
           end if
-
-          if( dm(k) > 0.0_WP .and. d2(k) > 0.0_WP ) then !.and. d3(k) > 0.0_WP ) then
-             
-             Td(k) = max(T_low(k),min(T_high(k),W(9,k)/rho(k)/Y_l(k)/b(k)**2))
-             
-          end if
-
-          Y_g(k) = 1.0_WP - Y_l(k)
 
        end if
-       
-       if(u_g(k) > 0.0_WP .and. Y_g(k) > 0.0_WP) then
+
+       !if(abs(u_g(k)) > 0.0_WP .and. Y_g(k) > 0.0_WP) then
+       if(Y_g(k) > 0.0_WP) then
           k_g(k) = max(0.0_WP,W(4,k)/rho(k)/Y_g(k)/b(k)**2)
           eps_g(k) = max(0.0_WP,W(5,k)/rho(k)/Y_g(k)/b(k)**2)
           zvar_g(k) = max(0.0_WP,W(6,k)/rho(k)/Y_g(k)/b(k)**2)
@@ -2971,9 +2968,9 @@ contains
     ! Boundary conditions for k, eps, and zvar are in the gas phase grid
     ! i.e. first cell next to the nozzle exit
     ! Based on Tamanini (1981) 
-    spray%k_g(kmin) = 1.0E-04*spray%u_g(kmin)**2
+    spray%k_g(kmino:kmin) = 1.0E-04*spray%u_g(kmin)**2
 
-    spray%eps_g(kmin) = sqrt(spray%c_k*spray%c_mu*spray%k_g(kmin)*spray%rho(kmin))*spray%k_g(kmin)/spray%b(kmin)
+    spray%eps_g(kmino:kmin) = sqrt(spray%c_k*spray%c_mu*spray%k_g(kmin)*spray%rho(kmin))*spray%k_g(kmin)/spray%b(kmin)
 
     spray%zvar_g(kmino:kmin-1) = spray%zvar_g(kmin)
 
@@ -3236,7 +3233,8 @@ contains
           z_integral = sum((zz(bound(1):bound(2))/Zmix_st)**2       &
                *(log(zz(bound(1):bound(2)))/log(Zmix_st)) &
                *bpdf(bound(1):bound(2)))
-          spray%chi_g_stl(k) = min(1.0_WP,max(0.0_WP,spray%chi_g(k)/z_integral))
+          ! Limit maximum scalar dissipation rate to 1000.0 (1/s)
+          spray%chi_g_stl(k) = min(1000.0_WP*spray%tau,max(0.0_WP,spray%chi_g(k)/z_integral))
 
           ! Integrate over spray volume
           numer = numer + spray%chi_g_stl(k)**1.5_WP*spray%rho(k)*PZmix_st/dz_st*spray%dz*Pi*spray%b(k)**2
