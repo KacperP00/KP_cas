@@ -32,7 +32,7 @@ endif
 SDIAL_INC  := -I$(SDIAL)/include
 SDIAL_LINK := -lsundials_cvode -lsundials_ida -lsundials_kinsol \
                    -lsundials_nvecserial
-ifneq ($(findstring mpif90,$(strip $(FC))),)
+ifneq ($(findstring mpiifort,$(strip $(FC))),)
 SDIAL_LINK += -lsundials_nvecparallel
 endif
 SDIAL_LIB := -L$(SDIAL)/lib $(SDIAL_LINK) -Wl,-rpath,$(SDIAL)/lib
