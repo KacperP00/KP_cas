@@ -446,7 +446,7 @@ contains
     integer, pointer :: kmin, kmax, kmino, kmaxo
     real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
     real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
-         Flux=>null()
+                                       Flux=>null(), alpha_m=>null()
     real(WP) :: a_l, a_r, FL, FR
 
     kmin => spray%kmin; kmax => spray%kmax
@@ -455,13 +455,15 @@ contains
     divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
     F => spray%solver%F; S => spray%solver%S
 
-    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g
+    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g; alpha_m => spray%solver%alpha_m
+
     Flux => spray%solver%Flux; Res => spray%solver%Res
 
     do k=kmino+1,kmaxo
 
        alpha_l(k) = max(abs(u_l(k-1)),abs(u_l(k))); !hx/dt;%max(abs(u_l(i-1)),abs(u_l(i)));
        alpha_g(k) = max(abs(u_g(k-1)),abs(u_g(k))); !hx/dt;%max(abs(u_l(i)),abs(u_l(i+1)));
+       alpha_m(k) = max(alpha_l(k),alpha_g(k))
 
     end do
 
