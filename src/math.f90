@@ -1201,10 +1201,10 @@ contains
 
        ! Find the location of the mesh point before the mean
        jMean = 1
-       do while (zz(jMean) <= mean) 
+       do while (zz(jMean) < mean) 
           jMean = jMean + 1
        end do
-       jMean = jMean -1
+       !jMean = jMean -1
 
        ! Start from the mean and decrease zz till the pdf is negligible
        j = jMean
@@ -1330,10 +1330,10 @@ contains
 
       ! find the location of the mesh point before the mean
       jjMean = 1
-      do while (x(jjMean) <= mean)
+      do while (x(jjMean) < mean)
          jjMean = jjMean + 1
       end do
-      jjMean = jjMean - 1
+      !jjMean = jjMean - 1
 
       sigma = sqrt(var)    ! compute the standard deviation
 
