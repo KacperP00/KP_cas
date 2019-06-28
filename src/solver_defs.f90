@@ -39,7 +39,7 @@ module solver_defs
      real(WP), dimension(:,:), pointer :: W, Wold, F, S, Res
 
      ! Flux, Residual, Wave speeds(liquid and gas phase)
-     real(WP), dimension(:), pointer :: Flux, alpha_l, alpha_g
+     real(WP), dimension(:), pointer :: Flux, alpha_l, alpha_g, alpha_m
 
      ! Newton-Raphson solver
      type(nr_solver_t), pointer :: nr
@@ -74,6 +74,7 @@ contains
     allocate(solver%Flux(nzo)); solver%Flux = 0.0_WP
     allocate(solver%alpha_l(nzo)); solver%alpha_l = 0.0_WP
     allocate(solver%alpha_g(nzo)); solver%alpha_g = 0.0_WP
+    allocate(solver%alpha_m(nzo)); solver%alpha_m = 0.0_WP
 
   end subroutine allocate_solver
 
@@ -98,7 +99,7 @@ contains
 
     deallocate(solver%W, solver%Wold, solver%F, solver%S)
     
-    deallocate(solver%Flux, solver%Res, solver%alpha_l, solver%alpha_g)
+    deallocate(solver%Flux, solver%Res, solver%alpha_l, solver%alpha_g, solver%alpha_m)
     
     deallocate(solver%nr)
 
