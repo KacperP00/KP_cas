@@ -841,11 +841,11 @@ contains
 
     do k=spray%kmino,spray%kmaxo
 
-       !if(spray%init_dsd_name .eq. 'blob' .or. spray%init_dsd_name .eq. 'Blob') then
-       !   if(D2(k)/Dm(k)**2 > 1.05_WP .and. D2(k)/Dm(k)**2 < 1.9_WP) then
-       !      spray%dsd_type(k) = type_rosin_rammler
-       !   end if
-       !end if
+       if(spray%init_dsd_name .eq. 'blob' .or. spray%init_dsd_name .eq. 'Blob') then
+          if(D2(k)/Dm(k)**2 > 1.05_WP .and. D2(k)/Dm(k)**2 < 1.9_WP) then
+             spray%dsd_type(k) = type_rosin_rammler
+          end if
+       end if
        
        select case(spray%dsd_type(k))
        case (type_rosin_rammler)
@@ -1428,7 +1428,6 @@ contains
     DRv => spray%DRv; DRa => spray%DRa; DRg => spray%DRg
     W => spray%solver%W
 
-    T_high = spray%NBP/spray%T_fuel
     T_low = spray%MP/spray%T_fuel
 
     rho = 0.0_WP; u_l = 0.0_WP; 
@@ -1439,25 +1438,36 @@ contains
     do k = spray%kmino,spray%kmaxo
 
        if ( (W(1,k)+W(2,k)) .gt. 0.0_WP ) then
-          u_g(k) = W(3,k)/(W(1,k)+W(2,k))
+          u_g(k) = min(1.0_WP,max(0.0_WP,W(3,k)/(W(1,k)+W(2,k))))
        end if
 
        Y_l(k) = W(7,k)/(W(1,k)+W(2,k)+W(7,k))
        if ( Y_l(k) < eps ) Y_l(k) = 0.0_WP
        Y_v(k) = max(0.0_WP,W(2,k)/(W(1,k)+W(2,k)+W(7,k)))
+       !Y_v(k) = W(2,k)/(W(1,k)+W(2,k)+W(7,k))
        !if ( Y_v(k) < eps ) Y_v(k) = 0.0_WP
        Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k))
+       !Y_a(k) = 1.0_WP - Y_l(k) - Y_v(k)
        Y_g(k) = 1.0_WP - Y_l(k)
        rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
        b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(7,k))/rho(k)))
 
        if(Y_l(k) >= eps) then
 
-          u_l(k) = W(8,k)/rho(k)/Y_l(k)/b(k)**2
+          u_l(k) = min(1.0_WP,max(0.0_WP,W(8,k)/rho(k)/Y_l(k)/b(k)**2))
+
+          if(u_l(k) < 0.0_WP .or. u_l(k) > 1.0_WP) then
+             write(*,*) u_l(k), u_g(k)
+          end if
+          if(u_g(k) < 0.0_WP .or. u_g(k) > 1.0_WP) then
+             write(*,*) u_l(k), u_g(k)
+          end if
 
           dm(k) = min(1.0_WP,max(0.0_WP,W(10,k)/rho(k)/Y_l(k)/b(k)**2))
+          !dm(k) = W(10,k)/rho(k)/Y_l(k)/b(k)**2
 
           dvar(k) = max(0.0_WP,W(11,k)/rho(k)/Y_l(k)/b(k)**2)
+          !dvar(k) = W(11,k)/rho(k)/Y_l(k)/b(k)**2
 
           d2(k) = min(1.0_WP,max(0.0_WP,W(12,k)/rho(k)/Y_l(k)/b(k)**2))
 
@@ -1465,6 +1475,7 @@ contains
 
           d2(k) = dm(k)**2 + dvar(k)
 
+          T_high(k) = spray%T_sat(k)/spray%T_fuel
           Td(k) = max(T_low(k),min(T_high(k),W(9,k)/rho(k)/Y_l(k)/b(k)**2))
 
           if( dm(k) == 0.0_WP .or. d2(k) == 0.0_WP ) then !.or. d3(k) == 0.0_WP ) then
@@ -1698,7 +1709,7 @@ contains
        end if
 
        ! Set temperature of liquid and vapor phaseson the grid
-       pc_l%T = min(spray%T_fuel,pc_l%NormalBoilingPoint)
+       pc_l%T = spray%T_fuel
        pc_l%p = spray%P_a
 
        ! Compute fuel properties: Liquid phase
@@ -1713,6 +1724,11 @@ contains
        spray%C_l(k) = pc_l%liqHeatCapacity
        spray%p_vap(k) = pc_l%vapPressure%val
        spray%L_f(k) = pc_l%HeatOfVap
+       if(spray%L_f(k) == 0.0_WP) then
+          spray%T_sat(k) = pc_l%Tcrit
+       else
+           spray%T_sat(k) = min(pc_l%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/pc_l%NormalBoilingPoint - spray%R_gas*log(spray%P_a/101325.0_WP)/pc_l%MolecularWeight*1000.0_WP/spray%L_f(k))))
+       end if
 
        nullify(pc_l)
     end do
@@ -1863,10 +1879,20 @@ contains
        spray%C_l(k) = pc_l%liqHeatCapacity
        spray%p_vap(k) = pc_l%vapPressure%val
        spray%L_f(k) = pc_l%HeatOfVap
-       
+       if(spray%L_f(k) == 0.0_WP) then
+          spray%T_sat(k) = pc_l%Tcrit
+       else
+          spray%T_sat(k) = min(pc_l%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/pc_l%NormalBoilingPoint - spray%R_gas*log(spray%P_a/101325.0_WP)/pc_l%MolecularWeight*1000.0_WP/spray%L_f(k))))
+       end if
+
        nullify(pc_l)
     end do
-  
+
+    ! XXXXXXXXXXXXXXX TESTING 
+!!$    spray%sigma = pc_l%SurfaceTension%val
+!!$    spray%rho_l = pc_l%liqDensity
+!!$    spray%visc_l = pc_l%liqViscosity%val
+ 
   end subroutine updateLiquidFuelProperties
 
   subroutine updateLiquidFuelPropertiesFromLFPT(spray,T)
