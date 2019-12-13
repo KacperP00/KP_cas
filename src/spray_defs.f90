@@ -50,7 +50,7 @@ module spray_defs
  
      ! Fuel properties
      real(WP), pointer :: T_fuel, sigma, rho_l, visc_l, MW_f, MP, NBP, stoic_coeff
-     real(WP), dimension(:), pointer :: L_f, C_l, p_vap, T_sat
+     real(WP), dimension(:), pointer :: L_f, C_l, p_vap, T_sat, sigma_loc, rho_l_loc, visc_l_loc
 
      ! Fuel properties from table
      character(len=128), pointer :: LFPTname, VFPTname
@@ -338,6 +338,9 @@ contains
     allocate(spray%p_vap(spray%nzo)); spray%p_vap = -9999.0_WP
     allocate(spray%T_sat(spray%nzo)); spray%T_sat = -9999.0_WP
     allocate(spray%L_f(spray%nzo)); spray%L_f = -9999.0_WP
+    allocate(spray%rho_l_loc(spray%nzo)); spray%rho_l_loc = -9999.0_WP
+    allocate(spray%sigma_loc(spray%nzo)); spray%sigma_loc = -9999.0_WP
+    allocate(spray%visc_l_loc(spray%nzo)); spray%visc_l_loc = -9999.0_WP
 
     allocate(spray%T_ref(spray%nzo)); spray%T_ref = -9999.0_WP
     allocate(spray%Y_ref(spray%nzo)); spray%Y_ref = -9999.0_WP
@@ -439,6 +442,7 @@ contains
                spray%zmix_g, spray%zvar_g, spray%chi_g, spray%chi_g_stl)
 
     deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l, &
+               spray%rho_l_loc, spray%sigma_loc, spray%visc_l_loc, &
                spray%p_vap,spray%T_sat, spray%MW_f,spray%L_f,spray%MP,spray%NBP,spray%stoic_coeff)
 
     deallocate(spray%pc_l)

@@ -167,6 +167,10 @@ contains
 
        call pc_diethylether(pc)
 
+    case('OME4','ome4')
+
+       call pc_oxymethylenether4(pc)
+
     case('OME1','Methylal','ome1','methylal')
 
        call pc_dimethoxymethane(pc)
@@ -324,11 +328,11 @@ subroutine computeLiqDensity(pc)
                                        pc%liqDensityMol%C,&
                                        pc%liqDensityMol%D,&
                                        pc%liqDensityMol%E)
-  else if (pc%T < pc%liqDensityMol%range(1,1)) then
+  else if (pc%T <= pc%liqDensityMol%range(1,1)) then
      !Write(*,*) 'Warning! liqDensity out of range. Setting it for minimum of the range...'
      !pc%T = pc%liqDensityMol%range(1,1)
      pc%liqDensityMol%val = pc%liqDensityMol%range(1,2)
-  else if (pc%T > pc%liqDensityMol%range(2,1)) then
+  else if (pc%T >= pc%liqDensityMol%range(2,1)) then
      !Write(*,*) 'Warning! liqDensity out of range. Setting it for maximum of the range...'
      !pc%T = pc%liqDensityMol%range(2,1)
      pc%liqDensityMol%val = pc%liqDensityMol%range(2,2)
@@ -369,11 +373,11 @@ subroutine computeVapPressure(pc)
                                         pc%vapPressure%C,&
                                         pc%vapPressure%D,&
                                         pc%vapPressure%E)
-  else if (pc%T < pc%vapPressure%range(1,1)) then
+  else if (pc%T <= pc%vapPressure%range(1,1)) then
      !Write(*,*) 'Warning! vapPressure out of range. Setting it for minimum of the range...'
      !pc%T = pc%vapPressure%range(1,1)
      pc%vapPressure%val = pc%vapPressure%range(1,2)
-  else if (pc%T > pc%vapPressure%range(2,1)) then
+  else if (pc%T >= pc%vapPressure%range(2,1)) then
      !Write(*,*) 'Warning! vapPressure out of range. Setting it for maximum of the range...'
      !pc%T = pc%vapPressure%range(2,1)
      pc%vapPressure%val = pc%vapPressure%range(2,2)
@@ -397,11 +401,11 @@ subroutine computeHeatOfVap(pc)
                                          pc%HeatOfVapMol%C,&
                                          pc%HeatOfVapMol%D,&
                                          pc%HeatOfVapMol%E)
-  else if (pc%T < pc%HeatOfVapMol%range(1,1)) then
+  else if (pc%T <= pc%HeatOfVapMol%range(1,1)) then
      !Write(*,*) 'Warning! HeatOfVap out of range. Setting it for minimum of the range...'
      !pc%T = pc%HeatOfVapMol%range(1,1)
      pc%HeatOfVapMol%val = pc%HeatOfVapMol%range(1,2)
-  else if (pc%T > pc%HeatOfVapMol%range(2,1)) then
+  else if (pc%T >= pc%HeatOfVapMol%range(2,1)) then
      !Write(*,*) 'Warning! HeatOfVap out of range. Setting it for maximum of the range...'
      !pc%T = pc%HeatOfVapMol%range(2,1)
      pc%HeatOfVapMol%val = pc%HeatOfVapMol%range(2,2)
@@ -427,11 +431,11 @@ subroutine computeSolHeatCapacity(pc)
                                                pc%solHeatCapacityMol%C,&
                                                pc%solHeatCapacityMol%D,&
                                                pc%solHeatCapacityMol%E)
-  else if (pc%T < pc%solHeatCapacityMol%range(1,1)) then
+  else if (pc%T <= pc%solHeatCapacityMol%range(1,1)) then
      !Write(*,*) 'Warning! HeatCapacity out of range. Setting it for minimum of the range...'
      !pc%T = pc%solHeatCapacityMol%range(1,1)
      pc%solHeatCapacityMol%val = pc%solHeatCapacityMol%range(1,2)
-  else if (pc%T > pc%solHeatCapacityMol%range(2,1)) then
+  else if (pc%T >= pc%solHeatCapacityMol%range(2,1)) then
      !Write(*,*) 'Warning! HeatCapacity out of range. Setting it for maximum of the range...'
      !pc%T = pc%solHeatCapacityMol%range(2,1)
      pc%solHeatCapacityMol%val = pc%solHeatCapacityMol%range(2,2)
@@ -457,11 +461,11 @@ subroutine computeLiqHeatCapacity(pc)
                                                pc%liqHeatCapacityMol%C,&
                                                pc%liqHeatCapacityMol%D,&
                                                pc%liqHeatCapacityMol%E)
-  else if (pc%T < pc%liqHeatCapacityMol%range(1,1)) then
+  else if (pc%T <= pc%liqHeatCapacityMol%range(1,1)) then
      !Write(*,*) 'Warning! liqHeatCapacity out of range. Setting it for minimum of the range...'
      !pc%T = pc%liqHeatCapacityMol%range(1,1)
      pc%liqHeatCapacityMol%val = pc%liqHeatCapacityMol%range(1,2)
-  else if (pc%T > pc%liqHeatCapacityMol%range(2,1)) then
+  else if (pc%T >= pc%liqHeatCapacityMol%range(2,1)) then
      !Write(*,*) 'Warning! liqHeatCapacity out of range. Setting it for maximum of the range...'
      !pc%T = pc%liqHeatCapacityMol%range(2,1)
      pc%liqHeatCapacityMol%val = pc%liqHeatCapacityMol%range(2,2)
@@ -487,11 +491,11 @@ subroutine computeIG_HeatCapacity(pc)
                                                pc%IG_HeatCapacityMol%C,&
                                                pc%IG_HeatCapacityMol%D,&
                                                pc%IG_HeatCapacityMol%E)
-  else if (pc%T < pc%IG_HeatCapacityMol%range(1,1)) then
+  else if (pc%T <= pc%IG_HeatCapacityMol%range(1,1)) then
      !Write(*,*) 'Warning! IG_HeatCapacity out of range. Setting it for minimum of the range...'
      !pc%T = pc%IG_HeatCapacityMol%range(1,1)
      pc%IG_HeatCapacityMol%val = pc%IG_HeatCapacityMol%range(1,2)
-  else if (pc%T > pc%IG_HeatCapacityMol%range(2,1)) then
+  else if (pc%T >= pc%IG_HeatCapacityMol%range(2,1)) then
      !Write(*,*) 'Warning! IG_HeatCapacity out of range. Setting it for maximum of the range...'
      !pc%T = pc%IG_HeatCapacityMol%range(2,1)
      pc%IG_HeatCapacityMol%val = pc%IG_HeatCapacityMol%range(2,2)
@@ -517,11 +521,11 @@ subroutine computeSeconfViralCoef(pc)
                                                pc%SecondViralCoefMol%C,&
                                                pc%SecondViralCoefMol%D,&
                                                pc%SecondViralCoefMol%E)
-  else if (pc%T < pc%SecondViralCoefMol%range(1,1)) then
+  else if (pc%T <= pc%SecondViralCoefMol%range(1,1)) then
      !Write(*,*) 'Warning! SecondViralCoef out of range. Setting it for minimum of the range...'
      !pc%T = pc%SecondViralCoefMol%range(1,1)
      pc%SecondViralCoefMol%val = pc%SecondViralCoefMol%range(1,2)
-  else if (pc%T > pc%SecondViralCoefMol%range(2,1)) then
+  else if (pc%T >= pc%SecondViralCoefMol%range(2,1)) then
      !Write(*,*) 'Warning! SecondViralCoef out of range. Setting it for maximum of the range...'
      !pc%T = pc%SecondViralCoefMol%range(2,1)
      pc%SecondViralCoefMol%val = pc%SecondViralCoefMol%range(2,2)
@@ -547,11 +551,11 @@ subroutine computeLiqViscosity(pc)
                                          pc%liqViscosity%C,&
                                          pc%liqViscosity%D,&
                                          pc%liqViscosity%E)
-  else if (pc%T < pc%liqViscosity%range(1,1)) then
+  else if (pc%T <= pc%liqViscosity%range(1,1)) then
      !Write(*,*) 'Warning! liqViscosity out of range. Setting it for minimum of the range...'
      !pc%T = pc%liqViscosity%range(1,1)
      pc%liqViscosity%val = pc%liqViscosity%range(1,2)
-  else if (pc%T > pc%liqViscosity%range(2,1)) then
+  else if (pc%T >= pc%liqViscosity%range(2,1)) then
      !Write(*,*) 'Warning! liqViscosity out of range. Setting it for maximum of the range...'
      !pc%T = pc%liqViscosity%range(2,1)
      pc%liqViscosity%val = pc%liqViscosity%range(2,2)
@@ -575,11 +579,11 @@ subroutine computeVapViscosity(pc)
                                          pc%vapViscosity%C,&
                                          pc%vapViscosity%D,&
                                          pc%vapViscosity%E)
-  else if (pc%T < pc%vapViscosity%range(1,1)) then
+  else if (pc%T <= pc%vapViscosity%range(1,1)) then
      !Write(*,*) 'Warning! vapViscosity out of range. Setting it for minimum of the range...'
      !pc%T = pc%vapViscosity%range(1,1)
      pc%vapViscosity%val = pc%vapViscosity%range(1,2)
-  else if (pc%T > pc%vapViscosity%range(2,1)) then
+  else if (pc%T >= pc%vapViscosity%range(2,1)) then
      !Write(*,*) 'Warning! vapViscosity out of range. Setting it for maximum of the range...'
      !pc%T = pc%vapViscosity%range(2,1)
      pc%vapViscosity%val = pc%vapViscosity%range(2,2)
@@ -603,11 +607,11 @@ subroutine computeLiqThermalConductivity(pc)
                                                    pc%liqThermalConductivity%C,&
                                                    pc%liqThermalConductivity%D,&
                                                    pc%liqThermalConductivity%E)
-  else if (pc%T < pc%liqThermalConductivity%range(1,1)) then
+  else if (pc%T <= pc%liqThermalConductivity%range(1,1)) then
      !Write(*,*) 'Warning! liqThermalConductivity out of range. Setting it for minimum of the range...'
      !pc%T = pc%liqThermalConductivity%range(1,1)
      pc%liqThermalConductivity%val = pc%liqThermalConductivity%range(1,2)
-  else if (pc%T > pc%liqThermalConductivity%range(2,1)) then
+  else if (pc%T >= pc%liqThermalConductivity%range(2,1)) then
      !Write(*,*) 'Warning! liqThermalConductivity out of range. Setting it for maximum of the range...'
      !pc%T = pc%liqThermalConductivity%range(2,1)
      pc%liqThermalConductivity%val = pc%liqThermalConductivity%range(2,2)
@@ -631,11 +635,11 @@ subroutine computeVapThermalConductivity(pc)
                                                    pc%vapThermalConductivity%C,&
                                                    pc%vapThermalConductivity%D,&
                                                    pc%vapThermalConductivity%E)
-  else if (pc%T < pc%vapThermalConductivity%range(1,1)) then
+  else if (pc%T <= pc%vapThermalConductivity%range(1,1)) then
      !Write(*,*) 'Warning! vapThermalConductivity out of range. Setting it for minimum of the range...'
      !pc%T = pc%vapThermalConductivity%range(1,1)
      pc%vapThermalConductivity%val = pc%vapThermalConductivity%range(1,2)
-  else if (pc%T > pc%vapThermalConductivity%range(2,1)) then
+  else if (pc%T >= pc%vapThermalConductivity%range(2,1)) then
      !Write(*,*) 'Warning! vapThermalConductivity out of range. Setting it for maximum of the range...'
      !pc%T = pc%vapThermalConductivity%range(2,1)
      pc%vapThermalConductivity%val = pc%vapThermalConductivity%range(2,2)
@@ -659,11 +663,11 @@ subroutine computeSurfaceTension(pc)
                                            pc%SurfaceTension%C,&
                                            pc%SurfaceTension%D,&
                                            pc%SurfaceTension%E)
-  else if (pc%T < pc%SurfaceTension%range(1,1)) then
+  else if (pc%T <= pc%SurfaceTension%range(1,1)) then
      !Write(*,*) 'Warning! SurfaceTension out of range. Setting it for minimum of the range...'
      !pc%T = pc%SurfaceTension%range(1,1)
      pc%SurfaceTension%val = pc%SurfaceTension%range(1,2)
-  else if (pc%T > pc%SurfaceTension%range(2,1)) then
+  else if (pc%T >= pc%SurfaceTension%range(2,1)) then
      !Write(*,*) 'Warning! SurfaceTension out of range. Setting it for maximum of the range...'
      !pc%T = pc%SurfaceTension%range(2,1)
      pc%SurfaceTension%val = pc%SurfaceTension%range(2,2)
