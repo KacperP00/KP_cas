@@ -65,6 +65,12 @@ contains
     ! Update solution
     call updateSolution(spray)
 
+    ! Add source terms
+    call addSource(spray)
+
+    ! Update solution
+    call updateSolution(spray)
+    
   end subroutine solver_run
 
   ! Compute first order divergence operator
@@ -411,7 +417,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k))) ! - S(i,k))
 
        end do
 
@@ -425,7 +431,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k))) ! - S(i,k))
 
        end do
 
@@ -475,7 +481,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k))) ! - S(i,k))
 
        end do
 
@@ -491,7 +497,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k)) - S(i,k))
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k))) ! - S(i,k))
 
        end do
 
@@ -548,7 +554,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1)) - S(i,k))
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
           !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -572,7 +578,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1)) - S(i,k))
+          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
           !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -699,5 +705,57 @@ contains
     end select
 
   end subroutine updateSolution
+
+  subroutine addSource(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    integer :: i, k
+    integer, pointer :: kmin, kmax, kmino, kmaxo
+    real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
+    real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
+                                       Flux=>null(), alpha_m=>null()
+
+    kmin => spray%kmin; kmax => spray%kmax
+    kmino => spray%kmino; kmaxo => spray%kmaxo
+
+    W => spray%solver%W; Wold => spray%solver%Wold; 
+    S => spray%solver%S
+
+    do i = 1,6
+
+       if(i >= abs(spray%skip_turb)) cycle
+
+       do k = kmin,kmax
+
+          Res(i,k) = spray%dt*S(i,k)
+
+       end do
+
+    end do
+
+    do i = 7,13
+
+       if(i == spray%skip_d2) cycle
+
+       if(i == spray%skip_d3) cycle
+
+       do k = kmin,kmax
+
+          Res(i,k) = spray%dt*S(i,k)
+
+       end do
+
+    end do
+
+    Wold = W
+
+    spray%solver%rktvd%RK(spray%solver%rktvd%niter,:,:) = W
+    spray%solver%rktvd%Res(spray%solver%rktvd%niter,:,:) = Res
+
+  end subroutine addSource
 
 end module solver_func
