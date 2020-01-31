@@ -61,6 +61,22 @@ contains
     do k=kmino,kmaxo
        spray%z(k) = k*spray%dz - 3.5_WP*spray%dz
     end do
+
+    ! Set sensitivity factors
+    ! Default 1.0; Otherwise specified by user
+    if(spray%f_rho_l==0.0_WP) spray%f_rho_l = 1.0_WP
+    if(spray%f_mu_l==0.0_WP) spray%f_mu_l = 1.0_WP
+    if(spray%f_lambda_l==0.0_WP) spray%f_lambda_l = 1.0_WP
+    if(spray%f_Lv==0.0_WP) spray%f_Lv = 1.0_WP
+    if(spray%f_C_l==0.0_WP) spray%f_C_l = 1.0_WP
+    if(spray%f_Pv==0.0_WP) spray%f_Pv = 1.0_WP
+    if(spray%f_sigma==0.0_WP) spray%f_sigma = 1.0_WP
+
+    if(spray%f_rho_v==0.0_WP) spray%f_rho_v = 1.0_WP
+    if(spray%f_mu_v==0.0_WP) spray%f_mu_v = 1.0_WP
+    if(spray%f_lambda_v==0.0_WP) spray%f_lambda_v = 1.0_WP
+    if(spray%f_Cp_v==0.0_WP) spray%f_Cp_v = 1.0_WP
+    if(spray%f_G_v==0.0_WP) spray%f_G_v = 1.0_WP
     
     ! Liquid fuel properties
     if (associated(spray%LFPT)) then
@@ -91,6 +107,14 @@ contains
     else if(spray%inj_mass .gt. 0.0_WP) then
        ! Compute injection parameters
        call injection_params(spray)
+    else
+       write(*,*) '#### Error!!! Specify one of the following to compute nozzle exit velocity....'
+       write(*,*) '#### 1. Use nozzle flow model : <.true./.false.>'
+       write(*,*) '#### 2. Constant injection velocity : <VALUE>'
+       write(*,*) '#### 3. Injected mass                   : <VALUE>'
+       write(*,*) '####    Area of nozzle                  : <VALUE>'
+       write(*,*) '####    Discharge coefficient of nozzle : <VALUE>'
+       call abort
     end if
 
     ! Compute non-dimensional parameters
@@ -127,7 +151,7 @@ contains
 !!$    end if
 
     ! Skip solving turbulence equations
-    !spray%skip_turb = 4
+    if(.not. spray%turb_model) spray%skip_turb = 4
     
     ! Skip solving d2 equation
     spray%skip_d2 = 12
@@ -183,7 +207,7 @@ contains
     spray%k_g = 0.0_WP
     spray%zvar_g = 0.0_WP
 
-    spray%eps_g = 1.0E-08_WP/spray%b**2 !sqrt(spray%c_k*spray%c_mu*spray%k_g*spray%rho)*spray%k_g/spray%b
+    spray%eps_g = 1.0E-09_WP !sqrt(spray%c_k*spray%c_mu*spray%k_g*spray%rho)*spray%k_g/spray%b
     
     spray%mu_t_g = spray%c_mu*spray%rho*sqrt(spray%Y_a*spray%Y_g)*spray%k_g**2/spray%eps_g
     !spray%mu_t_g = spray%c_mu*sqrt(1.0/spray%DRa/spray%DRg)*spray%k_g**2/spray%eps_g
@@ -199,6 +223,7 @@ contains
     call computeRefTemperature(spray)
 
     ! Compute initial droplet size distribution
+    if(spray%dgf < 0.0_WP) spray%dgf = 5.0_WP
     call compute_DSD(spray)
 
     call computeTimeStep(spray)
@@ -301,7 +326,7 @@ contains
           ! Update Source Vector
           call buildSourceVector(spray)
 
-          ! Solve hyperbolic system of equations
+          ! Solve hyperbolic system of equations without source terms
           call solver_run(spray)
 
           ! Update flow variables
@@ -384,7 +409,7 @@ contains
        write(*,*) 'Initializing delta (mono-dispersed) distribution for droplet sizes...'
        spray%dsd_type = type_delta
     ! Log-Normal distribution
-    case ('Log Normal', 'lognormal', 'LogNormal', 'log normal','LN','L-N')
+    case ('Log Normal', 'Log-Normal', 'lognormal', 'LogNormal', 'log normal','LN','L-N')
        write(*,*) 'Initializing Log-Normal distribution for droplets...'
        spray%dsd_type = type_log_normal
     ! Rosin-Rammler distributtttttion
@@ -595,7 +620,7 @@ contains
 
     peak_mfr = spray%inj_mass/inj_mass/spray%num_noz
 
-    spray%U_inj = 550.0_WP !peak_mfr/spray%rho_l/A_eff
+    spray%U_inj = peak_mfr/spray%rho_l/A_eff
 
     spray%tau = spray%D_eff/spray%U_inj
 
@@ -617,7 +642,6 @@ contains
     
     ! Fuel Jet Weber number
     spray%We = spray%rho_l*spray%U_inj**2*spray%D_eff/spray%sigma                 
-
     ! Density Ratio liquid to ambient gas
     spray%DRa = spray%rho_l/spray%rho_a
     
@@ -635,6 +659,8 @@ contains
     
     ! New non-dimensional parameter
     spray%De = spray%L_f(1)/(spray%T_fuel*spray%C_l(1))                              
+    ! Prandtl number 
+    !spray%Pr_l = spray%visc_l*spray%C_l(1)/spray%lambda_l
 
   end subroutine compute_constNonDparams
 
@@ -720,15 +746,17 @@ contains
 
        fgamma = sqrt(3.0_WP)/6.0_WP*(1.0_WP-exp(-10.0_WP*gammaa))
 
-       spray%beta = 4.0_WP*Pi*sqrt(1.0_WP/DRa)*fgamma
+       spray%beta = 4.0_WP*(Pi/A)*sqrt(1.0_WP/DRa)*fgamma
 
        spray%theta = atan(spray%beta)*180.0_WP/Pi
 
     case ('Reitz-Bracco-Simplified')
 
+       A = 3.0_WP + 0.28_WP*(ld)
+
        fgamma = sqrt(3.0_WP)/6.0_WP
 
-       spray%beta = 4.0_WP*Pi*sqrt(1.0_WP/DRa)*fgamma
+       spray%beta = 4.0_WP*(Pi/A)*sqrt(1.0_WP/DRa)*fgamma
 
        spray%theta = atan(spray%beta)*180.0_WP/Pi
 
@@ -740,7 +768,7 @@ contains
 
        fgamma = sqrt(3.0_WP)/6.0_WP*(1.0_WP-exp(-10.0_WP*gammaa))
 
-       spray%beta = 4.0_WP*Pi*sqrt(1.0_WP/DRa)*fgamma*(spray%Re/spray%We)**(-0.25_WP)
+       spray%beta = 4.0_WP*(Pi/A)*sqrt(1.0_WP/DRa)*fgamma*(spray%Re/spray%We)**(-0.25_WP)
 
        spray%theta = atan(spray%beta)*180.0_WP/Pi
 
@@ -822,7 +850,7 @@ contains
 
     ! ---------------------------------
     real(WP), dimension(spray%nzo):: Dbar, q, ratio, Dm, D2, D3, Dvar, mu, sigma2, B, alpha, beta, gamm, var, skew
-    real(WP), dimension(spray%nd):: f, weight, DD
+    real(WP), dimension(spray%nd):: hh, f, weight, DD
     real(WP), dimension(spray%nd+1):: D
     real(WP), dimension(spray%nd,spray%nzo) :: dsd, dsdln
     real(WP) :: L, h, norm, r_min, r_max, peak, diff
@@ -833,6 +861,7 @@ contains
     Dm = spray%dm
     D3 = spray%d3
     Dvar = spray%dvar
+    where(Dvar < 0.0_WP) Dvar = 0.0_WP
     D2 = Dm**2+Dvar
 
     do k=spray%kmino,spray%kmaxo
@@ -850,7 +879,7 @@ contains
 
           Dbar = 0.0_WP
 
-          L = min(1.0_WP,10.0_WP*Dm(k))
+          L = min(1.0_WP,spray%dgf*Dm(k))
 
           !call RosinRammlerPDF(Dm(k),D2(k),L,spray%nd,DD,f)
 
@@ -876,7 +905,7 @@ contains
 
              Dbar(k) = Dm(k)/gamma(1.0_WP+1.0_WP/q(k))
 
-             f = (q(k)/Dbar(k)**q(k))*D**(q(k)-1.0_WP)*exp(-(D/Dbar(k))**q(k))
+             f = (q(k)/Dbar(k)**q(k))*spray%di(:,k)**(q(k)-1.0_WP)*exp(-(spray%di(:,k)/Dbar(k))**q(k))
 
              norm = sum(f*h)
              if (norm > 0.0_WP) then
@@ -893,7 +922,7 @@ contains
 
           Dbar = 0.0_WP
 
-          L = min(1.0_WP,10.0_WP*Dm(k))
+          L = min(1.0_WP,spray%dgf*Dm(k))
 
           h = 2.0_WP*L/(2.0_WP*spray%nd-1.0_WP); spray%h(k) = h
 
@@ -966,24 +995,28 @@ contains
 
           !if(spray%step==0) write(*,*) 'Computing Log-Normal DSD...'
 
-          L = min(1.0_WP,10.0_WP*Dm(k))
+          L = min(1.0_WP,spray%dgf*Dm(k))
 
           h = 2.0_WP*L/(2.0_WP*spray%nd-1.0_WP); spray%h(k) = h
 
           D = (/ (h*real(i,WP),i=0,spray%nd,1) /)
           f = (/ (real(0.0,WP),i=1,spray%nd,1) /)
           spray%di(:,k) = (D(:spray%nd)+0.5_WP*h)
+          hh = h
+          !call createDropletGrid(Dm(k),D2(k),L,spray%nd,D,spray%di(:,k))
+          !hh = D(2:spray%nd+1)-D(1:spray%nd)
+          !spray%di(:,k) = (D(:spray%nd)+0.5_WP*hh)
 
           dsd(:,:) = 0.0_WP
 
           mu(k) = log(Dm(k)**2/sqrt(D2(k)))
-          sigma2(k) = max(0.0_WP,log(D2(k)/Dm(k)**2))
+          sigma2(k) = log(D2(k)/Dm(k)**2)
 
           B(k) = 1.0_WP/sqrt(twoPi*sigma2(k))
 
           if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
 
-             if (sigma2(k) == 0.0_WP) then
+             if (sigma2(k) <= 0.0_WP) then
 
                 call getIndex(D,Dm(k),idx)
 
@@ -995,9 +1028,9 @@ contains
 
              end if
 
-             norm = sum(f*h)
+             norm = sum(f*hh)
              if (norm > 0.0_WP) then
-                dsd(:,k) = f*h/norm;
+                dsd(:,k) = f*hh/norm;
              end if
 
           end if
@@ -1008,7 +1041,7 @@ contains
 
           !if(spray%step==0) write(*,*) 'Computing Gamma DSD...'
 
-          L = min(1.0_WP,10.0_WP*Dm(k))
+          L = min(1.0_WP,spray%dgf*Dm(k))
 
           h = 2.0_WP*L/(2.0_WP*spray%nd-1.0_WP); spray%h(k) = h
 
@@ -1020,27 +1053,105 @@ contains
 
           alpha(k) = Dm(k)**2/(D2(k)-Dm(k)**2)
           beta(k) = Dm(k)/(D2(k)-Dm(k)**2)
+          B(k) = beta(k)**alpha(k)/gamma(alpha(k))
 
-          if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
+          !if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP .and. abs(D2(k)-Dm(k)**2) > 0.0_WP ) then
+          !if((beta(k)**alpha(k) < 1000.0_WP) .and. (beta(k)**alpha(k) > 1.0E-3_WP) .and. (gamma(alpha(k)) < 1000.0_WP) .and. (gamma(alpha(k)) > 1.0E-3_WP)) then
+          if(.not. isnan(B(k)) .and. (B(k)>0.0_WP) .and. .not. isinf(B(k)) ) then
 
-             B(k) = beta(k)**alpha(k)/gamma(alpha(k))
+                f = B(k)*spray%di(:,k)**(alpha(k)-1.0_WP)*exp(-beta(k)*spray%di(:,k))
 
-             f = B(k)*D**(alpha(k)-1.0_WP)*exp(-beta(k)*D)
+                norm = sum(f*h)
+                if (norm > 0.0_WP) then
+                   dsd(:,k) = f*h/norm;
+                end if
 
+          else if ((D2(k)-Dm(k)**2) > 0.0_WP) then
+
+             mu(k) = Dm(k)
+             sigma2(k) = D2(k)-Dm(k)**2
+             B(k) = 1.0_WP/sqrt(twoPi*sigma2(k))
+             f = B(k)*exp(-((spray%di(:,k))-mu(k))**2/2.0_WP/sigma2(k))
              norm = sum(f*h)
              if (norm > 0.0_WP) then
                 dsd(:,k) = f*h/norm;
+             end if
+
+          else
+
+             call getIndex(D,Dm(k),idx)
+
+             f(idx) = 1.0_WP
+
+             norm = sum(f*h)
+             if (norm > 0.0_WP) then
+                dsd(:,k) = f*h/norm
              end if
 
           end if
 
           spray%dsd(:,k) = dsd(:,k)
 
+!!$       case (type_inverse_gamma)
+!!$
+!!$          !if(spray%step==0) write(*,*) 'Computing Inverse Gamma DSD...'
+!!$
+!!$          L = min(1.0_WP,spray%dgf*Dm(k))
+!!$
+!!$          h = 2.0_WP*L/(2.0_WP*spray%nd-1.0_WP); spray%h(k) = h
+!!$
+!!$          D = (/ (h*real(i,WP),i=0,spray%nd,1) /)
+!!$          f = (/ (real(0.0,WP),i=1,spray%nd,1) /)
+!!$          spray%di(:,k) = (D(:spray%nd)+0.5_WP*h)
+!!$
+!!$          dsd(:,:) = 0.0_WP
+!!$
+!!$          alpha(k) = Dm(k)**2/(D2(k)-Dm(k)**2)
+!!$          !alpha(k) = max(1.0_WP+1.0E-12_WP,min(100.0_WP,alpha(k)))
+!!$          beta(k) = Dm(k)/(D2(k)-Dm(k)**2)
+!!$          !beta(k) = max(1.0_WP,min(12.0_WP*alpha(k),beta(k)))
+!!$
+!!$
+!!$          !if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP .and. abs(D2(k)-Dm(k)**2) > 0.0_WP ) then
+!!$          if((beta(k)**alpha(k) < 1000.0_WP) .and. (beta(k)**alpha(k) > 1.0E-3_WP) .and. (gamma(alpha(k)) < 1000.0_WP) .and. (gamma(alpha(k)) > 1.0E-3_WP)) then
+!!$             B(k) = beta(k)**alpha(k)/gamma(alpha(k))
+!!$
+!!$             f = B(k)*D**(alpha(k)-1.0_WP)*exp(-beta(k)*D)
+!!$
+!!$             norm = sum(f*h)
+!!$             if (norm > 0.0_WP) then
+!!$                dsd(:,k) = f*h/norm;
+!!$             end if
+!!$
+!!$          else if ((D2(k)-Dm(k)**2) > 0.0_WP) then
+!!$             mu(k) = Dm(k)
+!!$             sigma2(k) = D2(k)-Dm(k)**2
+!!$             B(k) = 1.0_WP/sqrt(twoPi*sigma2(k))
+!!$             f = B(k)*exp(-((spray%di(:,k))-mu(k))**2/2.0_WP/sigma2(k))
+!!$             norm = sum(f*h)
+!!$             if (norm > 0.0_WP) then
+!!$                dsd(:,k) = f*h/norm;
+!!$             end if
+!!$          else
+!!$
+!!$             call getIndex(D,Dm(k),idx)
+!!$
+!!$             f(idx) = 1.0_WP
+!!$
+!!$             norm = sum(f*h)
+!!$             if (norm > 0.0_WP) then
+!!$                dsd(:,k) = f*h/norm
+!!$             end if
+!!$
+!!$          end if
+!!$
+!!$          spray%dsd(:,k) = dsd(:,k)
+
        case (type_general_gamma)!'GenGamma','Generalized Gamma')
 
           !if(spray%step==0) write(*,*) 'Computing Generalized Gamma DSD with three parameters...'
 
-          L = min(1.0_WP,10.0_WP*Dm(k))
+          L = min(1.0_WP,spray%dgf*Dm(k))
 
           h = 2.0_WP*L/(2.0_WP*spray%nd-1.0_WP); spray%h(k) = h
 
@@ -1135,85 +1246,346 @@ contains
 
     end do
 
-  contains
-
-    subroutine getIndex(A,val,idx)
-      implicit none
-      real(WP), dimension(:), intent(inout) :: A
-      real(WP), intent(in) :: val
-      integer, intent(out) :: idx
-      ! -------------------------------
-
-      real(WP) :: tmp
-      integer :: i, n, flag
-
-      n = size(A)
-
-      do i=1,n-1
-         if (val .ge. A(i) .and. val .lt. A(i+1)) then
-            idx = i
-         end if
-      end do
-
-    end subroutine getIndex
-
-    subroutine sortGetIndex(A,val,idx)
-      implicit none
-      real(WP), dimension(:), intent(inout) :: A
-      real(WP), intent(in) :: val
-      integer, intent(out) :: idx
-      ! -------------------------------
-
-      real(WP) :: tmp
-      integer :: i, n, flag
-
-      n = size(A)
-
-      do i=1,n-1
-         if (A(i)>A(i+1)) then
-            tmp = A(i)
-            A(i) = A(i+1)
-            A(i+1) = tmp
-            idx = i+1
-         end if
-      end do
-
-    end subroutine sortGetIndex
-
-    subroutine bisection(q_final,ratio)
-      implicit none
-
-      real(WP), intent(inout) :: q_final
-      real(WP), intent(in) :: ratio
-      ! -------------------------------
-      real(WP), parameter :: ql0 = 1.0, qh0 = 10.0_WP, tol = 1E-06
-      real(WP) :: fs, fl, fh, qs, ql, qh, err
-      integer :: iter
-      ! -------------------------------
-
-      iter = 0
-      err = 1.0_WP
-      ql = ql0; qh = qh0; qs = 0.5_WP*(ql+qh)
-      do while ( err > tol)
-         iter = iter + 1
-         fs = gamma(1.0_WP+2.0_WP/qs)/(gamma(1.0_WP+1.0_WP/qs))**2 - ratio
-         fl = gamma(1.0_WP+2.0_WP/ql)/(gamma(1.0_WP+1.0_WP/ql))**2 - ratio
-         fh = gamma(1.0_WP+2.0_WP/qh)/(gamma(1.0_WP+1.0_WP/qh))**2 - ratio
-         
-         if (fl*fs < 0.0_WP) then
-            qh = qs; qs = 0.5_WP*(ql+qh)
-         elseif (fs*fh < 0.0_WP) then
-            ql = qs; qs = 0.5_WP*(ql+qh)
-         end if
-
-         err = abs(fs)
-
-      end do
-      !write(*,*) 'Bisection iters:', iter
-      q_final = qs
-    end subroutine bisection
-
   end subroutine compute_DSD
+
+  subroutine createDropletGrid(xm,x2,xmax,nx,x_,x)
+    implicit none
+
+    ! ---------------------------------
+    real(WP), intent(in) :: xm, x2, xmax
+    integer, intent(in) :: nx
+    real(WP), dimension(:), intent(out) :: x_,x
+    ! ---------------------------------
+
+    real(WP), dimension(nx+1) :: f, dx_, dx, x_adapt, f_adapt, dx_adapt
+    real(WP), dimension(nx) :: invdiff
+    real(WP) :: dx_min, dx_max, peak_x, peak_xn
+    real(WP) :: dxx, mu, sigma2, B, xbar, r_min, r_max, q, ratio, norm
+    real(WP) :: Integral, bin, dummy_bin, dx_guess1, dx_guess2, dx_guess3, err_bin, err_bin2, err_case, x_left, x_right, f_left, f_right, eps
+    integer :: i,idx,ind,kk
+
+    dx_min = 0.0001_WP*xm
+    dx_max = 10.0_WP*xmax/nx
+
+    dxx = 2.0_WP*xmax/(2.0_WP*nx-1.0_WP)
+
+    x_ = (/ (dxx*real(i,WP),i=0,nx,1) /)
+    f = (/ (real(0.0,WP),i=1,nx,1) /)
+    x = (x_(:nx)+0.5_WP*dxx)
+
+    mu = log(xm**2/sqrt(x2))
+    sigma2 = log(x2/xm**2)
+    if(sigma2 <= 0.0_WP .or. isnan(sigma2)) then
+       return
+    end if
+
+    call lognormalPDF(xm,mu,sigma2,x_,f)
+
+    eps = 1.0E-05_WP
+
+    Integral = 0
+    do i=1,nx
+       Integral = Integral + 0.5_WP*(f(i)+f(i+1))*dxx
+    end do
+    bin = Integral/nx
+
+    do i=1,nx
+       
+       x_left = x_adapt(i)
+       f_left = f_adapt(i)
+
+       dx_guess1 = dxx;
+       x_right = x_adapt(i) + dx_guess1
+       if (x_right == 0) then
+          f_right = 0
+       else
+          call lognormalPDFscalar(mu,sigma2,x_right,f_right)
+       end if
+
+       dummy_bin = 0.5*(f_left+f_right)*dx_guess1
+       err_bin = dummy_bin - bin
+
+       kk = 0
+       do while (abs(err_bin) > eps)
+          kk = kk+1
+          if (kk==1) then
+             dx_guess2 = dx_guess1
+             if (err_bin > eps) then
+                dx_guess1 = dx_guess2/2            
+             end if
+             if (err_bin <  -eps) then
+                dx_guess1 = dx_guess2*2   
+             end if
+          else
+             err_case = err_bin2*err_bin
+             dx_guess3 = dx_guess2
+             dx_guess2 = dx_guess1
+             if (err_case > 0) then
+                if (err_bin > eps) then
+                   dx_guess1 = dx_guess2/2
+                end if
+                if (err_bin <  -eps) then
+                   dx_guess1 = dx_guess2*2
+                end if
+             else
+                dx_guess1 = (dx_guess3+dx_guess2)/2
+             end if
+          end if
+
+          x_right = x_adapt(i) + dx_guess1
+          if(x_right == 0) then
+             f_right = 0
+          else
+             call lognormalPDFscalar(mu,sigma2,x_right,f_right)
+          end if
+          dummy_bin = 0.5*(f_left+f_right)*dx_guess1
+          err_bin2 = err_bin
+          err_bin = dummy_bin - bin
+
+       end do
+
+       x_adapt(i+1) = x_right
+       f_adapt(i+1) = f_right
+       dx_adapt(i+1) = dx_guess1
+    end do
+
+    x_ = x_adapt
+
+!!$    open(unit=1000,file='DSD.grid',form="formatted",status="unknown",action="write")
+!!$    do i=1,nx
+!!$       write(1000,FMT='(ES15.5E3,ES15.5E3,ES15.5E3,ES15.5E3)') x_(i),f(i),x_adapt(i),f_adapt(i)
+!!$    end do
+!!$    close(unit=1000)
+
+!!$    B = 1.0_WP/sqrt(twoPi*sigma2)
+!!$
+!!$    if (xm > 0.0_WP .and. sigma2 .gt. 0.0_WP) then
+!!$       
+!!$       f = B*exp(-((log(x)-mu)**2/2.0_WP/sigma2))/x
+!!$
+!!$       norm = sum(f*dxx)
+!!$       if (norm > 0.0_WP) then
+!!$          f = f/norm;
+!!$       end if
+!!$
+!!$       ind = maxloc(f);
+!!$       peak_x = x(ind);
+!!$
+!!$       ! Adapt 
+!!$       invdiff = -f+maxval(f)+1.0_WP; !1.0_WP/(abs(f(:nx-1)-f(2:nx))+1E-8)
+!!$
+!!$       dx_adapt(1:nx) = invdiff/maxval(invdiff)
+!!$       dx_adapt(1) = dx_adapt(2)
+!!$
+!!$       dx_ = dx_adapt/sum(dx_adapt)*(xmax+0.5_WP*(x_(nx+1)-x_(nx)))
+!!$
+!!$       x_ = 0.0_WP
+!!$       do i=2,nx+1
+!!$          x_(i) = x_(i-1) + dx_(i-1); !min(dx_max,max(dx_min,dx_(i-1)))
+!!$       end do
+!!$
+!!$       !x_ = xmax*x_
+!!$
+!!$       ! Shift to cell center
+!!$       dx = x_(2:nx+1)-x_(1:nx)
+!!$
+!!$       x = x_(:nx)+0.5_WP*dx
+!!$
+!!$       if(maxval(x) .gt. 1.0_WP) then
+!!$          x = x/maxval(x)
+!!$       end if
+!!$
+!!$    end if
+!!$
+!!$    peak_xn = x(ind)
+!!$
+!!$    x = peak_x/peak_xn*x
+!!$
+!!$    B = 1.0_WP/sqrt(twoPi*sigma2)
+!!$
+!!$    if (xm > 0.0_WP .and. sigma2 .gt. 0.0_WP) then
+!!$       
+!!$       f = B*exp(-((log(x)-mu)**2/2.0_WP/sigma2))/x
+!!$
+!!$       norm = sum(f*dxx)
+!!$       if (norm > 0.0_WP) then
+!!$          f = f/norm;
+!!$       end if
+!!$    end if
+
+!!$    if (xm > 0.0_WP .and. x2 > 0.0_WP) then
+!!$
+!!$       if (ratio > r_min ) then
+!!$          ratio = min(r_max,ratio)
+!!$          call bisection(q,ratio)
+!!$       else
+!!$          q = 5.1334_WP
+!!$       end if
+!!$
+!!$       xbar = xm/gamma(1.0_WP+1.0_WP/q)
+!!$
+!!$       f = (q/xbar**q)*x**(q-1.0_WP)*exp(-(x/xbar)**q)
+!!$
+!!$       norm = sum(f)
+!!$       if (norm > 0.0_WP) then
+!!$          f = f/norm;
+!!$       end if
+!!$
+!!$       ! Adapt 
+!!$       invdiff = 1.0_WP/abs(f(:nx-1)-f(2:nx))
+!!$
+!!$       dx_adapt(2:nx) = invdiff/maxval(invdiff)
+!!$       dx_adapt(1) = dx_adapt(2)
+!!$
+!!$       dx_ = dx_adapt/sum(dx_adapt)
+!!$
+!!$       x_ = 0.0_WP
+!!$       do i=2,nx+1
+!!$          x_(i) = x_(i-1) + dx_(i-1) 
+!!$       end do
+!!$
+!!$       x_ = xmax*x_
+!!$
+!!$       dx = x_(2:nx+1)-x_(1:nx)
+!!$
+!!$       x = x_(:nx)+0.5_WP*dx
+!!$
+!!$       f = (q/xbar**q)*x**(q-1.0_WP)*exp(-(x/xbar)**q)
+!!$
+!!$       norm = sum(f*dx)
+!!$       if (norm > 0.0_WP) then
+!!$          f = f*dx/norm;
+!!$       end if
+!!$
+!!$    end if
+
+ 
+  end subroutine createDropletGrid
+
+      
+  subroutine lognormalPDF(xm,mu,sigma2,x,fy)
+    implicit none
+
+    ! ---------------------------------
+    real(WP), intent(in) :: xm, mu, sigma2
+    real(WP), dimension(:), intent(in) :: x
+    real(WP), dimension(:), intent(out) :: fy
+    ! ---------------------------------
+    real(WP) :: B
+    integer :: idx,ind
+
+    B = 1.0_WP/sqrt(twoPi*sigma2)
+
+    if (sigma2 .gt. 0.0_WP) then
+
+       fy = 2.0_WP + B*exp(-((log(x)-mu)**2/2.0_WP/sigma2))/x
+    else
+       call getIndex(x,xm,idx)
+       fy(idx) = 1.0_WP
+    end if
+
+    where(x == 0.0_WP) fy = 0.0_WP
+
+  end subroutine lognormalPDF
+
+  subroutine lognormalPDFscalar(mu,sigma2,x,fyy)
+    implicit none
+
+    ! ---------------------------------
+    real(WP), intent(in) :: mu, sigma2, x
+    real(WP), intent(out) :: fyy
+    ! ---------------------------------
+
+    real(WP) :: B
+
+    if (sigma2 .gt. 0.0_WP) then
+
+       B = 1.0_WP/sqrt(twoPi*sigma2)
+
+       fyy = 2.0_WP + B*exp(-((log(x)-mu)**2/2.0_WP/sigma2))/x
+    else
+       fyy = 1.0
+    end if
+
+    if(x == 0.0_WP) fyy = 0.0_WP
+
+  end subroutine lognormalPDFscalar
+  
+  subroutine getIndex(A,val,idx)
+    implicit none
+    real(WP), dimension(:), intent(in) :: A
+    real(WP), intent(in) :: val
+    integer, intent(out) :: idx
+    ! -------------------------------
+
+    real(WP) :: tmp
+    integer :: i, n, flag
+
+    n = size(A)
+
+    do i=1,n-1
+       if (val .ge. A(i) .and. val .lt. A(i+1)) then
+          idx = i
+       end if
+    end do
+
+  end subroutine getIndex
+
+  subroutine sortGetIndex(A,val,idx)
+    implicit none
+    real(WP), dimension(:), intent(inout) :: A
+    real(WP), intent(in) :: val
+    integer, intent(out) :: idx
+    ! -------------------------------
+
+    real(WP) :: tmp
+    integer :: i, n, flag
+
+    n = size(A)
+
+    do i=1,n-1
+       if (A(i)>A(i+1)) then
+          tmp = A(i)
+          A(i) = A(i+1)
+          A(i+1) = tmp
+          idx = i+1
+       end if
+    end do
+
+  end subroutine sortGetIndex
+
+  subroutine bisection(q_final,ratio)
+    implicit none
+
+    real(WP), intent(inout) :: q_final
+    real(WP), intent(in) :: ratio
+    ! -------------------------------
+    real(WP), parameter :: ql0 = 1.0, qh0 = 10.0_WP, tol = 1E-06
+    real(WP) :: fs, fl, fh, qs, ql, qh, err
+    integer :: iter
+    ! -------------------------------
+
+    iter = 0
+    err = 1.0_WP
+    ql = ql0; qh = qh0; qs = 0.5_WP*(ql+qh)
+    do while ( err > tol)
+       iter = iter + 1
+       fs = gamma(1.0_WP+2.0_WP/qs)/(gamma(1.0_WP+1.0_WP/qs))**2 - ratio
+       fl = gamma(1.0_WP+2.0_WP/ql)/(gamma(1.0_WP+1.0_WP/ql))**2 - ratio
+       fh = gamma(1.0_WP+2.0_WP/qh)/(gamma(1.0_WP+1.0_WP/qh))**2 - ratio
+
+       if (fl*fs < 0.0_WP) then
+          qh = qs; qs = 0.5_WP*(ql+qh)
+       elseif (fs*fh < 0.0_WP) then
+          ql = qs; qs = 0.5_WP*(ql+qh)
+       end if
+
+       err = abs(fs)
+
+    end do
+    !write(*,*) 'Bisection iters:', iter
+    q_final = qs
+  end subroutine bisection
 
   subroutine maximumEntropyFormalism(spray,Dm,D2,D3,k,Dp,pdf)
     implicit none
@@ -1429,7 +1801,7 @@ contains
     rho = 0.0_WP; u_l = 0.0_WP; 
  
     Y_l = 0.0_WP; Y_a = 0.0_WP; Y_v = 0.0_WP;
-    dm = 0.0_WP; d2 = 0.0_WP; Td = 0.0_WP
+    dm = 0.0_WP; d2 = 0.0_WP; Td = 0.0_WP; dvar = 0.0_WP
 
     do k = spray%kmino,spray%kmaxo
 
@@ -1711,15 +2083,16 @@ contains
        ! Compute fuel properties: Liquid phase
        call computeLiqDensity(pc_l)
        call computeLiqViscosity(pc_l)
+       call computeLiqThermalConductivity(pc_l)
        call computeLiqHeatCapacity(pc_l)
        call computeVapPressure(pc_l)
        call computeHeatOfVap(pc_l)
        call computeSurfaceTension(pc_l)
 
        ! Set fuel properties to spray
-       spray%C_l(k) = pc_l%liqHeatCapacity
-       spray%p_vap(k) = pc_l%vapPressure%val
-       spray%L_f(k) = pc_l%HeatOfVap
+       spray%C_l(k) = spray%f_C_l*pc_l%liqHeatCapacity
+       spray%p_vap(k) = spray%f_Pv*pc_l%vapPressure%val
+       spray%L_f(k) = spray%f_Lv*pc_l%HeatOfVap
        if(spray%L_f(k) == 0.0_WP) then
           spray%T_sat(k) = pc_l%Tcrit
        else
@@ -1732,16 +2105,18 @@ contains
     pc_l => spray%pc_l(1)
 
     ! Set fuel properties to spray (constant throughout spray simulation)
-    spray%sigma = pc_l%SurfaceTension%val
-    spray%rho_l = pc_l%liqDensity
-    spray%visc_l = pc_l%liqViscosity%val
+    spray%sigma = spray%f_sigma*pc_l%SurfaceTension%val
+    spray%rho_l = spray%f_rho_l*pc_l%liqDensity
+    spray%visc_l = spray%f_mu_l*pc_l%liqViscosity%val
+    spray%lambda_l = spray%f_lambda_l*pc_l%liqThermalConductivity%val
     spray%MW_f = pc_l%MolecularWeight/1000.0_WP
     spray%MP = pc_l%MeltingPoint
     spray%NBP = pc_l%NormalBoilingPoint
 
-    spray%sigma_loc = spray%sigma
-    spray%rho_l_loc = spray%rho_l
-    spray%visc_l_loc = spray%visc_l
+    spray%sigma_loc = spray%f_mu_l*spray%sigma
+    spray%rho_l_loc = spray%f_rho_l*spray%rho_l
+    spray%visc_l_loc = spray%f_mu_l*spray%visc_l
+    spray%lambda_l_loc = spray%f_lambda_l*spray%lambda_l
 
   end subroutine computeLiquidFuelProperties
 
@@ -1767,14 +2142,14 @@ contains
     call interpolate1(spray%LFPT,col,T,values)
 
     ! Set fuel properties to spray
-    spray%C_l = values(8)
-    spray%p_vap = values(5)
-    spray%L_f = values(4)
+    spray%C_l = spray%f_C_l*values(8)
+    spray%p_vap = spray%f_Pv*values(5)
+    spray%L_f = spray%f_Lv*values(4)
 
     ! Set fuel properties to spray (constant throughout spray simulation)
-    spray%sigma = values(3)
-    spray%rho_l = values(7)
-    spray%visc_l = values(2)
+    spray%sigma = spray%f_sigma*values(3)
+    spray%rho_l = spray%f_rho_l*values(7)
+    spray%visc_l = spray%f_mu_l*values(2)
 
     if (spray%MW_f == -9999.0_WP) then
        write(*,*) 'Error: Molecular weight of the fuel not provided. Please add following line to input file:'
@@ -1872,6 +2247,7 @@ contains
        ! Compute fuel properties: Liquid phase
        call computeLiqDensity(pc_l)
        call computeLiqViscosity(pc_l)
+       call computeLiqThermalConductivity(pc_l)
        call computeSurfaceTension(pc_l)
 
        call computeLiqHeatCapacity(pc_l)
@@ -1879,18 +2255,19 @@ contains
        call computeHeatOfVap(pc_l)
 
        ! Set fuel properties to spray
-       spray%C_l(k) = pc_l%liqHeatCapacity
-       spray%p_vap(k) = pc_l%vapPressure%val
-       spray%L_f(k) = pc_l%HeatOfVap
+       spray%C_l(k) = spray%f_C_l*pc_l%liqHeatCapacity
+       spray%p_vap(k) = spray%f_Pv*pc_l%vapPressure%val
+       spray%L_f(k) = spray%f_Lv*pc_l%HeatOfVap
        if(spray%L_f(k) == 0.0_WP) then
           spray%T_sat(k) = pc_l%Tcrit
        else
           spray%T_sat(k) = min(pc_l%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/pc_l%NormalBoilingPoint - spray%R_gas*log(spray%P_a/101325.0_WP)/pc_l%MolecularWeight*1000.0_WP/spray%L_f(k))))
        end if
 
-       spray%rho_l_loc(k) = pc_l%liqDensity
-       spray%visc_l_loc(k) = pc_l%liqViscosity%val
-       spray%sigma_loc(k) = pc_l%SurfaceTension%val
+       spray%rho_l_loc(k) = spray%f_rho_l*pc_l%liqDensity
+       spray%visc_l_loc(k) = spray%f_mu_l*pc_l%liqViscosity%val
+       spray%lambda_l_loc(k) = spray%f_lambda_l*pc_l%liqThermalConductivity%val
+       spray%sigma_loc(k) = spray%f_sigma*pc_l%SurfaceTension%val
 
        nullify(pc_l)
     end do
@@ -1927,9 +2304,9 @@ contains
        call interpolate1(spray%LFPT,col,T(k),values)
 
        ! Set fuel properties to spray
-       spray%C_l(k) = values(8)
-       spray%p_vap(k) = values(5)
-       spray%L_f(k) = values(4)
+       spray%C_l(k) = spray%f_C_l*values(8)
+       spray%p_vap(k) = spray%f_Pv*values(5)
+       spray%L_f(k) = spray%f_Lv*values(4)
 
     end do
   
@@ -1986,10 +2363,10 @@ contains
     call computeDiffusionCoeffcientFuller(pc_v)
     
     ! Set fuel vapor properties in spray object
-    spray%rho_v = pc_v%IG_vapDensity
-    spray%visc_v = pc_v%vapViscosity%val
-    spray%lambda_v = pc_v%vapThermalConductivity%val
-    spray%Cp_v = pc_v%IG_HeatCapacity
+    spray%rho_v = spray%f_rho_v*pc_v%IG_vapDensity
+    spray%visc_v = spray%f_mu_v*pc_v%vapViscosity%val
+    spray%lambda_v = spray%f_lambda_v*pc_v%vapThermalConductivity%val
+    spray%Cp_v = spray%f_Cp_v*pc_v%IG_HeatCapacity
 
   end subroutine computeVaporFuelProperties
 
@@ -2099,11 +2476,11 @@ contains
        call computeDiffusionCoeffcientFuller(pc_v)
 
        ! Set fuel vapor properties in spray object
-       spray%rho_rv(k) = pc_v%IG_vapDensity
-       spray%visc_rv(k) = pc_v%vapViscosity%val
-       spray%lambda_rv(k) = pc_v%vapThermalConductivity%val
-       spray%Cp_rv(k) = pc_v%IG_HeatCapacity
-       spray%G_rv(k) = pc_v%DiffusionCoefficientFuller
+       spray%rho_rv(k) = spray%f_rho_v*pc_v%IG_vapDensity
+       spray%visc_rv(k) = spray%f_mu_v*pc_v%vapViscosity%val
+       spray%lambda_rv(k) = spray%f_lambda_v*pc_v%vapThermalConductivity%val
+       spray%Cp_rv(k) = spray%f_Cp_v*pc_v%IG_HeatCapacity
+       spray%G_rv(k) = spray%f_G_v*pc_v%DiffusionCoefficientFuller
 
        nullify(pc_v)
     end do
@@ -2489,8 +2866,31 @@ contains
     !spray%Y_ref = spray%Cevap*spray%Y_v
     !spray%Y_ref = spray%Cevap*spray%Y_v*spray%Y_v/spray%Y_g
     !spray%Y_ref = Ystar_fe*spray%Y_v
-    !spray%Y_ref = 0.5_WP/spray%b*spray%Y_v
-    spray%Y_ref = 0.5_WP**2/spray%b**2*spray%Y_v
+    spray%Y_ref = 0.5_WP/spray%b*spray%Y_v
+
+!!$    do k = spray%kmin,spray%kmax
+!!$       spray%Cevap = max(0.0_WP,rand_normal(spray%Zmix_g(k),sqrt(spray%Zvar_g(k))))
+!!$       if(spray%Cevap < spray%Zmix_g(k)) then
+!!$          spray%Cevap = 0.0_WP
+!!$       else
+!!$          spray%Cevap = 1.0_WP
+!!$       end if
+!!$       spray%Y_ref(k) = spray%Cevap*spray%Y_v(k)
+!!$    end do
+!!$       spray%Y_ref(k) = min(spray%Cevap/spray%Zmix_g(k),1.0_WP)*spray%Y_v(k)
+!!$       if(spray%Zmix_g(k) > 0.0_WP) then
+!!$          write(*,*) spray%Y_v(k), spray%Y_ref(k)
+!!$       end if
+!!$       spray%Y_ref(k) = spray%Cevap*spray%Y_v(k)
+!!$       if(spray%Zmix_g(k) > 0.0_WP) then
+!!$          write(*,*) spray%Cevap, spray%Y_v(k), spray%Y_ref(k)
+!!$       end if
+!!$    end do
+
+    !spray%Y_ref = spray%Y_v - 3.0_WP*spray%Zvar_g**0.5/spray%Zmix_g
+    !where(spray%Y_ref < 0.0_WP) spray%Y_ref = 0.0_WP
+    
+    !write(*,*) spray%Y_v, spray%Zvar_g**0.5, spray%Y_ref
 
     Bdeq = (Ystar_fe - Y_ref)/(1.0_WP-Ystar_fe)
     where(Bdeq < eps) Bdeq = eps
@@ -2504,7 +2904,7 @@ contains
           Shd(:,k) = (2.0_WP + 0.552_WP*(Red(:,k)**0.5_WP)*(Sc_g(k)**(1.0_WP/3.0_WP)))
 
           zetta = zeta(k)*Shd(:,k)
-
+          
           Xneq = Xeq(k) - 2.0_WP*(Lk(k)/D(:,k))*zetta
           where(Xneq <0.0_WP) Xneq = 0.0_WP
 
@@ -2531,7 +2931,7 @@ contains
           spray%omega_vapd3(k) = (1.5_WP*rho(k)*Y_l(k))*sum((dsd(:,k)*K_vap*di(:,k)))/Re
 
           Nud(:,k) = (2.0_WP + 0.552_WP*(Red(:,k)**0.5_WP)*(Pr_g(k)**(1.0_WP/3.0_WP)))
-          !Qd = (1.0_WP/(Pr_g(k)*VRg(k)))*(spray%Cp_g(k)/spray%C_l(k))*(zetta/(exp(zetta)-1.0_WP+eps))*(spray%T_a/spray%T_fuel-Td(k))*Nud(:,k)/di;
+          !Qd = (1.0_WP/(Pr_g(k)*VRg(k)))*(spray%Cp_g(k)/spray%C_l(k))*(zetta/(exp(zetta)-1.0_WP+eps))*(spray%T_a/spray%T_fuel-Td(k))*Nud(:,k)/di
           Qd = (1.0_WP/(Pr_g(k)*VRg(k)))*(spray%Cp_g(k)/spray%C_l(k))*(zetta/(exp(zetta)-1.0_WP+eps))*(spray%Tg(k)-Td(k))*Nud(:,k)/di(:,k);
           K_T = sum((6.0_WP*Qd/di(:,k)-1.5_WP*De*CR(k)*LR(k)*K_vap/di(:,k)**2)*dsd(:,k))/Re
 
