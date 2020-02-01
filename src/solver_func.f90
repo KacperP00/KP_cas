@@ -23,6 +23,11 @@ contains
     call computeDivc1(spray)
 
     select case(spray%solver%scheme)
+    case ('WENO3')
+
+       ! Compute Residual
+       call init_weno3(spray)
+
     case ('WENO5')
 
        ! Compute Residual
@@ -73,6 +78,11 @@ contains
        ! Compute Residual
        call computeResidual_LF(spray)
 
+    case ('WENO3')
+
+       ! Compute Residual
+       call computeResidual_WENO3(spray)
+
     case ('WENO5')
 
        ! Compute Residual
@@ -111,6 +121,11 @@ contains
        ! Compute Residual
        call computeResidual_LF(spray)
 
+    case ('WENO3')
+
+       ! Compute Residual
+       call computeResidual_WENO3(spray)
+
     case ('WENO5')
 
        ! Compute Residual
@@ -143,6 +158,11 @@ contains
 
        ! Compute Residual
        call computeResidual_LF(spray)
+
+    case ('WENO3')
+
+       ! Compute Residual
+       call computeResidual_WENO3(spray)
 
     case ('WENO5')
 
@@ -177,6 +197,155 @@ contains
     divc(1,:) = 1.0_WP/spray%dz
 
   end subroutine computeDivc1
+
+  subroutine init_weno3(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    type(solver_t), pointer :: solver=>null()
+
+    solver => spray%solver
+
+    ! Allocate stencils
+    allocate(solver%S0_p(-2:+0))
+    allocate(solver%S1_p(-2:+0))
+    allocate(solver%S0_m(-1:+1))
+    allocate(solver%S1_m(-1:+1))
+
+    ! Allocate WENO5 operators
+    allocate(solver%weno3p(-2:0,spray%kmino:spray%kmaxo))
+    allocate(solver%weno3m(-1:1,spray%kmino:spray%kmaxo))
+
+    ! Allocate flux vectors
+    allocate(solver%f_p(spray%kmino:spray%kmaxo))
+    allocate(solver%f_m(spray%kmino:spray%kmaxo))
+    allocate(solver%f_t(spray%kmino:spray%kmaxo))
+
+    ! Interpolation at the faces
+    solver%S0_p = 0.0_WP; solver%S0_m = 0.0_WP
+    solver%S1_p = 0.0_WP; solver%S1_m = 0.0_WP
+
+    solver%S0_p(-2) = real(-1.0/2.0,WP); solver%S0_p(-1) = real( 3.0/2.0,WP)
+    solver%S0_m( 0) = real( 3.0/2.0,WP); solver%S0_m(+1) = real(-1.0/2.0,WP)
+
+    solver%S1_p(-1) = real( 1.0/2.0,WP); solver%S1_p( 0) = real(1.0/2.0,WP)
+    solver%S1_m(-1) = real( 1.0/2.0,WP); solver%S1_m( 0) = real(1.0/2.0,WP)
+
+    ! Optimal weights
+    solver%a0 = real(1.0/3.0,WP); solver%a1 = real(2.0/3.0,WP)
+
+  end subroutine init_weno3
+
+  subroutine computeWeno3Coeff(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    type(solver_t), pointer :: solver => null()
+    integer :: i
+    real(WP) :: alpha,r,c, a0, a1, a2
+    real(WP), parameter :: epsilon = 1.0e-6_WP
+    real(WP) :: ISa, ISb, IS0_p, IS1_p, IS0_m, IS1_m, sum_inv
+    real(WP), dimension(:), pointer :: F_p=>null(), F_m=>null(), &
+         S0_p=>null(), S1_p=>null(), &
+         S0_m=>null(), S1_m=>null()
+    ! ---------------------------------
+
+     solver => spray%solver    
+
+     F_p => solver%f_p; F_m => solver%f_m
+     S0_p => solver%S0_p; S1_p => solver%S1_p
+     S0_m => solver%S0_m; S1_m => solver%S1_m
+  
+     ! compute WENO5 operators...
+     do i=spray%kmin,spray%kmax
+
+        ! Direction x - U>0
+        ! compute smoothness indicators at regular faces...
+        IS0_p = (F_p(i-1)-F_p(  i))**2
+        IS1_p = (F_p(i-2)-F_p(i-1))**2
+
+        ! Compute new local weights
+        a0 = solver%a0/(epsilon+IS0_p)**2
+        a1 = solver%a1/(epsilon+IS1_p)**2
+        
+        sum_inv = 1.0_WP/(a0+a1+a2)
+        solver%weno3p(:,i) = (a0*S0_p(:)+a1*S1_p(:))*sum_inv
+
+        ! Direction x - U<0
+        ! compute smoothness indicators at regular faces...
+        IS0_m = (F_m(i  )-F_m(i-1))**2
+        IS1_m = (F_m(i+1)-F_m(i  ))**2
+
+        ! Compute new local weights
+        a0 = solver%a0/(epsilon+IS0_m)**2
+        a1 = solver%a1/(epsilon+IS1_m)**2
+
+        sum_inv = 1.0_WP/(a0+a1+a2)
+        solver%weno5m(:,i) = (a0*S0_m(:)+a1*S1_m(:))*sum_inv
+
+     end do
+   
+     ! apply boundary treatment to coefficients
+     ! order of scheme is reduced near boundary
+     ! to avoid large stencil size
+     call apply_weno3_bc()
+
+   contains
+     
+     subroutine apply_weno3_bc()
+       implicit none
+
+       ! Reduced to first order scheme at boundaries
+       ! Left boundary
+       solver%weno3p(: ,spray%kmino:spray%kmin-1) = 0.0_WP
+       solver%weno3p(-1,spray%kmino:spray%kmin-1) = 1.0_WP
+
+       ! Right boundary
+       solver%weno3p(: ,spray%kmax+1:spray%kmaxo) = 0.0_WP
+       solver%weno3p(-1,spray%kmax+1:spray%kmaxo) = 1.0_WP
+       
+       ! Left boundary
+       solver%weno3m(:,spray%kmino:spray%kmin-1) = 0.0_WP
+       solver%weno3m(0,spray%kmino:spray%kmin-1) = 1.0_WP
+
+       ! Right boundary
+       solver%weno3m(:,spray%kmax+1:spray%kmaxo) = 0.0_WP
+       solver%weno3m(0,spray%kmax+1:spray%kmaxo) = 1.0_WP
+
+     end subroutine apply_weno3_bc
+       
+  end subroutine computeWeno3Coeff
+
+  subroutine computeWeno3Flux(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    type(solver_t), pointer :: solver => null()
+    integer :: k
+
+    solver => spray%solver
+
+    solver%f_t(spray%kmino:spray%kmin) = solver%f_p(spray%kmino:spray%kmin) &
+         + solver%f_m(spray%kmino:spray%kmin)
+
+    solver%f_t(spray%kmax+1:spray%kmaxo) = solver%f_p(spray%kmax+1:spray%kmaxo)&
+         + solver%f_m(spray%kmax+1:spray%kmaxo)
+
+    do k=spray%kmin+1,spray%kmax
+       solver%f_t(k) = sum(solver%weno3p(:,k)*solver%f_p(k-2:k  )) &
+                     + sum(solver%weno3m(:,k)*solver%f_m(k-1:k+1))
+    end do
+
+  end subroutine computeWeno3Flux
 
   subroutine init_weno5(spray)
     implicit none
@@ -260,9 +429,9 @@ contains
         IS2_p = ISa*(F_p(i-3)-2.0_WP*F_p(i-2)+F_p(i-1))**2 + ISb*(F_p(i-3)-4.0_WP*F_p(i-2)+3.0_WP*F_p(i-1))**2
 
         ! Compute new local weights
-        a0 = solver%a0/(epsilon+IS0_p)
-        a1 = solver%a1/(epsilon+IS1_p)
-        a2 = solver%a2/(epsilon+IS2_p)
+        a0 = solver%a0/(epsilon+IS0_p)**2
+        a1 = solver%a1/(epsilon+IS1_p)**2
+        a2 = solver%a2/(epsilon+IS2_p)**2
         
         sum_inv = 1.0_WP/(a0+a1+a2)
         solver%weno5p(:,i) = (a0*S0_p(:)+a1*S1_p(:)+a2*S2_p(:))*sum_inv
@@ -274,9 +443,9 @@ contains
         IS2_m = ISa*(F_m(i+2)-2.0_WP*F_m(i+1)+F_m(i))**2 + ISb*(F_m(i+2)-4.0_WP*F_m(i+1)+3.0_WP*F_m(i))**2
 
         ! Compute new local weights
-        a0 = solver%a0/(epsilon+IS0_m)
-        a1 = solver%a1/(epsilon+IS1_m)
-        a2 = solver%a2/(epsilon+IS2_m)
+        a0 = solver%a0/(epsilon+IS0_m)**2
+        a1 = solver%a1/(epsilon+IS1_m)**2
+        a2 = solver%a2/(epsilon+IS2_m)**2
         sum_inv = 1.0_WP/(a0+a1+a2)
         solver%weno5m(:,i) = (a0*S0_m(:)+a1*S1_m(:)+a2*S2_m(:))*sum_inv
 
@@ -610,6 +779,94 @@ contains
     spray%solver%rktvd%Res(spray%solver%rktvd%niter,:,:) = Res
 
   end subroutine computeResidual_LF
+
+  subroutine computeResidual_WENO3(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    integer :: i, k
+    integer, pointer :: kmin, kmax, kmino, kmaxo
+    real(WP), dimension(:,:), pointer :: divc=>null(), W=>null(), Wold=>null(), F=>null(), S=>null(), Res=>null()
+    real(WP), dimension(:), pointer :: u_l=>null(), u_g=>null(), alpha_l=>null(), alpha_g=>null(), &
+         Flux=>null()
+    real(WP) :: a_l, a_r, FL, FR
+    type(solver_t), pointer :: solver=>null()
+
+    solver => spray%solver
+
+    kmin => spray%kmin; kmax => spray%kmax
+    kmino => spray%kmino; kmaxo => spray%kmaxo
+
+    divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
+    F => spray%solver%F; S => spray%solver%S
+
+    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g
+    Flux => spray%solver%Flux; Res => spray%solver%Res
+
+    ! Global LF splitting
+    alpha_l = maxval(u_l); alpha_g = maxval(u_g)
+
+    do i = 1,6
+
+       if(i >= abs(spray%skip_turb)) cycle
+
+       solver%f_p = 0.5_WP*(F(i,:) + alpha_g*W(i,:))
+       solver%f_m = 0.5_WP*(F(i,:) - alpha_g*W(i,:))
+
+       call computeWeno3Coeff(spray)
+
+       call computeWeno3Flux(spray)
+
+       !where(solver%f_t < 0.0_WP) solver%f_t = 0.0_WP
+
+       do k = kmin,kmax
+
+          if(spray%solver%strang) then
+             Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
+          else
+             Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+          end if
+
+       end do
+
+    end do
+
+    do i = 7,13
+
+       if(i == spray%skip_d2) cycle
+
+       if(i == spray%skip_d3) cycle
+
+       solver%f_p = 0.5_WP*(F(i,:) + alpha_l*W(i,:))
+       solver%f_m = 0.5_WP*(F(i,:) - alpha_l*W(i,:))
+
+       call computeWeno3Coeff(spray)
+
+       call computeWeno3Flux(spray)
+
+       !where(solver%f_t < 0.0_WP) solver%f_t = 0.0_WP
+
+       do k = kmin,kmax
+
+          if(spray%solver%strang) then
+             Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
+          else
+             Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+          end if
+
+       end do
+
+    end do
+
+    Wold = W
+
+    spray%solver%rktvd%RK(spray%solver%rktvd%niter,:,:) = W
+    spray%solver%rktvd%Res(spray%solver%rktvd%niter,:,:) = Res
+
+  end subroutine computeResidual_WENO3
 
   subroutine computeResidual_WENO5(spray)
     implicit none

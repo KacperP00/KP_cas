@@ -23,12 +23,12 @@ module solver_defs
      type(rktvd_solver_t), pointer :: rktvd
      
      ! Convective scheme
-     real(WP), dimension(:,:), pointer :: divc, weno5p, weno5m
+     real(WP), dimension(:,:), pointer :: divc, weno3p, weno3m, weno5p, weno5m
 
-     ! Optimal weights for weno5
+     ! Optimal weights for weno3/5
      real(WP) :: a0, a1, a2
 
-     ! Stencils for weno5
+     ! Stencils for weno3/5
      real(WP), dimension(:), pointer :: S0_p, S1_p, S2_p, S0_m, S1_m, &
                                         S2_m, f_p, f_m, f_t
 
@@ -97,6 +97,13 @@ contains
        deallocate(solver%weno5p, solver%weno5m, &
                   solver%S0_p, solver%S1_p, solver%S2_p, &
                   solver%S0_m, solver%S1_m, solver%S2_m, &
+                  solver%f_p, solver%f_m, solver%f_t)
+    end if
+
+    if(associated(solver%weno3p)) then
+       deallocate(solver%weno3p, solver%weno3m, &
+                  solver%S0_p, solver%S1_p, &
+                  solver%S0_m, solver%S1_m, &
                   solver%f_p, solver%f_m, solver%f_t)
     end if
 
