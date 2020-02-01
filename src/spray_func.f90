@@ -1831,6 +1831,7 @@ contains
              write(*,*) u_l(k), u_g(k)
           end if
 
+          ! This condition is necessary to avoid oscillations in the solution
           if(rho(k)*Y_l(k) >= 1.0E-04_WP) then
              dm(k) = min(1.0_WP,max(0.0_WP,W(10,k)/rho(k)/Y_l(k)/b(k)**2))
              !dm(k) = W(10,k)/rho(k)/Y_l(k)/b(k)**2

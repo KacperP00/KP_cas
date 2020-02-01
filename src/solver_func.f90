@@ -501,8 +501,12 @@ contains
        if(i >= abs(spray%skip_turb)) cycle
 
        do k = kmin,kmax
-
-          Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*F(i,k-1:k))) ! - S(i,k))
+          
+          if(spray%solver%strang) then
+             Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*F(i,k-1:k))) ! - S(i,k))
+          else
+             Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+          end if
 
        end do
 
@@ -516,7 +520,11 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*F(i,k-1:k))) ! - S(i,k))
+          if(spray%solver%strang) then
+             Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*F(i,k-1:k))) ! - S(i,k))
+          else
+             Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+          end if
 
        end do
 
@@ -647,8 +655,11 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
-          !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+          if(spray%solver%strang) then
+             Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
+          else
+             Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+          end if
 
        end do
 
@@ -671,8 +682,11 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
-          !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+          if(spray%solver%strang) then
+             Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
+          else
+             Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
+          end if
 
        end do
 
