@@ -70,6 +70,29 @@ contains
 
     ! Update solution
     call updateSolution(spray)
+
+    select case(spray%solver%scheme)
+    case ('UPWIND1')
+
+       ! Compute Residual
+       call computeResidual_UPWIND1(spray)       
+
+    case ('LF')
+
+       ! Compute Residual
+       call computeResidual_LF(spray)
+
+    case ('WENO5')
+
+       ! Compute Residual
+       call computeResidual_WENO5(spray)
+
+    case default
+
+    end select
+
+    ! Update solution
+    call updateSolution(spray)
     
   end subroutine solver_run
 
@@ -417,7 +440,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k))) ! - S(i,k))
+          Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*F(i,k-1:k))) ! - S(i,k))
 
        end do
 
@@ -431,7 +454,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k))) ! - S(i,k))
+          Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*F(i,k-1:k))) ! - S(i,k))
 
        end do
 
@@ -481,7 +504,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k))) ! - S(i,k))
+          Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*Flux(k-1:k))) ! - S(i,k))
 
        end do
 
@@ -497,7 +520,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*Flux(k-1:k))) ! - S(i,k))
+          Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*Flux(k-1:k))) ! - S(i,k))
 
        end do
 
@@ -554,7 +577,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
+          Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
           !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -578,7 +601,7 @@ contains
 
        do k = kmin,kmax
 
-          Res(i,k) = -spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
+          Res(i,k) = -0.5_WP*spray%dt*(sum(divc(:,k)*solver%f_t(k:k+1))) ! - S(i,k))
           !Res(i,k) = -spray%dt*(sum(divc(:,k)*F(i,k-1:k)) - S(i,k))
 
        end do
@@ -724,7 +747,7 @@ contains
 
     W => spray%solver%W; Wold => spray%solver%Wold; 
     S => spray%solver%S
-
+    Res => spray%solver%Res
     do i = 1,6
 
        if(i >= abs(spray%skip_turb)) cycle

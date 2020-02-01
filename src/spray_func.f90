@@ -1798,10 +1798,10 @@ contains
 
     T_low = spray%MP/spray%T_fuel
 
-    rho = 0.0_WP; u_l = 0.0_WP; 
+    !rho = 0.0_WP; u_l = 0.0_WP; 
  
-    Y_l = 0.0_WP; Y_a = 0.0_WP; Y_v = 0.0_WP;
-    dm = 0.0_WP; d2 = 0.0_WP; Td = 0.0_WP; dvar = 0.0_WP
+    !Y_l = 0.0_WP; Y_a = 0.0_WP; Y_v = 0.0_WP;
+    !dm = 0.0_WP; d2 = 0.0_WP; Td = 0.0_WP; dvar = 0.0_WP
 
     do k = spray%kmino,spray%kmaxo
 
@@ -1820,7 +1820,7 @@ contains
        rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
        b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(7,k))/rho(k)))
 
-       if(Y_l(k) >= eps) then
+       if(Y_l(k) > eps) then
 
           u_l(k) = min(1.0_WP,max(0.0_WP,W(8,k)/rho(k)/Y_l(k)/b(k)**2))
 
@@ -1831,20 +1831,22 @@ contains
              write(*,*) u_l(k), u_g(k)
           end if
 
-          dm(k) = min(1.0_WP,max(0.0_WP,W(10,k)/rho(k)/Y_l(k)/b(k)**2))
-          !dm(k) = W(10,k)/rho(k)/Y_l(k)/b(k)**2
+          if(rho(k)*Y_l(k) >= 1.0E-04_WP) then
+             dm(k) = min(1.0_WP,max(0.0_WP,W(10,k)/rho(k)/Y_l(k)/b(k)**2))
+             !dm(k) = W(10,k)/rho(k)/Y_l(k)/b(k)**2
 
-          dvar(k) = max(0.0_WP,W(11,k)/rho(k)/Y_l(k)/b(k)**2)
-          !dvar(k) = W(11,k)/rho(k)/Y_l(k)/b(k)**2
+             dvar(k) = max(0.0_WP,W(11,k)/rho(k)/Y_l(k)/b(k)**2)
+             !dvar(k) = W(11,k)/rho(k)/Y_l(k)/b(k)**2
 
-          d2(k) = min(1.0_WP,max(0.0_WP,W(12,k)/rho(k)/Y_l(k)/b(k)**2))
+             d2(k) = min(1.0_WP,max(0.0_WP,W(12,k)/rho(k)/Y_l(k)/b(k)**2))
 
-          d3(k) = min(1.0_WP,max(0.0_WP,W(13,k)/rho(k)/Y_l(k)/b(k)**2))
+             d3(k) = min(1.0_WP,max(0.0_WP,W(13,k)/rho(k)/Y_l(k)/b(k)**2))
 
-          d2(k) = dm(k)**2 + dvar(k)
+             d2(k) = dm(k)**2 + dvar(k)
 
-          T_high(k) = spray%T_sat(k)/spray%T_fuel
-          Td(k) = max(T_low(k),min(T_high(k),W(9,k)/rho(k)/Y_l(k)/b(k)**2))
+             T_high(k) = spray%T_sat(k)/spray%T_fuel
+             Td(k) = max(T_low(k),min(T_high(k),W(9,k)/rho(k)/Y_l(k)/b(k)**2))
+          end if
 
           if( dm(k) == 0.0_WP .or. d2(k) == 0.0_WP ) then !.or. d3(k) == 0.0_WP ) then
              dm(k) = 0.0_WP
@@ -3441,7 +3443,7 @@ contains
     ! Based on Tamanini (1981) 
     spray%k_g(kmino:kmin) = 1.0E-04*spray%u_g(kmin)**2
 
-    spray%eps_g(kmino:kmin) = sqrt(spray%c_k*spray%c_mu*spray%k_g(kmin)*spray%rho(kmin))*spray%k_g(kmin)/spray%b(kmin)
+    spray%eps_g(kmino:kmin) = spray%eps_g(kmin) !sqrt(spray%c_k*spray%c_mu*spray%k_g(kmin)*spray%rho(kmin))*spray%k_g(kmin)/spray%b(kmin)
 
     spray%zvar_g(kmino:kmin-1) = spray%zvar_g(kmin)
 
@@ -3699,7 +3701,7 @@ contains
                *(log(zz(bound(1):bound(2)))/log(Zmix_st)) &
                *bpdf(bound(1):bound(2)))
           ! Limit maximum scalar dissipation rate to 1000.0 (1/s)
-          spray%chi_g_stl(k) = min(1000.0_WP*spray%tau,max(0.0_WP,spray%chi_g(k)/z_integral))
+          spray%chi_g_stl(k) = min(1000_WP*spray%tau,max(0.0_WP,spray%chi_g(k)/z_integral))
 
           ! Integrate over spray volume
           numer = numer + spray%chi_g_stl(k)**1.5_WP*spray%rho(k)*PZmix_st/dz_st*spray%dz*Pi*spray%b(k)**2
