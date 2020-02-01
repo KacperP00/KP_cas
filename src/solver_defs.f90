@@ -44,6 +44,9 @@ module solver_defs
      ! Newton-Raphson solver
      type(nr_solver_t), pointer :: nr
 
+     ! Strang splitting
+     logical :: strang = .true.
+
   end type solver_t
 
 contains

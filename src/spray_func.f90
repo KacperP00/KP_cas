@@ -2837,7 +2837,7 @@ contains
                                        DRg=>null(), VRg=>null(), Sc_g=>null(), Pr_g=>null(), &
                                        Td=>null(), CR=>null(), LR=>null()
     real(WP), pointer :: Re=>null(), De=>null()
-    real(WP), dimension(spray%nzo) :: Lv, Lk, Xeq, T_d, Ystar_fe, Bdeq, zeta, norm_var
+    real(WP), dimension(spray%nzo) :: Lv, Lk, Xeq, T_d, Ystar_fe, Bdeq, zeta, norm_var, tmp
 
     real(WP), dimension(spray%nd) :: zetta, Xneq, Ystar_f, Yref, Bd, coeff, K_vap, Qd
     real(WP), dimension(spray%nd,spray%nzo) :: D
@@ -2855,7 +2855,7 @@ contains
 
     Lv = spray%L_f; TBd = spray%NBP; T_d = spray%T_fuel*spray%Td; D = spray%D_eff*di
 
-    Xeq = (101325.0_WP/spray%P_a)*exp((Lv*spray%MW_f/spray%R_gas)*(1.0_WP/TBd-1.0_WP/T_d))
+    Xeq = spray%f_Pv*(101325.0_WP/spray%P_a)*exp((Lv*spray%MW_f/spray%R_gas)*(1.0_WP/TBd-1.0_WP/T_d))
 
     Lk = spray%visc_ra*sqrt(2.0_WP*Pi*T_d*spray%R_gas/spray%MW_f)/(Sc_g*spray%P_a)
 

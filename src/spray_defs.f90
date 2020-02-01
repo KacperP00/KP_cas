@@ -22,8 +22,8 @@ module spray_defs
      real(WP), dimension(:), pointer :: CFL_conv, CFL_bre, CFL_evap
 
      ! Non-dimensional numbers
-     real(WP), pointer :: Re, We, WR, De, DRa, DRv, VRa, VRv
-     real(WP), dimension(:), pointer :: DRg, VRg, VRtg, LR, CR
+     real(WP), pointer :: Re, We, WR, De, DRa, DRv, VRa, VRv, Pr_l
+     real(WP), dimension(:), pointer :: DRg, VRg, VRtg, TCRg, LR, CR
      
      ! Geometric variables
      real(WP), pointer :: noz_D, noz_LD, noz_rD, noz_Dsac
@@ -49,8 +49,8 @@ module spray_defs
      type(pc_t), dimension(:), pointer :: pc_v
  
      ! Fuel properties
-     real(WP), pointer :: T_fuel, sigma, rho_l, visc_l, MW_f, MP, NBP, stoic_coeff
-     real(WP), dimension(:), pointer :: L_f, C_l, p_vap, T_sat, sigma_loc, rho_l_loc, visc_l_loc
+     real(WP), pointer :: T_fuel, sigma, rho_l, visc_l, lambda_l, MW_f, MP, NBP, stoic_coeff
+     real(WP), dimension(:), pointer :: L_f, C_l, p_vap, T_sat, sigma_loc, rho_l_loc, visc_l_loc, lambda_l_loc
 
      ! Fuel properties from table
      character(len=128), pointer :: LFPTname, VFPTname
@@ -84,11 +84,11 @@ module spray_defs
      ! Droplet size distribution
      character(len=128), pointer :: init_dsd_name
      integer, pointer :: nd
-     real(WP), pointer :: init_dm, init_d2, init_d3, init_dvar, d10, d20, d30
+     real(WP), pointer :: init_dm, init_d2, init_d3, init_dvar, d10, d20, d30, dgf
      real(WP), dimension(:), pointer :: h
      real(WP), dimension(:,:), pointer :: di, dsd, CD, Red, Shd, Nud, dsdlam
      integer, dimension(:), pointer :: dsd_type
-     integer, pointer :: skip_turb, skip_d2, skip_d3
+     integer, pointer :: skip_d2, skip_d3
 
      ! Breakup parameters with default values
      real(WP) :: B0 = 0.61_WP, B1 = 10.0_WP, C3 = 2.5_WP, Crel = 1.0_WP
@@ -100,6 +100,8 @@ module spray_defs
      real(WP), pointer :: R_gas
 
      ! Turbulence parameters
+     logical :: turb_model = .false.
+     integer, pointer :: skip_turb
      real(WP), pointer :: c_k, c_mu, c_eps1, c_eps2, c_zvar
 
      ! Combustion model
@@ -118,6 +120,10 @@ module spray_defs
      ! Postprocessing
      real(WP), dimension(:), pointer :: time, LPL, VPL, chi_st
 
+     ! For sensitivity analysis
+     real(WP) :: f_rho_l=0.0_WP, f_mu_l=0.0_WP, f_lambda_l=0.0_WP, f_Lv=0.0_WP, f_C_l=0.0_WP, f_Pv=0.0_WP, f_sigma=0.0_WP
+     real(WP) :: f_rho_v=0.0_WP, f_mu_v=0.0_WP, f_lambda_v=0.0_WP, f_Cp_v=0.0_WP, f_G_v=0.0_WP
+
      ! Fixed Non-dimensional numbers
      real(WP), pointer :: fixed_Re, fixed_We, fixed_DRa, fixed_DRv, fixed_VRa, fixed_VRv, fixed_De
 
@@ -135,6 +141,7 @@ module spray_defs
        type_rosin_rammler             = 2, &
        type_log_normal                = 3, &
        type_gamma                     = 4, &
+       type_inverse_gamma             = 5, &
        type_general_gamma             = 6, &
        type_maximum_entropy_formalism = 7
 
@@ -201,6 +208,7 @@ contains
     allocate(spray%sigma); spray%sigma = -9999.0_WP
     allocate(spray%rho_l); spray%rho_l = -9999.0_WP
     allocate(spray%visc_l); spray%visc_l = -9999.0_WP
+    allocate(spray%lambda_l); spray%lambda_l = -9999.0_WP
     allocate(spray%MW_f); spray%MW_f = -9999.0_WP
     allocate(spray%MP); spray%MP = -9999.0_WP
     allocate(spray%NBP); spray%NBP = -9999.0_WP
@@ -237,6 +245,7 @@ contains
 
     allocate(spray%init_dsd_name); spray%init_dsd_name = 'noname'
     allocate(spray%nd); spray%nd = -9999
+    allocate(spray%dgf); spray%dgf = -9999.0_WP
     allocate(spray%init_dm); spray%init_dm = -9999.0_WP
     allocate(spray%init_d2); spray%init_d2 = -9999.0_WP
     allocate(spray%init_d3); spray%init_d3 = -9999.0_WP
@@ -341,6 +350,7 @@ contains
     allocate(spray%rho_l_loc(spray%nzo)); spray%rho_l_loc = -9999.0_WP
     allocate(spray%sigma_loc(spray%nzo)); spray%sigma_loc = -9999.0_WP
     allocate(spray%visc_l_loc(spray%nzo)); spray%visc_l_loc = -9999.0_WP
+    allocate(spray%lambda_l_loc(spray%nzo)); spray%lambda_l_loc = -9999.0_WP
 
     allocate(spray%T_ref(spray%nzo)); spray%T_ref = -9999.0_WP
     allocate(spray%Y_ref(spray%nzo)); spray%Y_ref = -9999.0_WP
@@ -441,8 +451,8 @@ contains
                spray%k_g,spray%eps_g,spray%mu_t_g, &
                spray%zmix_g, spray%zvar_g, spray%chi_g, spray%chi_g_stl)
 
-    deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%C_l, &
-               spray%rho_l_loc, spray%sigma_loc, spray%visc_l_loc, &
+    deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l, spray%lambda_l,spray%C_l, &
+               spray%rho_l_loc, spray%sigma_loc, spray%visc_l_loc, spray%lambda_l_loc, &
                spray%p_vap,spray%T_sat, spray%MW_f,spray%L_f,spray%MP,spray%NBP,spray%stoic_coeff)
 
     deallocate(spray%pc_l)
@@ -479,7 +489,7 @@ contains
 
     deallocate(spray%nd)
 
-    deallocate(spray%init_dm, spray%init_d2, spray%init_d3, spray%init_dvar)
+    deallocate(spray%init_dm, spray%init_d2, spray%init_d3, spray%init_dvar, spray%dgf)
 
     deallocate(spray%skip_turb, spray%skip_d2, spray%skip_d3)
 
@@ -491,7 +501,9 @@ contains
 
     deallocate(spray%c_k, spray%c_mu, spray%c_eps1, spray%c_eps2, spray%c_zvar)
 
+#ifdef MDUC_MPI
     deallocate(spray%combustion_model, spray%zz, spray%bpdf)
+#endif
 
     call deallocate_solver(spray%solver)
 
