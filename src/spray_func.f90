@@ -207,7 +207,7 @@ contains
     spray%k_g = 0.0_WP
     spray%zvar_g = 0.0_WP
 
-    spray%eps_g = 1.0E-09_WP !sqrt(spray%c_k*spray%c_mu*spray%k_g*spray%rho)*spray%k_g/spray%b
+    spray%eps_g = sqrt(spray%c_k*spray%c_mu*spray%k_g*spray%rho)*spray%k_g/spray%b
     
     spray%mu_t_g = spray%c_mu*spray%rho*sqrt(spray%Y_a*spray%Y_g)*spray%k_g**2/spray%eps_g
     !spray%mu_t_g = spray%c_mu*sqrt(1.0/spray%DRa/spray%DRg)*spray%k_g**2/spray%eps_g
@@ -1870,6 +1870,16 @@ contains
           k_g(k) = max(0.0_WP,W(4,k)/rho(k)/Y_g(k)/b(k)**2)
           eps_g(k) = max(0.0_WP,W(5,k)/rho(k)/Y_g(k)/b(k)**2)
           zvar_g(k) = max(0.0_WP,W(6,k)/rho(k)/Y_g(k)/b(k)**2)
+          if(k_g(k) /= k_g(k)) then
+             write(*,*) 'k_g is NaN'
+          end if
+          if(eps_g(k) /= eps_g(k)) then
+             write(*,*) 'eps_g is NaN'
+          end if
+          if(zvar_g(k) /= zvar_g(k)) then
+             write(*,*) 'zvar_g is NaN'
+          end if
+
           if(eps_g(k) > 0.0_WP) then
              mu_t_g(k) = spray%c_mu*rho(k)*sqrt(Y_g(k)*Y_a(k))*k_g(k)**2/eps_g(k)
              !mu_t_g(k) = spray%c_mu*sqrt(1.0_WP/DRa/DRg(k))*k_g(k)**2/eps_g(k)
@@ -3166,7 +3176,8 @@ contains
 
     factor = spray%eps_g/spray%k_g
     
-    where (spray%k_g == 0.0_WP) factor = 0.0_WP
+    !where (spray%k_g == 0.0_WP) factor = 0.0_WP
+    where (factor /= factor .or. spray%k_g == 0.0_WP) factor = 0.0_WP
     
     spray%omega_eps_g_p = factor*spray%c_eps1*spray%omega_k_g_p
     spray%omega_eps_g_d = factor*spray%c_eps2*spray%omega_k_g_d
@@ -3442,11 +3453,11 @@ contains
     ! Boundary conditions for k, eps, and zvar are in the gas phase grid
     ! i.e. first cell next to the nozzle exit
     ! Based on Tamanini (1981) 
-    spray%k_g(kmino:kmin) = 1.0E-04*spray%u_g(kmin)**2
+    spray%k_g(kmino:kmin) = (0.01_WP*spray%u_g(kmin))**2
 
-    spray%eps_g(kmino:kmin) = spray%eps_g(kmin) !sqrt(spray%c_k*spray%c_mu*spray%k_g(kmin)*spray%rho(kmin))*spray%k_g(kmin)/spray%b(kmin)
+    spray%eps_g(kmino:kmin) = sqrt(spray%c_k*spray%c_mu*spray%k_g(kmin)*spray%rho(kmin))*spray%k_g(kmin)/spray%b(kmin)
 
-    spray%zvar_g(kmino:kmin-1) = spray%zvar_g(kmin)
+    spray%zvar_g(kmino:kmin) = spray%zvar_g(kmin)
 
     ! Right boundary (Neumann)
     spray%rho(kmax+1:kmaxo) = spray%rho(kmax)

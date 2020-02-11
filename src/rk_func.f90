@@ -26,8 +26,12 @@ contains
     solver%nzo = spray%nzo
 
     ! Set type of RK scheme
-
-    solver%scheme = spray%solver%rktvd%scheme
+    if (spray%solver%strang) then
+       write(*,*) 'Warning! Strang splitting only implemented with Euler time stepping...'
+       solver%scheme = '1'
+    else
+       solver%scheme = spray%solver%rktvd%scheme
+    end if
 
     select case (trim(solver%scheme))
     case ('1','11','E11','Euler')

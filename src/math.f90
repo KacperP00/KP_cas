@@ -1472,4 +1472,25 @@ contains
 
   end subroutine RosinRammlerPDF
 
+  logical function isnan(a)
+    real(WP) :: a
+    if (a.ne.a) then
+       isnan = .true.
+    else
+       isnan = .false.
+    end if
+    return
+  end function isnan
+
+  logical function isinf(a)
+    real(WP) ::  a
+
+    if ((a-1.0_WP).eq.a) then
+       isinf = .true.
+    else
+       isinf = .false.
+    end if
+    return
+  end function isinf
+
 end module math

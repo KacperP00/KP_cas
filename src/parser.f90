@@ -94,6 +94,8 @@ contains
                   read(line(idx+1:len(line)),*) spray%init_dsd_name
                else if(param .eq. 'Number of diameter classes') then
                   read(line(idx+1:len(line)),*) spray%nd
+               else if(param .eq. 'Droplet grid factor') then
+                  read(line(idx+1:len(line)),*) spray%dgf
                else if(param .eq. 'Initial Dm') then
                   read(line(idx+1:len(line)),*) spray%init_dm
                else if(param .eq. 'Initial D2') then
@@ -132,6 +134,8 @@ contains
                   read(line(idx+1:len(line)),*) spray%beta
                else if(param .eq. 'ROI profile') then
                   read(line(idx+1:len(line)),*) spray%roi_file
+               else if(param .eq. 'Strang splitting') then
+                  read(line(idx+1:len(line)),*) spray%solver%strang
                else if(param .eq. 'RK scheme') then
                   read(line(idx+1:len(line)),*) spray%solver%rktvd%scheme
                else if(param .eq. 'Conv scheme') then
@@ -144,6 +148,8 @@ contains
                   read(line(idx+1:len(line)),*) spray%plfilename
                else if(param .eq. 'Output frequency') then
                   read(line(idx+1:len(line)),*) spray%outfreq
+               else if(param .eq. 'Turbulence model') then
+                  read(line(idx+1:len(line)),*) spray%turb_model
                else if(param .eq. 'Combustion model') then
                   read(line(idx+1:len(line)),*) spray%combustion_model
                else if(param .eq. 'Y_O2') then
@@ -162,6 +168,30 @@ contains
                   read(line(idx+1:len(line)),*) spray%fixed_VRv
                else if(param .eq. 'Fixed De') then
                   read(line(idx+1:len(line)),*) spray%fixed_De
+               else if(param .eq. 'f_rho_l') then
+                  read(line(idx+1:len(line)),*) spray%f_rho_l
+               else if(param .eq. 'f_mu_l') then
+                  read(line(idx+1:len(line)),*) spray%f_mu_l
+               else if(param .eq. 'f_lambda_l') then
+                  read(line(idx+1:len(line)),*) spray%f_lambda_l
+               else if(param .eq. 'f_Lv') then
+                  read(line(idx+1:len(line)),*) spray%f_Lv
+               else if(param .eq. 'f_C_l') then
+                  read(line(idx+1:len(line)),*) spray%f_C_l
+               else if(param .eq. 'f_Pv') then
+                  read(line(idx+1:len(line)),*) spray%f_Pv
+               else if(param .eq. 'f_sigma') then
+                  read(line(idx+1:len(line)),*) spray%f_sigma
+               else if(param .eq. 'f_rho_v') then
+                  read(line(idx+1:len(line)),*) spray%f_rho_v
+               else if(param .eq. 'f_mu_v') then
+                  read(line(idx+1:len(line)),*) spray%f_mu_v
+               else if(param .eq. 'f_lambda_v') then
+                  read(line(idx+1:len(line)),*) spray%f_lambda_v
+               else if(param .eq. 'f_Cp_v') then
+                  read(line(idx+1:len(line)),*) spray%f_Cp_v
+               else if(param .eq. 'f_G_v') then
+                  read(line(idx+1:len(line)),*) spray%f_G_v
                else
                end if
             end if
