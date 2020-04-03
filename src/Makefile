@@ -14,10 +14,11 @@ FC = mpiifort
 # LINK MDUC LIBRARY
 MDUC_DIR = /home/ad738098/codes/mduc
 MDUC_INC = -I$(MDUC_DIR)/include
-MDUC_LIB = -L$(MDUC_DIR)/lib -lmduc -lmduc_chem -lmduc_mechanism
+MDUC_LIB = -L$(MDUC_DIR)/lib_ome0to5 -lmduc -lmduc_chem -lmduc_mechanism
 
 # LINK SUNDIALS
 SDIAL = /home/itv/compile_centos7/lib/sundials/2.7.0_intel19.0_intelmpi_2018_mkl/Install_DIR
+#SDIAL = /home/ad738098/codes/sundials/2.7.0_intel19.0_intelmpi_2018_mkl/Install_DIR
 
 # set up Sundials library
 ifeq ($(strip $(SDIAL)),)
@@ -47,7 +48,7 @@ else
 FC = ifort
 
 INCFLAGS = $(MODDIR)
-LDFLAGS = -mkl -limf -lm
+LDFLAGS = #-mkl -limf -lm
 
 MDUCFLAGS = 
 
@@ -85,13 +86,13 @@ CASOPT = cas_opt
 # objects
 ifeq ($(withMDUC),YES)
 F90FILES = precision.f90 math.f90 string.f90 \
-      pc_defs.f90 pc_database.f90 pc_func.f90 combust_rif_mduc_defs.f90 combust_mduc.f90 \
+      pc_defs.f90 pc_database.f90 pc_func.f90 fpt_defs.f90 fpt_func.f90 combust_rif_mduc_defs.f90 combust_mduc.f90 \
       rk_defs.f90 solver_defs.f90 spray_defs.f90 parser.f90 rk_func.f90 solver_func.f90 spray_combust.f90 spray_func.f90 \
       cas.f90
 
 else
 F90FILES = precision.f90 math.f90 string.f90 \
-      pc_defs.f90 pc_database.f90 pc_func.f90 \
+      pc_defs.f90 pc_database.f90 pc_func.f90 fpt_defs.f90 fpt_func.f90 \
       rk_defs.f90 solver_defs.f90 spray_defs.f90 parser.f90 rk_func.f90 solver_func.f90 spray_func.f90 \
       cas.f90
 endif
