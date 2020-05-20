@@ -6540,6 +6540,192 @@ contains
 
   end subroutine pc_oxymethylenether4
 
+  subroutine pc_oxymethylenether4_pcpsaft(pc)
+    implicit none
+
+    ! ---------------------------------------------
+    type(pc_t), pointer, intent(inout) :: pc
+    ! ---------------------------------------------
+
+
+
+
+    ! all alternative names
+    pc%name = 'OME4';
+    pc%CAS = '';
+    ! components
+    pc%ChemicalFormula%C = 6;         
+    pc%ChemicalFormula%H = 14;
+    pc%ChemicalFormula%O = 5;
+
+    pc%MolecularWeight = 166.172_WP;   ! kg/kmol    
+    pc%Tcrit = 616.581_WP;             ! K    
+    pc%pcrit = 2.95007_WP;             ! Pa
+    pc%vcrit = 0.533478_WP;            ! m^3/kmol
+    pc%CritCompressFactor = 0.211_WP;  ! -
+
+
+    pc%MeltingPoint = 256.499_WP;              ! K 
+    pc%TripletPointT = MAX_REAL_WP;            ! K DO NOT KNOW
+    pc%TripletPointp = MAX_REAL_WP;            ! Pa DO NOT KNOW
+    pc%NormalBoilingPoint = 424.45_WP;         ! K
+    pc%liqMolarVolume = 0.201301_WP;           ! m^3/kmol
+
+    pc%IG_HeatOfFormation = MAX_REAL_WP;             ! J/kmol DO NOT KNOW
+    pc%IG_GibbsOfFormation = MAX_REAL_WP;            ! J/kmol DO NOT KNOW
+    pc%IG_AbsoluteEntropy = MAX_REAL_WP;             ! J/kmolK DO NOT KNOW
+    pc%HeatFusionAtMeltPoint = MAX_REAL_WP;          ! J/kmol DO NOT KNOW
+    pc%StandardNetHeatOfCombustion = MAX_REAL_WP;    ! J/kmol DO NOT KNOW
+    pc%StandardGibbsOfFormation = MAX_REAL_WP;              ! J/kmol DO NOT KNOW
+    pc%StandardHeatOfFormation = MAX_REAL_WP;               ! J/kmol DO NOT KNOW
+    pc%StandardAbsoluteEntropy = MAX_REAL_WP;               ! J/kmolK DO NOT KNOW
+
+
+    pc%AcentricFactor = 0.3836_WP;            ! - PCP-SAFT calculations
+    pc%RadiusOfGyration = MAX_REAL_WP;        ! m DO NOT KNOW
+    pc%SolubilityParameter = MAX_REAL_WP;     ! (J/m^3)^.5 DO NOT KNOW
+    pc%DipoleMoment = MAX_REAL_WP;            ! C^m DO NOT KNOW
+    pc%VanDerWaalsVolume = MAX_REAL_WP;       ! m^3/kmol DO NOT KNOW
+
+
+    pc%VanDerWaalsArea = MAX_REAL_WP;         ! m^2/kmol DO NOT KNOW
+    pc%RefractiveIndex = MAX_REAL_WP;         ! - DO NOT KNOW
+    pc%FlashPoint = MAX_REAL_WP;              ! K DO NOT KNOW
+    pc%FlammabilityLimits = (/ MAX_REAL_WP, MAX_REAL_WP /);    ! vol-! DO NOT KNOW
+    pc%FlammabilityLimitTemps = (/ MAX_REAL_WP, MAX_REAL_WP /); ! K DO NOT KNOW
+    pc%AutoignitionTemp = MAX_REAL_WP;          ! K DO NOT KNOW
+
+    ! XXXX NOT KNOWN
+    pc%solDensityMol%A = 0.0_WP;
+    pc%solDensityMol%B = 0.0_WP;
+    pc%solDensityMol%C = 0.0_WP;
+    pc%solDensityMol%D = 0.0_WP;
+    pc%solDensityMol%E = 0.0_WP;
+    pc%solDensityMol%range(:,1) = (/ MAX_REAL_WP, MAX_REAL_WP /);
+    pc%solDensityMol%eqn = 100;
+
+    ! XXXX
+    pc%liqDensityMol%A = 1.38435695329566E+01_WP;
+    pc%liqDensityMol%B = -6.64940622122727E-02_WP;
+    pc%liqDensityMol%C = 2.34788283896903E-04_WP;
+    pc%liqDensityMol%D = -3.85301058535382E-07_WP;
+    pc%liqDensityMol%E = 2.20853685616797E-10_WP;
+    pc%liqDensityMol%range(:,1) = (/ 268.0_WP, 615.6_WP /);
+    pc%liqDensityMol%range(:,2) = (/ 6.652820567_WP, 3.665080563_WP /);
+    pc%liqDensityMol%eqn = 100;
+
+    ! XXXX FROM EXCEL SHEET
+    pc%vapPressure%A = 73.4273462767746_WP;
+    pc%vapPressure%B = -8497.77116527637_WP;
+    pc%vapPressure%C = -7.09835749350697_WP;
+    pc%vapPressure%D = 0.00000000000000001_WP;
+    pc%vapPressure%E = 6.10934905086933_WP;
+    pc%vapPressure%range(:,1) = (/ 268.0_WP, 615.6_WP /);
+    pc%vapPressure%range(:,2) = (/ 7.68484E+00_WP, 3.72994E+06_WP /);
+    pc%vapPressure%eqn = 101;  
+
+    ! XXXX FROM EXCEL SHEET
+    pc%HeatOfVapMol%A = 8.42909520204301E+07_WP;
+    pc%HeatOfVapMol%B = 1.200766275140770E+00_WP;
+    pc%HeatOfVapMol%C = -1.047590592324820E+00_WP;
+    pc%HeatOfVapMol%D = 0.0_WP;
+    pc%HeatOfVapMol%E = 0.0_WP;
+    pc%HeatOfVapMol%range(:,1) = (/ 268.0_WP, 615.6_WP /);
+    pc%HeatOfVapMol%range(:,2) = (/ 5.505535408532550E+07_WP, 0.0_WP /);
+    pc%HeatOfVapMol%eqn = 106;     
+
+    ! XXXX NOT AVAILABLE
+    pc%solHeatCapacityMol%A = -1.6050E04_WP;
+    pc%solHeatCapacityMol%B = 1.3984E03_WP;
+    pc%solHeatCapacityMol%C = -5.8400E00_WP;
+    pc%solHeatCapacityMol%D = 8.5900E-03_WP;
+    pc%solHeatCapacityMol%E = 0.0_WP;
+    pc%solHeatCapacityMol%range(:,1) = (/ 15.00_WP, 168.35_WP /);
+    pc%solHeatCapacityMol%range(:,2) = (/ 3.6410E03_WP, 9.4841E04_WP /);
+    pc%solHeatCapacityMol%eqn = 100;
+
+    ! FROM EXCEL SHEET
+    pc%liqHeatCapacityMol%A = 3.04940766054870E+05_WP;
+    pc%liqHeatCapacityMol%B = -2.74831030094651E+02_WP;
+    pc%liqHeatCapacityMol%C = 5.02855394544221E-01_WP;
+    pc%liqHeatCapacityMol%D = 0.0_WP;
+    pc%liqHeatCapacityMol%E = 0.0_WP;
+    pc%liqHeatCapacityMol%range(:,1) = (/ 268.0_WP, 615.6_WP /);
+    pc%liqHeatCapacityMol%range(:,2) = (/ 2.67403135847247E+05_WP, 3.26318553839206E+05_WP /);
+    pc%liqHeatCapacityMol%eqn = 100;    
+
+    ! FROM EXCEL SHEET
+    pc%IG_HeatCapacityMol%A = 1.71002033600000E+05_WP;
+    pc%IG_HeatCapacityMol%B = 2.57840000000000E+02_WP;
+    pc%IG_HeatCapacityMol%C = 0.0_WP;
+    pc%IG_HeatCapacityMol%D = 0.0_WP;
+    pc%IG_HeatCapacityMol%E = 0.0_WP;
+    pc%IG_HeatCapacityMol%range(:,1) = (/ 268.0_WP, 620.00_WP /);
+    pc%IG_HeatCapacityMol%range(:,2) = (/ 2.40103153600000E+05_WP, 3.30862833600000E+05_WP /);
+    pc%IG_HeatCapacityMol%eqn = 100;
+
+    ! XXXX NOT AVAILABLE
+    pc%SecondViralCoefMol%A = 1.6669E-01_WP;
+    pc%SecondViralCoefMol%B = -1.6805E02_WP;
+    pc%SecondViralCoefMol%C = -1.9195E07_WP;
+    pc%SecondViralCoefMol%D = 2.9849E19_WP;
+    pc%SecondViralCoefMol%E = -8.7864E21_WP;
+    pc%SecondViralCoefMol%range(:,1) = (/ 240.30_WP, 2400.00_WP /);
+    pc%SecondViralCoefMol%range(:,2) = (/ -2.5200_WP, 9.5290E-02_WP /);
+    pc%SecondViralCoefMol%eqn = 104;  
+
+    ! XXXX FROM EXCEL SHEET
+    pc%liqViscosity%A = -4.73279672E+01_WP;
+    pc%liqViscosity%B = 3.27503801E+03_WP;
+    pc%liqViscosity%C = 5.28039807E+00_WP;
+    pc%liqViscosity%D = 3.28403307E-06_WP;
+    pc%liqViscosity%E = 4.86541006E-01_WP;
+    pc%liqViscosity%range(:,1) = (/ 268.0_WP, 615.6_WP /);
+    pc%liqViscosity%range(:,2) = (/ 3.7537908E-03_WP, 3.0538220E-04_WP /);
+    pc%liqViscosity%eqn = 101;
+
+    ! XXXX FROM EXCEL SHEET
+    pc%vapViscosity%A = 1.72298102E-08_WP;
+    pc%vapViscosity%B = 1.23762536E+00_WP;
+    pc%vapViscosity%C = 1.80430750E+03_WP;
+    pc%vapViscosity%D = -4.83910313E+04_WP;
+    pc%vapViscosity%E = 0.0_WP;
+    pc%vapViscosity%range(:,1) = (/ 268.0_WP, 620.0_WP /);
+    pc%vapViscosity%range(:,2) = (/ 2.4698702112E-06_WP, 1.3008621821E-05_WP /);
+    pc%vapViscosity%eqn = 102;
+
+    ! XXXX FROM EXCEL SHEET
+    pc%liqThermalConductivity%A = 6.81596746E-01_WP;
+    pc%liqThermalConductivity%B = -2.66777745E-03_WP;
+    pc%liqThermalConductivity%C = 5.98408357E-06_WP;
+    pc%liqThermalConductivity%D = -6.79546584E-09_WP;
+    pc%liqThermalConductivity%E = 3.06374344E-12_WP;
+    pc%liqThermalConductivity%range(:,1) = (/ 268.0_WP, 615.6_WP /);
+    pc%liqThermalConductivity%range(:,2) = (/ 2.8143332E-01_WP, 1.6174228E-01_WP /);
+    pc%liqThermalConductivity%eqn = 100;
+
+    ! XXXX FROM EXCEL SHEET assuming Pr=0.7
+    pc%vapThermalConductivity%A = 9.7323914200E-02_WP;
+    pc%vapThermalConductivity%B = 1.22192393E-01_WP;
+    pc%vapThermalConductivity%C = -2.30249695E+03_WP;
+    pc%vapThermalConductivity%D = 3.26150483E+06_WP;
+    pc%vapThermalConductivity%E = 0.0_WP;
+    pc%vapThermalConductivity%range(:,1) = (/ 273.15_WP, 620.0_WP /);
+    pc%vapThermalConductivity%range(:,2) = (/ 5.0958598408E-03_WP, 3.6998199098E-02_WP /);
+    pc%vapThermalConductivity%eqn = 102; 
+
+    ! XXXX FROM EXCEL SHEET
+    pc%SurfaceTension%A = 4.28E-02_WP;
+    pc%SurfaceTension%B = 0.858893924_WP;
+    pc%SurfaceTension%C = 0.0_WP;
+    pc%SurfaceTension%D = 0.0_WP;
+    pc%SurfaceTension%E = 0.0_WP;
+    pc%SurfaceTension%range(:,1) = (/ 293.35_WP, 615.6_WP /);
+    pc%SurfaceTension%range(:,2) = (/ 0.0246_WP, 0.0_WP /);
+    pc%SurfaceTension%eqn = 106; 
+
+  end subroutine pc_oxymethylenether4_pcpsaft
+
   subroutine pc_dimethoxymethane(pc)
     implicit none
 

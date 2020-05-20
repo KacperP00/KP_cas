@@ -95,9 +95,10 @@ contains
     ! Update solution
     call updateSolution(spray)
 
-    call updatePrimVars(spray)
+    !call updatePrimVars(spray)
+    call updateFlowVariabless(spray)
 
-    call buildSourceVector(spray)
+    !call buildSourceVector(spray)
 
 
     ! Step 2: Add source terms 1 time step
@@ -105,6 +106,9 @@ contains
 
     ! Update solution
     call updateSolution(spray)
+
+    !call updatePrimVars(spray)
+    call updateFlowVariabless(spray)
 
     call buildFluxVector(spray)
 
@@ -1258,5 +1262,153 @@ contains
     !             + 2*1.016*spray%Y_a*0.022292/18.01528_WP ! H2O
 
   end subroutine updatePrimVars
+
+  subroutine updateFlowVariabless(spray)
+    implicit none
+
+    ! ---------------------------------
+    type(spray_t), pointer, intent(inout) :: spray
+
+    ! ---------------------------------
+    type(pc_t), pointer :: pc_l
+    real(WP), dimension(:,:), pointer :: W=>null()
+    real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
+                                       u_l=>null(), u_g=>null(), d3=>null(), d2=>null(), dm=>null(), dvar=>null(), &
+                                       Td=>null(), b=>null(), k_g=>null(), eps_g=>null(), zvar_g=>null(), &
+                                       mu_t_g=>null(), chi_g=>null(), DRg=>null()
+
+    real(WP), pointer :: DRv=>null(), DRa=>null()
+    real(WP), dimension(spray%nzo) :: T_low, T_high
+    real(WP) :: nu, eps = 1.0E-16_WP
+    integer :: k
+
+    rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar; Td => spray%Td; b => spray%b
+    k_g => spray%k_g; eps_g => spray%eps_g; zvar_g => spray%zvar_g; mu_t_g => spray%mu_t_g; chi_g => spray%chi_g
+    DRv => spray%DRv; DRa => spray%DRa; DRg => spray%DRg
+    W => spray%solver%W
+
+    T_low = spray%MP/spray%T_fuel
+
+    !rho = 0.0_WP; u_l = 0.0_WP; 
+ 
+    !Y_l = 0.0_WP; Y_a = 0.0_WP; Y_v = 0.0_WP;
+    !dm = 0.0_WP; d2 = 0.0_WP; Td = 0.0_WP; dvar = 0.0_WP
+
+    do k = spray%kmino,spray%kmaxo
+
+       if ( (W(1,k)+W(2,k)) .gt. 0.0_WP ) then
+          u_g(k) = min(1.0_WP,max(0.0_WP,W(3,k)/(W(1,k)+W(2,k))))
+       end if
+
+       Y_l(k) = W(7,k)/(W(1,k)+W(2,k)+W(7,k))
+       if ( Y_l(k) < eps ) Y_l(k) = 0.0_WP
+       Y_v(k) = max(0.0_WP,W(2,k)/(W(1,k)+W(2,k)+W(7,k)))
+       !Y_v(k) = W(2,k)/(W(1,k)+W(2,k)+W(7,k))
+       !if ( Y_v(k) < eps ) Y_v(k) = 0.0_WP
+       Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k))
+       !Y_a(k) = 1.0_WP - Y_l(k) - Y_v(k)
+       Y_g(k) = 1.0_WP - Y_l(k)
+       rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
+       b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(7,k))/rho(k)))
+
+       if(Y_l(k) > eps) then
+
+          u_l(k) = min(1.0_WP,max(0.0_WP,W(8,k)/rho(k)/Y_l(k)/b(k)**2))
+
+          if(u_l(k) < 0.0_WP .or. u_l(k) > 1.0_WP) then
+             write(*,*) u_l(k), u_g(k)
+          end if
+          if(u_g(k) < 0.0_WP .or. u_g(k) > 1.0_WP) then
+             write(*,*) u_l(k), u_g(k)
+          end if
+
+          ! This condition is necessary to avoid oscillations in the solution
+          if(rho(k)*Y_l(k) >= 1.0E-04_WP) then
+             dm(k) = min(1.0_WP,max(0.0_WP,W(10,k)/rho(k)/Y_l(k)/b(k)**2))
+             !dm(k) = W(10,k)/rho(k)/Y_l(k)/b(k)**2
+
+             dvar(k) = max(0.0_WP,W(11,k)/rho(k)/Y_l(k)/b(k)**2)
+             !dvar(k) = W(11,k)/rho(k)/Y_l(k)/b(k)**2
+
+             !d2(k) = min(1.0_WP,max(0.0_WP,W(12,k)/rho(k)/Y_l(k)/b(k)**2))
+
+             !d3(k) = min(1.0_WP,max(0.0_WP,W(13,k)/rho(k)/Y_l(k)/b(k)**2))
+
+             d2(k) = dm(k)**2 + dvar(k)
+
+             T_high(k) = spray%T_sat(k)/spray%T_fuel
+             Td(k) = max(T_low(k),min(T_high(k),W(9,k)/rho(k)/Y_l(k)/b(k)**2))
+          end if
+
+          if( dm(k) == 0.0_WP .or. d2(k) == 0.0_WP ) then !.or. d3(k) == 0.0_WP ) then
+             dm(k) = 0.0_WP
+             d2(k) = 0.0_WP
+             d3(k) = 0.0_WP
+             dvar(k) = 0.0_WP
+             u_l(k) = 0.0_WP
+             Y_l(k) = 0.0_WP
+             !Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k))
+             !Y_g(k) = 1.0_WP - Y_l(k)
+             !rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
+             Td(k) = 0.0_WP
+             !b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(4,k))/rho(k)))
+          end if
+
+       end if
+
+       !if(abs(u_g(k)) > 0.0_WP .and. Y_g(k) > 0.0_WP) then
+       if(Y_g(k) > 0.0_WP) then
+          k_g(k) = max(0.0_WP,W(4,k)/rho(k)/Y_g(k)/b(k)**2)
+          eps_g(k) = max(0.0_WP,W(5,k)/rho(k)/Y_g(k)/b(k)**2)
+          zvar_g(k) = max(0.0_WP,W(6,k)/rho(k)/Y_g(k)/b(k)**2)
+          if(k_g(k) /= k_g(k)) then
+             write(*,*) 'k_g is NaN'
+          end if
+          if(eps_g(k) /= eps_g(k)) then
+             write(*,*) 'eps_g is NaN'
+          end if
+          if(zvar_g(k) /= zvar_g(k)) then
+             write(*,*) 'zvar_g is NaN'
+          end if
+
+          if(eps_g(k) > 0.0_WP) then
+             mu_t_g(k) = spray%c_mu*rho(k)*sqrt(Y_g(k)*Y_a(k))*k_g(k)**2/eps_g(k)
+             !mu_t_g(k) = spray%c_mu*sqrt(1.0_WP/DRa/DRg(k))*k_g(k)**2/eps_g(k)
+             !mu_t_g(k) = spray%c_mu/DRg(k)*k_g(k)**2/eps_g(k)
+             if(mu_t_g(k) /= mu_t_g(k)) then
+                write(*,*) 'mu_t_g is NaN'
+             end if
+          end if
+          if(k_g(k) > 0.0_WP) then
+             chi_g(k) = spray%c_zvar*eps_g(k)/k_g(k)*zvar_g(k)
+          end if
+       end if
+
+    end do
+
+    !call compute_b(spray)
+
+    !spray%Tg = (spray%Y_v*(1.0_WP - spray%De*spray%CR*spray%LR) &
+    !         +  spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
+
+    !spray%Tg(spray%kmino:spray%kmin-1) = spray%T_a/spray%T_fuel
+
+    !spray%mu_t_g = spray%c_mu*spray%k_g**2/spray%eps_g
+    !spray%c_mu*sqrt(1.0_WP/spray%DRa/spray%DRg)*spray%k_g**2/spray%eps_g
+
+    spray%Tg = spray%T_a/spray%T_fuel
+
+    ! n-dodecane
+    !nu = 3.475402137_WP
+    ! n-heptane
+    !nu = 3.51283381901_WP 
+
+    spray%Zmix_g = (spray%stoic_coeff*spray%Y_v-spray%Y_O2*spray%Y_a+spray%Y_O2)/(spray%stoic_coeff+spray%Y_O2)
+    !spray%zmix_g = 12*12.0107_WP*spray%Y_v/spray%MW_f + 26*1.00794_WP*spray%Y_v/spray%MW_f & ! Fuel
+    !             + 12.0107_WP*spray%Y_a*0.093629/44.01_WP & ! CO2
+    !             + 2*1.016*spray%Y_a*0.022292/18.01528_WP ! H2O
+
+  end subroutine updateFlowVariabless
 
 end module solver_func

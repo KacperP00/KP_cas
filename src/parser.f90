@@ -46,14 +46,8 @@ contains
                   read(line(idx+1:len(line)),*) spray%Fuel
                else if(param .eq. 'Fuel temperature') then
                   read(line(idx+1:len(line)),*) spray%T_fuel
-               else if(param .eq. 'Liquid fuel properties table') then
-                  read(line(idx+1:len(line)),*) spray%LFPTname
-               else if(param .eq. 'Normal boiling point') then
-                  read(line(idx+1:len(line)),*) spray%NBP
-               else if(param .eq. 'Melting point') then
-                  read(line(idx+1:len(line)),*) spray%MP
-               else if(param .eq. 'Vapor fuel properties table') then
-                  read(line(idx+1:len(line)),*) spray%VFPTname
+               else if(param .eq. 'Fuel properties table') then
+                  read(line(idx+1:len(line)),*) spray%FPTname
                else if(param .eq. 'Fuel molecular weight') then
                   read(line(idx+1:len(line)),*) spray%MW_f
                else if(param .eq. 'Use nozzle flow model') then

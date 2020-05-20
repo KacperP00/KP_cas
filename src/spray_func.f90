@@ -5,6 +5,8 @@ module spray_func
   use spray_defs
   use pc_defs
   use pc_func
+  use fpt_defs
+  use fpt_func
   use solver_defs
   use solver_func
 #ifdef MDUC_MPI
@@ -25,6 +27,7 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
+    type(fpt_t), pointer :: fpt
     integer, pointer :: kmin, kmax, kmino, kmaxo
     integer :: k, ierr
     real(WP) :: scal, Cm, Cvar, var, nu
@@ -37,22 +40,13 @@ contains
     ! Initialize grid and grid variables
     call allocate_spray_grid_vars(spray)
 
-    ! Load liquid fuel properties table if provided
-    if ( spray%LFPTname /= 'noname' ) then
-       call readLiquidFuelPropertiesTable(spray)
-    end if
+    ! Load fuel properties table if provided
+    if ( spray%FPTname /= 'noname' ) then
+       
+       call allocate_fpt(spray%fpt)
+       spray%fpt%file = spray%FPTname
+       call readFuelProperties(spray%fpt)
 
-    ! Load vapor fuel properties table if provided
-    if ( spray%VFPTname /= 'noname' ) then
-       call readVaporFuelPropertiesTable(spray)
-    end if
-
-    if ( associated(spray%LFPT) .and. .not.associated(spray%VFPT) ) then
-       write(*,*) 'Warning! Vapor Fuel Properties Table not provided.'
-       write(*,*) 'Warning! Vapor Fuel Properties will be used from pc_database if available.'
-    else if ( .not.associated(spray%LFPT) .and. associated(spray%VFPT) ) then
-       write(*,*) 'Warning! Liquid Fuel Properties Table not provided.'
-       write(*,*) 'Warning! Liquid Fuel Properties will be used from pc_database if available.'
     end if
 
     ! Initialize solvers
@@ -79,7 +73,7 @@ contains
     if(spray%f_G_v==0.0_WP) spray%f_G_v = 1.0_WP
     
     ! Liquid fuel properties
-    if (associated(spray%LFPT)) then
+    if (associated(spray%FPT)) then
        call getLiquidFuelPropertiesFromLFPT(spray)
     else
        call computeLiquidFuelProperties(spray)
@@ -89,7 +83,7 @@ contains
     call computeAmbientProperties(spray)
 
     ! Vapor fuel properties
-    if (associated(spray%VFPT)) then
+    if (associated(spray%FPT)) then
        call getVaporFuelPropertiesFromVFPT(spray,spray%T_a)
     else
        call computeVaporFuelProperties(spray,spray%T_a)
@@ -109,8 +103,8 @@ contains
        call injection_params(spray)
     else
        write(*,*) '#### Error!!! Specify one of the following to compute nozzle exit velocity....'
-       write(*,*) '#### 1. Use nozzle flow model : <.true./.false.>'
-       write(*,*) '#### 2. Constant injection velocity : <VALUE>'
+       write(*,*) '#### 1. Use nozzle flow model           : <.true./.false.>'
+       write(*,*) '#### 2. Constant injection velocity     : <VALUE>'
        write(*,*) '#### 3. Injected mass                   : <VALUE>'
        write(*,*) '####    Area of nozzle                  : <VALUE>'
        write(*,*) '####    Discharge coefficient of nozzle : <VALUE>'
@@ -196,10 +190,17 @@ contains
     !spray%Tg(kmino:kmin-1) = spray%T_a/spray%T_fuel
 
     ! Compute stoichiometric coefficient for fuel
-    spray%stoic_coeff = (spray%pc_v(spray%kmaxo)%ChemicalFormula%C &
-                      +  0.25_WP*spray%pc_v(spray%kmaxo)%ChemicalFormula%H - 0.5_WP*spray%pc_v(spray%kmaxo)%ChemicalFormula%O)&
-                      *  32.0E-03_WP/spray%MW_f
-    spray%Zmix_g = (spray%stoic_coeff*spray%Y_v-spray%Y_O2*spray%Y_a+spray%Y_O2)/(spray%stoic_coeff+spray%Y_O2)
+    if (associated(spray%FPT)) then
+       spray%stoic_coeff = (spray%fpt%ChemicalFormula%C &
+                         +  0.25_WP*spray%fpt%ChemicalFormula%H - 0.5_WP*spray%fpt%ChemicalFormula%O)&
+                         *  32.0E-03_WP/spray%fpt%MolecularWeight
+    else
+       spray%stoic_coeff = (spray%pc_v(spray%kmaxo)%ChemicalFormula%C &
+                         +  0.25_WP*spray%pc_v(spray%kmaxo)%ChemicalFormula%H - 0.5_WP*spray%pc_v(spray%kmaxo)%ChemicalFormula%O)&
+                         *  32.0E-03_WP/spray%MW_f
+    end if
+
+    spray%Zmix_g = (spray%stoic_coeff*spray%Y_v/spray%Y_g-spray%Y_O2*spray%Y_a/spray%Y_g+spray%Y_O2)/(spray%stoic_coeff+spray%Y_O2)
 
     ! Initialize turbulence
     spray%c_k = 7.0_WP; spray%c_mu = 0.09_WP; spray%c_eps1 = 1.44_WP; spray%c_eps2 = 1.92_WP
@@ -207,11 +208,17 @@ contains
     spray%k_g = 0.0_WP
     spray%zvar_g = 0.0_WP
 
-    spray%eps_g = sqrt(spray%c_k*spray%c_mu*spray%k_g*spray%rho)*spray%k_g/spray%b
-    
-    spray%mu_t_g = spray%c_mu*spray%rho*sqrt(spray%Y_a*spray%Y_g)*spray%k_g**2/spray%eps_g
-    !spray%mu_t_g = spray%c_mu*sqrt(1.0/spray%DRa/spray%DRg)*spray%k_g**2/spray%eps_g
+    !spray%eps_g = sqrt(spray%c_k*spray%c_mu*spray%k_g*spray%rho)*spray%k_g/spray%b
+    spray%eps_g = sqrt(spray%c_k*spray%c_mu*spray%k_g)*spray%k_g/spray%b
+
+    !spray%k_g = 1.0E-04_WP
+    !spray%eps_g = 1.0E-010_WP
+
+    ! TEST
+    !spray%mu_t_g = spray%c_mu*spray%rho*sqrt(spray%Y_a*spray%Y_g)*spray%k_g**2/spray%eps_g
+    !spray%mu_t_g = spray%c_mu*sqrt(1.0/spray%DRa/spray%DRa)*spray%k_g**2/spray%eps_g
     !spray%mu_t_g = spray%c_mu/spray%DRg*spray%k_g**2/spray%eps_g
+    spray%mu_t_g = spray%c_mu*sqrt(spray%rho_ra*spray%rho_l/spray%DRg)*spray%k_g**2/spray%eps_g*(0.5_WP*spray%U_inj**2*spray%tau)
     where (spray%eps_g == 0.0_WP) spray%mu_t_g = 0.0_WP
 
     spray%chi_g = spray%c_zvar*spray%eps_g/spray%k_g*spray%zvar_g
@@ -291,7 +298,7 @@ contains
 
     do while (spray%ndtime < spray%ndftime .and. .not.spray%end )
        
-       write(*,*) 'step: ', spray%step, 'Time: ', spray%ndtime, 'dt: ', spray%dt!, 'End: ', spray%ndftime
+       write(*,*) 'step: ', spray%step, 'Time: ', spray%ndtime, 'dt: ', spray%dt !, 'End: ', spray%ndftime
 
        do niter = 1,spray%solver%rktvd%stage
 
@@ -462,7 +469,7 @@ contains
     end if
 
     ! Consistency between d2 and dvar
-    if(spray%init_dvar > 0.0_WP) then
+    if(spray%init_dvar >= 0.0_WP) then
        spray%init_d2 = spray%init_dm**2 + spray%init_dvar
     end if
     if(spray%init_d2 > 0.0_WP .and. spray%init_dvar < 0.0_WP) then
@@ -558,7 +565,6 @@ contains
 
     spray%Cc0 = Cc0; spray%Cc = Cc
     
-
     ! Initial conditions
     Cd = 1.0
     u_mean = sqrt(2.0_WP*(P_inj-P_amb)/rho_l)
@@ -636,7 +642,6 @@ contains
 
     ! ---------------------------------
 
-
     ! Fuel Jet exit Reynolds number
     spray%Re = spray%rho_l*spray%U_inj*spray%D_eff/spray%visc_l
     
@@ -685,7 +690,7 @@ contains
     spray%CR = spray%C_l(1)/spray%C_l
 
     ! Viscosity Ratio liquid to gas phase turbulent viscosity
-    spray%VRtg = spray%visc_l/spray%mu_t_g
+    spray%VRtg = spray%mu_t_g/spray%visc_l
    
   end subroutine compute_varNonDparams
 
@@ -797,6 +802,11 @@ contains
        if (spray%C_theta .lt. 0.0_WP) spray%C_theta = 1.0_WP
 
        spray%beta = spray%C_theta*((1.0_WP/DRa)**0.19_WP - 0.0043_WP*(DRa)**0.5_WP)
+
+       spray%theta = atan(spray%beta)*180.0_WP/Pi
+    case ('Reddemann')
+
+       spray%beta = 0.212_WP*(1.0_WP/DRa)**0.198*spray%Re**0.0526
 
        spray%theta = atan(spray%beta)*180.0_WP/Pi
 
@@ -1001,11 +1011,11 @@ contains
 
           D = (/ (h*real(i,WP),i=0,spray%nd,1) /)
           f = (/ (real(0.0,WP),i=1,spray%nd,1) /)
-          spray%di(:,k) = (D(:spray%nd)+0.5_WP*h)
-          hh = h
-          !call createDropletGrid(Dm(k),D2(k),L,spray%nd,D,spray%di(:,k))
-          !hh = D(2:spray%nd+1)-D(1:spray%nd)
-          !spray%di(:,k) = (D(:spray%nd)+0.5_WP*hh)
+          !spray%di(:,k) = (D(:spray%nd)+0.5_WP*h)
+          !hh = h
+          call createDropletGrid(Dm(k),D2(k),L,spray%nd,D,spray%di(:,k))
+          hh = D(2:spray%nd+1)-D(1:spray%nd)
+          spray%di(:,k) = (D(:spray%nd)+0.5_WP*hh)
 
           dsd(:,:) = 0.0_WP
 
@@ -1014,7 +1024,7 @@ contains
 
           B(k) = 1.0_WP/sqrt(twoPi*sigma2(k))
 
-          if (Dm(k) > 0.0_WP .and. D2(k) > 0.0_WP) then
+          if (Dm(k) > 0.0_WP .and. Dvar(k) >= 0.0_WP) then
 
              if (sigma2(k) <= 0.0_WP) then
 
@@ -1809,16 +1819,18 @@ contains
           u_g(k) = min(1.0_WP,max(0.0_WP,W(3,k)/(W(1,k)+W(2,k))))
        end if
 
-       Y_l(k) = W(7,k)/(W(1,k)+W(2,k)+W(7,k))
-       if ( Y_l(k) < eps ) Y_l(k) = 0.0_WP
-       Y_v(k) = max(0.0_WP,W(2,k)/(W(1,k)+W(2,k)+W(7,k)))
-       !Y_v(k) = W(2,k)/(W(1,k)+W(2,k)+W(7,k))
-       !if ( Y_v(k) < eps ) Y_v(k) = 0.0_WP
-       Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k))
-       !Y_a(k) = 1.0_WP - Y_l(k) - Y_v(k)
-       Y_g(k) = 1.0_WP - Y_l(k)
-       rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
-       b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(7,k))/rho(k)))
+       !if((W(1,k)+W(2,k)+W(7,k)) > 0.0_WP) then
+          Y_l(k) = W(7,k)/(W(1,k)+W(2,k)+W(7,k))
+          if ( Y_l(k) < eps ) Y_l(k) = 0.0_WP
+          Y_v(k) = max(0.0_WP,W(2,k)/(W(1,k)+W(2,k)+W(7,k)))
+          !Y_v(k) = W(2,k)/(W(1,k)+W(2,k)+W(7,k))
+          !if ( Y_v(k) < eps ) Y_v(k) = 0.0_WP
+          Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k))
+          !Y_a(k) = 1.0_WP - Y_l(k) - Y_v(k)
+          Y_g(k) = 1.0_WP - Y_l(k)
+          rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
+          b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(7,k))/rho(k)))
+       !end if
 
        if(Y_l(k) > eps) then
 
@@ -1839,9 +1851,9 @@ contains
              dvar(k) = max(0.0_WP,W(11,k)/rho(k)/Y_l(k)/b(k)**2)
              !dvar(k) = W(11,k)/rho(k)/Y_l(k)/b(k)**2
 
-             d2(k) = min(1.0_WP,max(0.0_WP,W(12,k)/rho(k)/Y_l(k)/b(k)**2))
+             !d2(k) = min(1.0_WP,max(0.0_WP,W(12,k)/rho(k)/Y_l(k)/b(k)**2))
 
-             d3(k) = min(1.0_WP,max(0.0_WP,W(13,k)/rho(k)/Y_l(k)/b(k)**2))
+             !d3(k) = min(1.0_WP,max(0.0_WP,W(13,k)/rho(k)/Y_l(k)/b(k)**2))
 
              d2(k) = dm(k)**2 + dvar(k)
 
@@ -1866,13 +1878,20 @@ contains
        end if
 
        !if(abs(u_g(k)) > 0.0_WP .and. Y_g(k) > 0.0_WP) then
-       if(Y_g(k) > 0.0_WP) then
-          k_g(k) = max(0.0_WP,W(4,k)/rho(k)/Y_g(k)/b(k)**2)
-          eps_g(k) = max(0.0_WP,W(5,k)/rho(k)/Y_g(k)/b(k)**2)
+       if(Y_g(k) > 0.01_WP) then
+          if(W(4,k) > 0.0_WP) then
+             k_g(k) = max(0.0_WP,W(4,k)/rho(k)/Y_g(k)/b(k)**2)
+          end if
+          if(W(5,k) > 0.0_WP) then
+             eps_g(k) = max(0.0_WP,W(5,k)/rho(k)/Y_g(k)/b(k)**2)
+          end if
           zvar_g(k) = max(0.0_WP,W(6,k)/rho(k)/Y_g(k)/b(k)**2)
           if(k_g(k) /= k_g(k)) then
              write(*,*) 'k_g is NaN'
           end if
+          if(k_g(k) > 1.0e+100_WP) then
+             write(*,*) 'k_g is NaN'
+          end if          
           if(eps_g(k) /= eps_g(k)) then
              write(*,*) 'eps_g is NaN'
           end if
@@ -1881,9 +1900,14 @@ contains
           end if
 
           if(eps_g(k) > 0.0_WP) then
-             mu_t_g(k) = spray%c_mu*rho(k)*sqrt(Y_g(k)*Y_a(k))*k_g(k)**2/eps_g(k)
-             !mu_t_g(k) = spray%c_mu*sqrt(1.0_WP/DRa/DRg(k))*k_g(k)**2/eps_g(k)
-             !mu_t_g(k) = spray%c_mu/DRg(k)*k_g(k)**2/eps_g(k)
+             !mu_t_g(k) = spray%c_mu*rho(k)*sqrt(Y_g(k)*Y_a(k))*k_g(k)**2/eps_g(k)
+             if(DRg(k) /= DRg(k)) then
+                mu_t_g(k) = 0.0_WP
+             else
+                !mu_t_g(k) = spray%c_mu*sqrt(1.0_WP/DRa/DRg(k))*k_g(k)**2/eps_g(k)
+                !mu_t_g(k) = spray%c_mu/DRg(k)*k_g(k)**2/eps_g(k)
+                mu_t_g(k) = spray%c_mu*sqrt(spray%rho_ra(k)*spray%rho_l/DRg(k))*k_g(k)**2/eps_g(k)*(0.5_WP*spray%U_inj**2*spray%tau)
+             end if
              if(mu_t_g(k) /= mu_t_g(k)) then
                 write(*,*) 'mu_t_g is NaN'
              end if
@@ -1906,13 +1930,13 @@ contains
     !spray%c_mu*sqrt(1.0_WP/spray%DRa/spray%DRg)*spray%k_g**2/spray%eps_g
 
     spray%Tg = spray%T_a/spray%T_fuel
-
+    spray%mu_t_g(spray%kmin) = 0.0_WP
     ! n-dodecane
     !nu = 3.475402137_WP
     ! n-heptane
     !nu = 3.51283381901_WP 
 
-    spray%Zmix_g = (spray%stoic_coeff*spray%Y_v-spray%Y_O2*spray%Y_a+spray%Y_O2)/(spray%stoic_coeff+spray%Y_O2)
+    spray%Zmix_g = (spray%stoic_coeff*spray%Y_v/spray%Y_g-spray%Y_O2*spray%Y_a/spray%Y_g+spray%Y_O2)/(spray%stoic_coeff+spray%Y_O2)
     !spray%zmix_g = 12*12.0107_WP*spray%Y_v/spray%MW_f + 26*1.00794_WP*spray%Y_v/spray%MW_f & ! Fuel
     !             + 12.0107_WP*spray%Y_a*0.093629/44.01_WP & ! CO2
     !             + 2*1.016*spray%Y_a*0.022292/18.01528_WP ! H2O
@@ -1947,7 +1971,7 @@ contains
     !rho = 0.0_WP; u_l = 0.0_WP; u_g = 0.0_WP; Y_l = 0.0_WP; Y_a = 1.0_WP; Y_v = 0.0_WP;
     !dm = 0.0_WP; d2 = 0.0_WP; Td = 0.0_WP; b = 0.5_WP
 
-    b = 0.5_WP + spray%z*spray%beta
+    !b = 0.5_WP + spray%z*spray%beta
     
     do k = spray%kmin,spray%kmax
        
@@ -2109,7 +2133,8 @@ contains
        if(spray%L_f(k) == 0.0_WP) then
           spray%T_sat(k) = pc_l%Tcrit
        else
-          spray%T_sat(k) = min(pc_l%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/pc_l%NormalBoilingPoint - spray%R_gas*log(spray%P_a/101325.0_WP)/pc_l%MolecularWeight*1000.0_WP/spray%L_f(k))))
+          !spray%T_sat(k) = min(pc_l%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/pc_l%NormalBoilingPoint - spray%R_gas*log(spray%P_a/101325.0_WP)/pc_l%MolecularWeight*1000.0_WP/spray%L_f(k))))
+          spray%T_sat(k) = min(pc_l%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/pc_l%Tcrit - spray%R_gas*log(spray%P_a/pc_l%Pcrit)/pc_l%MolecularWeight*1000.0_WP/spray%L_f(k))))
        end if
 
        nullify(pc_l)
@@ -2140,10 +2165,27 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
+    type(fpt_t), pointer :: fpt
     real(WP), dimension(:), pointer :: values
-    real(WP) :: T
+    real(WP) :: T, dummy, T_sat
     integer :: col
- 
+    
+    fpt => spray%fpt
+
+    allocate(spray%LFPT(size(fpt%lTemp,1),8))
+    spray%LFPT(:,1) = fpt%lTemp
+    spray%LFPT(:,2) = fpt%liqViscosity
+    spray%LFPT(:,3) = fpt%SurfaceTension
+    spray%LFPT(:,4) = fpt%HeatOfVap
+    spray%LFPT(:,5) = fpt%vapPressure
+    spray%LFPT(:,6) = fpt%liqThermalConductivity
+    spray%LFPT(:,7) = fpt%liqDensity
+    spray%LFPT(:,8) = fpt%liqHeatCapacity
+
+    spray%NBP = fpt%NormalBoilingPoint
+    spray%MP = fpt%MeltingPoint
+    spray%MW_f = fpt%MolecularWeight
+
     allocate(values(size(spray%LFPT,2))); values = 0.0_WP
 
     ! Set temperature of liquid and vapor phases on the grid
@@ -2156,13 +2198,35 @@ contains
 
     ! Set fuel properties to spray
     spray%C_l = spray%f_C_l*values(8)
-    spray%p_vap = spray%f_Pv*values(5)
     spray%L_f = spray%f_Lv*values(4)
+
+    if(values(5) < 0.0_WP) then
+       spray%p_vap = spray%f_Pv*(fpt%pcrit)*exp((spray%L_f*spray%MW_f/spray%R_gas)*(1.0_WP/fpt%Tcrit-1.0_WP/T))
+       if(T >= fpt%Tcrit) then
+          spray%T_sat = fpt%Tcrit
+       else
+          spray%T_sat = min(fpt%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/fpt%Tcrit - spray%R_gas*log(spray%P_a/fpt%pcrit)/fpt%MolecularWeight/spray%L_f)))
+       end if
+    else
+       spray%p_vap = spray%f_Pv*values(5)
+       if(spray%P_a >= fpt%pcrit) then
+          spray%T_sat = fpt%Tcrit
+       else
+          call interpolate1val(fpt%vapPressure,fpt%lTemp,spray%P_a,T_sat,dummy)
+          spray%T_sat = T_sat
+       end if
+    end if
 
     ! Set fuel properties to spray (constant throughout spray simulation)
     spray%sigma = spray%f_sigma*values(3)
     spray%rho_l = spray%f_rho_l*values(7)
     spray%visc_l = spray%f_mu_l*values(2)
+    spray%lambda_l = spray%f_lambda_l*values(6)
+
+    spray%sigma_loc = spray%f_mu_l*spray%sigma
+    spray%rho_l_loc = spray%f_rho_l*spray%rho_l
+    spray%visc_l_loc = spray%f_mu_l*spray%visc_l
+    spray%lambda_l_loc = spray%f_lambda_l*spray%lambda_l
 
     if (spray%MW_f == -9999.0_WP) then
        write(*,*) 'Error: Molecular weight of the fuel not provided. Please add following line to input file:'
@@ -2185,6 +2249,8 @@ contains
        write(*,*) 'Setting melting point of the fuel to ', spray%MP, '...'
 
     end if
+
+    deallocate(values)
   
   end subroutine getLiquidFuelPropertiesFromLFPT
 
@@ -2245,7 +2311,7 @@ contains
     kmin => spray%kmin; kmax => spray%kmax
     kmino => spray%kmino; kmaxo => spray%kmaxo
 
-   do k=kmino,kmaxo
+    do k=kmino,kmaxo
 
        pc_l => spray%pc_l(k)
 
@@ -2274,7 +2340,8 @@ contains
        if(spray%L_f(k) == 0.0_WP) then
           spray%T_sat(k) = pc_l%Tcrit
        else
-          spray%T_sat(k) = min(pc_l%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/pc_l%NormalBoilingPoint - spray%R_gas*log(spray%P_a/101325.0_WP)/pc_l%MolecularWeight*1000.0_WP/spray%L_f(k))))
+          !spray%T_sat(k) = min(pc_l%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/pc_l%NormalBoilingPoint - spray%R_gas*log(spray%P_a/101325.0_WP)/pc_l%MolecularWeight*1000.0_WP/spray%L_f(k))))
+          spray%T_sat(k) = min(pc_l%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/pc_l%Tcrit - spray%R_gas*log(spray%P_a/pc_l%Pcrit)/pc_l%MolecularWeight*1000.0_WP/spray%L_f(k))))
        end if
 
        spray%rho_l_loc(k) = spray%f_rho_l*pc_l%liqDensity
@@ -2300,12 +2367,16 @@ contains
     real(WP), dimension(:), intent(in) :: T
 
     ! ---------------------------------
+    type(fpt_t), pointer :: fpt
     real(WP), dimension(:), pointer :: values
+    real(WP) :: dummy
     integer, pointer :: kmin, kmax, kmino, kmaxo
     integer :: col, k
  
     kmin => spray%kmin; kmax => spray%kmax
     kmino => spray%kmino; kmaxo => spray%kmaxo
+
+    fpt => spray%fpt
 
     allocate(values(size(spray%LFPT,2))); values = 0.0_WP
     
@@ -2318,11 +2389,26 @@ contains
 
        ! Set fuel properties to spray
        spray%C_l(k) = spray%f_C_l*values(8)
-       spray%p_vap(k) = spray%f_Pv*values(5)
        spray%L_f(k) = spray%f_Lv*values(4)
 
+       if(values(5) < 0.0_WP) then
+          spray%p_vap(k) = spray%f_Pv*(fpt%pcrit)*exp((spray%L_f(k)*spray%MW_f/spray%R_gas)*(1.0_WP/fpt%Tcrit-1.0_WP/T(k)))
+          if(T(k) >= fpt%Tcrit) then
+             spray%T_sat(k) = fpt%Tcrit
+          else
+             spray%T_sat(k) = min(fpt%Tcrit,1.0_WP/max(1E-16_WP,(1.0_WP/fpt%Tcrit - spray%R_gas*log(spray%P_a/fpt%pcrit)/fpt%MolecularWeight/spray%L_f(k))))
+          end if
+       else
+          spray%p_vap(k) = spray%f_Pv*values(5)
+          if(spray%P_a >= fpt%pcrit) then
+             spray%T_sat(k) = fpt%Tcrit
+          else
+             call interpolate1val(fpt%vapPressure,fpt%lTemp,spray%P_a,spray%T_sat(k),dummy)
+          end if
+       end if
     end do
   
+    deallocate(values)
   end subroutine updateLiquidFuelPropertiesFromLFPT
 
   subroutine computeAmbientProperties(spray)
@@ -2391,29 +2477,58 @@ contains
     real(WP), intent(in):: T
 
     ! ---------------------------------
+    type(pc_t), pointer :: pc_v => null()
+    type(fpt_t), pointer :: fpt => null()
     real(WP), dimension(:), pointer :: values
     integer :: col
     real(WP) :: R_gas
-    
+
+!!$    pc_v => spray%pc_v(spray%kmaxo)
+!!$    if ( pc_v%name == 'pc' ) then
+!!$       call choosePC(pc_v,spray%Fuel)
+!!$    end if
+!!$
+!!$    ! Set temperature and pressure of vapor phases on the grid      
+!!$    pc_v%T = T
+!!$    pc_v%p = spray%P_a
+
+    fpt => spray%fpt
+
+    if(.not. associated(spray%VFPT)) then
+       allocate(spray%VFPT(size(fpt%vTemp,1),6))
+       spray%VFPT(:,1) = fpt%vTemp
+       spray%VFPT(:,2) = fpt%vapViscosity
+       spray%VFPT(:,3) = fpt%vapThermalConductivity
+       spray%VFPT(:,4) = fpt%vapDensity
+       spray%VFPT(:,5) = fpt%vapHeatCapacity
+       spray%VFPT(:,6) = fpt%DiffusionCoefficient
+    end if
+
+    allocate(values(size(spray%VFPT,2))); values = 0.0_WP
+        
     if (spray%MW_f == -9999.0_WP) then
        write(*,*) 'Error: Molecular weight of the fuel not provide. Please add following line to input file:'
        write(*,*) 'Fuel molecular weight : <value>'
        call abort
     end if
 
-    R_gas = 1000.0_WP*spray%R_gas   ! J/K/kmol
-    
-    allocate(values(size(spray%VFPT,2))); values = 0.0_WP
+    R_gas = spray%R_gas   ! J/K/mol
 
-    ! Linearly interpolate fuel properties: Liquid phase
+    ! Linearly interpolate fuel properties: vapor phase
     ! Use temperature column as a x-value for interpolation
     col = 1
     call interpolate1(spray%VFPT,col,T,values)
 
-    spray%rho_v = spray%P_a*spray%MW_f/(R_gas*T)
-    spray%visc_v = values(2)
-    spray%lambda_v = values(3)
-    spray%Cp_v = values(4)
+    if(values(4) < 0.0_WP) then
+       spray%rho_v = spray%f_rho_v*spray%P_a*spray%MW_f/(R_gas*T)
+    else
+       spray%rho_v = spray%f_rho_v*values(4)
+    end if
+    spray%visc_v = spray%f_mu_v*values(2)
+    spray%lambda_v = spray%f_lambda_v*values(3)
+    spray%Cp_v = spray%f_Cp_v*values(5)
+
+    deallocate(values)
  
   end subroutine getVaporFuelPropertiesFromVFPT
 
@@ -2507,10 +2622,26 @@ contains
     real(WP), dimension(:), intent(in):: T
 
     ! ---------------------------------
+    type(fpt_t), pointer :: fpt => null()
     real(WP), dimension(:), pointer :: values
     integer, pointer :: kmin, kmax, kmino, kmaxo
     integer :: col, k
     real(WP) :: R_gas
+
+    fpt => spray%fpt
+
+    if(.not. associated(spray%VFPT)) then
+       allocate(spray%VFPT(size(fpt%vTemp,1),6))
+       spray%VFPT(:,1) = fpt%vTemp
+       spray%VFPT(:,2) = fpt%vapViscosity
+       spray%VFPT(:,3) = fpt%vapThermalConductivity
+       spray%VFPT(:,4) = fpt%vapDensity
+       spray%VFPT(:,5) = fpt%vapHeatCapacity
+       spray%VFPT(:,6) = fpt%DiffusionCoefficient
+       fpt%DiffusionCoefficient = 0.0_WP
+    end if
+    
+    allocate(values(size(spray%VFPT,2))); values = 0.0_WP
     
     if (spray%MW_f == -9999.0_WP) then
        write(*,*) 'Error: Molecular weight of the fuel not provide. Please add following line to the input file:'
@@ -2518,7 +2649,7 @@ contains
        call abort
     end if
 
-    R_gas = 1000.0_WP*spray%R_gas   ! J/K/kmol
+    R_gas = spray%R_gas   ! J/K/kmol
     
     allocate(values(size(spray%VFPT,2))); values = 0.0_WP
 
@@ -2531,12 +2662,27 @@ contains
        col = 1
        call interpolate1(spray%VFPT,col,T(k),values)
 
-       spray%rho_rv(k) = spray%P_a*spray%MW_f/(R_gas*T(k))
-       spray%visc_rv(k) = values(2)
-       spray%lambda_rv(k) = values(3)
-       spray%Cp_rv(k) = values(4)
-       spray%G_rv(k) = values(5)
+       if(values(4) < 0.0_WP) then
+          spray%rho_rv(k) = spray%f_rho_v*spray%P_a*spray%MW_f/(R_gas*T(k))
+       else
+          spray%rho_rv(k) = spray%f_rho_v*values(4)
+       end if
+
+       spray%visc_rv(k) = spray%f_mu_v*values(2)
+       spray%lambda_rv(k) = spray%f_lambda_v*values(3)
+       spray%Cp_rv(k) = spray%f_Cp_v*values(5)
+    
+       if(values(6) < 0.0_WP) then
+          call computeDiffusionCoeffcientFullerFPT(fpt,spray%P_a,T(k),spray%G_rv(k))
+          !call computeDiffusionCoeffcientWilkeLeeFPT(fpt,spray%P_a,T(k),spray%G_rv(k))
+          !spray%G_rv(k) = spray%f_G_v*fpt%DiffusionCoefficient(k)
+       else
+          spray%G_rv(k) = spray%f_G_v*values(6)
+       end if
+       
     end do
+    
+    deallocate(values)
 
   end subroutine getRefVaporFuelPropertiesFromVFPT
 
@@ -2633,8 +2779,11 @@ contains
     u_g => spray%u_g; omega_ent => spray%omega_ent;  DRa => spray%DRa
 
     omega_ent(spray%kmin:spray%kmax) = spray%beta*u_g(spray%kmin:spray%kmax)/DRa
-    !omega_ent(spray%kmin:spray%kmax) = spray%c_k/spray%Re*(1.0_WP/spray%VRa+1.0_WP/spray%VRtg(spray%kmin:spray%kmax))
+    !omega_ent(spray%kmin:spray%kmax) = spray%c_k*0.9_WP/spray%Re*(1.0_WP/(1.0_WP+spray%VRa)+1.0_WP/spray%VRtg(spray%kmin:spray%kmax))
+    !omega_ent(spray%kmin:spray%kmax) = spray%c_k/spray%Re*(1.0_WP/spray%VRtg(spray%kmin:spray%kmax))
     
+    !omega_ent(spray%kmin:spray%kmax) = 4.0_WP*spray%beta/DRa*spray%z(spray%kmin:spray%kmax)/sqrt((1.0_WP/DRa-1.0_WP)**2+4.0_WP*spray%b(spray%kmin:spray%kmax)**2/DRa)
+
   end subroutine entrainmentTerm
 
 !!$  subroutine evaporationModel_try(spray)
@@ -2866,7 +3015,8 @@ contains
 
     Lv = spray%L_f; TBd = spray%NBP; T_d = spray%T_fuel*spray%Td; D = spray%D_eff*di
 
-    Xeq = spray%f_Pv*(101325.0_WP/spray%P_a)*exp((Lv*spray%MW_f/spray%R_gas)*(1.0_WP/TBd-1.0_WP/T_d))
+    !Xeq = spray%f_Pv*(101325.0_WP/spray%P_a)*exp((Lv*spray%MW_f/spray%R_gas)*(1.0_WP/TBd-1.0_WP/T_d))
+    Xeq = spray%f_Pv*(spray%p_vap/spray%P_a)
 
     Lk = spray%visc_ra*sqrt(2.0_WP*Pi*T_d*spray%R_gas/spray%MW_f)/(Sc_g*spray%P_a)
 
@@ -3108,8 +3258,8 @@ contains
              
              ! Kelvin-Helmoltz WAVE model
              !B0 = 0.61; B1 = 0.01_WP
-             Weg = 0.5_WP*We*u_rel2(k)*di(:,k)/DRg(k)
-             Wel = 0.5_WP*We*di(:,k)*u_rel2(k)
+             Weg = 0.5_WP*We*u_rel2(k)*di(:,k)/DRg(k) !*spray%sigma_loc(1)/spray%sigma_loc(k)
+             Wel = 0.5_WP*We*di(:,k)*u_rel2(k) !*spray%sigma_loc(1)/spray%sigma_loc(k)
              Rel = 0.5_WP*Re*di(:,k)*u_rel(k)
              Z = sqrt(Wel)/(Rel)
              T = Z*sqrt(Weg)
@@ -3169,9 +3319,17 @@ contains
     type(spray_t), pointer, intent(inout) :: spray
 
     ! ---------------------------------
+    integer :: k
     real(WP), dimension(spray%nzo) :: factor
 
-    spray%omega_k_g_p = 0.5_WP*spray%c_k*spray%u_g**2*spray%mu_t_g 
+    ! Assuming only gas phase turbulence induced by gas phase velocity
+
+    spray%c_k = spray%omega_ent*spray%b/(spray%VRtg/spray%Re + 1.0_WP/spray%VRg/spray%Re)
+    spray%c_k(spray%kmino:spray%kmin) = 0.0_WP
+    !spray%c_k = sum(spray%rho*spray%Y_g*spray%b**2*spray%c_k)/sum(spray%rho*spray%Y_g*spray%b**2)
+
+    !spray%omega_k_g_p = 0.5_WP*spray%c_k*spray%u_g**2*spray%mu_t_g
+    spray%omega_k_g_p = spray%c_k*spray%u_g**2/spray%Re*spray%VRtg*spray%Y_g
     spray%omega_k_g_d = spray%rho*spray%Y_g*spray%eps_g*spray%b*spray%b
 
     factor = spray%eps_g/spray%k_g
@@ -3182,7 +3340,8 @@ contains
     spray%omega_eps_g_p = factor*spray%c_eps1*spray%omega_k_g_p
     spray%omega_eps_g_d = factor*spray%c_eps2*spray%omega_k_g_d
 
-    spray%omega_zvar_g_p = spray%c_k*spray%zmix_g**2*spray%mu_t_g 
+    !spray%omega_zvar_g_p = spray%c_k*spray%zmix_g**2*spray%mu_t_g
+    spray%omega_zvar_g_p = spray%c_k*spray%zmix_g**2/spray%Re*spray%VRtg*spray%Y_g
     spray%omega_zvar_g_d = spray%c_zvar*factor*spray%rho*spray%Y_g*spray%zvar_g*spray%b*spray%b
 
   end subroutine turbulenceModel
@@ -3260,12 +3419,20 @@ contains
        
        write(rnk,"(I0.2)") spray%irank
 
-       cmd = "cat "//trim(spray%roi_file)//" | sed '/^\s*#/d;/^\s*$/d' | wc -l > nlines.txt_"//trim(rnk)
-       call system(cmd)
-       open(unit=104,file='nlines.txt_'//trim(rnk))
-       read(unit=104,fmt='(i6)',iostat=ioerr) nlines
-       cmd = 'rm nlines.txt_'//trim(rnk)
-       call system(cmd)
+!!$       cmd = "cat "//trim(spray%roi_file)//" | sed '/^\s*#/d;/^\s*$/d' | wc -l > nlines.txt_"//trim(rnk)
+!!$       call system(cmd)
+!!$       open(unit=104,file='nlines.txt_'//trim(rnk))
+!!$       read(unit=104,fmt='(i6)',iostat=ioerr) nlines
+!!$       cmd = 'rm nlines.txt_'//trim(rnk)
+!!$       call system(cmd)
+!!$       close(unit=104)
+       nlines = 0 
+       open (unit=104, file =trim(spray%roi_file))
+       do
+          read(unit=104,fmt=*,iostat=ioerr)
+          if (ioerr/=0) exit
+          nlines = nlines + 1
+       end do
        close(unit=104)
 
        !nlines = 10000
@@ -3301,108 +3468,108 @@ contains
 
   end subroutine read_ROI_from_file
 
-  ! Liquid Fuel Property Table should be in the following format
-  ! Header should be commented using '#' and physical properties
-  ! as a function of temperature
-  ! Temperature[K] Viscosity[Ns/m^2] SurfTension[N/m] HeatOfVap[J/kg] VaporPres[Pa] ThermConductivity[W/(mK)] Density[kg/m^3] SpecificHeatCapacity[J/(kgK)]
-  subroutine readLiquidFuelPropertiesTable(spray)
-    implicit none
-
-    ! ---------------------------------
-    type(spray_t), pointer, intent(inout) :: spray
-
-    ! ---------------------------------  
-    logical :: exist_file
-    character(len=128) :: cmd, line
-    integer :: nlines, ioerr, i
-
-    inquire(file=trim(spray%LFPTname), exist=exist_file)
-
-    i = 1
-
-    if(exist_file) then
-       cmd = "cat "//trim(spray%LFPTname)//" | sed '/^\s*#/d;/^\s*$/d' | wc -l > nlfpt.txt"
-       call system(cmd)
-       open(unit=1040,file='nlfpt.txt')
-       read(unit=1040,fmt='(i6)',iostat=ioerr) nlines
-       cmd = 'rm nlfpt.txt'
-       call system(cmd)
-       close(unit=1040)
-       allocate(spray%LFPT(nlines,8)); spray%LFPT = 0.0_WP
-       open(unit=1050,file=trim(spray%LFPTname),form="formatted",status="old",action="read")
-       write(*,*) 'Reading Liquid Fuel Properties from Table...'
-       do while (.true.)
-          read(unit=1050,fmt='(a)',iostat=ioerr) line
-
-          if (ioerr .ne. 0) then
-             exit
-          end if
-
-          if ( index(line,'!') > 0 .or. index(line,'#') > 0 ) then
-             cycle
-          end if
-          
-          read(line,*)  spray%LFPT(i,1), spray%LFPT(i,2), spray%LFPT(i,3), spray%LFPT(i,4),&
-                        spray%LFPT(i,5), spray%LFPT(i,6), spray%LFPT(i,7), spray%LFPT(i,8)
-
-          !write(*,*) spray%LFPT(i,1), spray%LFPT(i,2), spray%LFPT(i,3), spray%LFPT(i,4), spray%LFPT(i,5), spray%LFPT(i,6), spray%LFPT(i,7), spray%LFPT(i,8)
-
-          i = i + 1
-
-       end do
-       close(unit=1050)
-    end if
-
-  end subroutine readLiquidFuelPropertiesTable
-
-  ! Vapor Fuel Property Table should be in the following format
-  ! Header should be commented using '#' and physical properties
-  ! as a function of temperature
-  ! Temperature[K] Viscosity[Ns/m^2] ThermConductivity[W/(mK)] SpecificHeatCapacity[J/(kgK)] DiffusionCoefficient[m^2/s]
-  subroutine readVaporFuelPropertiesTable(spray)
-    implicit none
-
-    ! ---------------------------------
-    type(spray_t), pointer, intent(inout) :: spray
-
-    ! ---------------------------------  
-    logical :: exist_file
-    character(len=128) :: cmd, line
-    integer :: nlines, ioerr, i
-
-    inquire(file=trim(spray%VFPTname), exist=exist_file)
-
-    i = 1
-
-    if(exist_file) then
-       cmd = "cat "//trim(spray%VFPTname)//" | sed '/^\s*#/d;/^\s*$/d' | wc -l > nlvfpt.txt"
-       call system(cmd)
-       open(unit=1041,file='nlvfpt.txt')
-       read(unit=1041,fmt='(i6)',iostat=ioerr) nlines
-       cmd = 'rm nlvfpt.txt'
-       call system(cmd)
-       close(unit=1041)
-       allocate(spray%VFPT(nlines,5)); spray%VFPT = 0.0_WP
-       open(unit=105,file=trim(spray%VFPTname),form="formatted",status="old",action="read")
-       write(*,*) 'Reading Vapor Fuel Properties from Table...'
-       do while (.true.)
-          read(unit=1051,fmt='(a)',iostat=ioerr) line
-
-          if (ioerr .ne. 0) then
-             exit
-          end if
-
-          if ( index(line,'!') > 0 .or. index(line,'#') > 0 ) then
-             cycle
-          end if
-          
-          read(line,*)  spray%VFPT(i,1), spray%VFPT(i,2), spray%VFPT(i,3), spray%VFPT(i,4), spray%VFPT(i,5)
-          i = i + 1
-       end do
-       close(unit=1051)
-    end if
-
-  end subroutine readVaporFuelPropertiesTable
+!!$  ! Liquid Fuel Property Table should be in the following format
+!!$  ! Header should be commented using '#' and physical properties
+!!$  ! as a function of temperature
+!!$  ! Temperature[K] Viscosity[Ns/m^2] SurfTension[N/m] HeatOfVap[J/kg] VaporPres[Pa] ThermConductivity[W/(mK)] Density[kg/m^3] SpecificHeatCapacity[J/(kgK)]
+!!$  subroutine readLiquidFuelPropertiesTable(spray)
+!!$    implicit none
+!!$
+!!$    ! ---------------------------------
+!!$    type(spray_t), pointer, intent(inout) :: spray
+!!$
+!!$    ! ---------------------------------  
+!!$    logical :: exist_file
+!!$    character(len=128) :: cmd, line
+!!$    integer :: nlines, ioerr, i
+!!$
+!!$    inquire(file=trim(spray%LFPTname), exist=exist_file)
+!!$
+!!$    i = 1
+!!$
+!!$    if(exist_file) then
+!!$       cmd = "cat "//trim(spray%LFPTname)//" | sed '/^\s*#/d;/^\s*$/d' | wc -l > nlfpt.txt"
+!!$       call system(cmd)
+!!$       open(unit=1040,file='nlfpt.txt')
+!!$       read(unit=1040,fmt='(i6)',iostat=ioerr) nlines
+!!$       cmd = 'rm nlfpt.txt'
+!!$       call system(cmd)
+!!$       close(unit=1040)
+!!$       allocate(spray%LFPT(nlines,8)); spray%LFPT = 0.0_WP
+!!$       open(unit=1050,file=trim(spray%LFPTname),form="formatted",status="old",action="read")
+!!$       write(*,*) 'Reading Liquid Fuel Properties from Table...'
+!!$       do while (.true.)
+!!$          read(unit=1050,fmt='(a)',iostat=ioerr) line
+!!$
+!!$          if (ioerr .ne. 0) then
+!!$             exit
+!!$          end if
+!!$
+!!$          if ( index(line,'!') > 0 .or. index(line,'#') > 0 ) then
+!!$             cycle
+!!$          end if
+!!$          
+!!$          read(line,*)  spray%LFPT(i,1), spray%LFPT(i,2), spray%LFPT(i,3), spray%LFPT(i,4),&
+!!$                        spray%LFPT(i,5), spray%LFPT(i,6), spray%LFPT(i,7), spray%LFPT(i,8)
+!!$
+!!$          !write(*,*) spray%LFPT(i,1), spray%LFPT(i,2), spray%LFPT(i,3), spray%LFPT(i,4), spray%LFPT(i,5), spray%LFPT(i,6), spray%LFPT(i,7), spray%LFPT(i,8)
+!!$
+!!$          i = i + 1
+!!$
+!!$       end do
+!!$       close(unit=1050)
+!!$    end if
+!!$
+!!$  end subroutine readLiquidFuelPropertiesTable
+!!$
+!!$  ! Vapor Fuel Property Table should be in the following format
+!!$  ! Header should be commented using '#' and physical properties
+!!$  ! as a function of temperature
+!!$  ! Temperature[K] Viscosity[Ns/m^2] ThermConductivity[W/(mK)] SpecificHeatCapacity[J/(kgK)] DiffusionCoefficient[m^2/s]
+!!$  subroutine readVaporFuelPropertiesTable(spray)
+!!$    implicit none
+!!$
+!!$    ! ---------------------------------
+!!$    type(spray_t), pointer, intent(inout) :: spray
+!!$
+!!$    ! ---------------------------------  
+!!$    logical :: exist_file
+!!$    character(len=128) :: cmd, line
+!!$    integer :: nlines, ioerr, i
+!!$
+!!$    inquire(file=trim(spray%VFPTname), exist=exist_file)
+!!$
+!!$    i = 1
+!!$
+!!$    if(exist_file) then
+!!$       cmd = "cat "//trim(spray%VFPTname)//" | sed '/^\s*#/d;/^\s*$/d' | wc -l > nlvfpt.txt"
+!!$       call system(cmd)
+!!$       open(unit=1041,file='nlvfpt.txt')
+!!$       read(unit=1041,fmt='(i6)',iostat=ioerr) nlines
+!!$       cmd = 'rm nlvfpt.txt'
+!!$       call system(cmd)
+!!$       close(unit=1041)
+!!$       allocate(spray%VFPT(nlines,5)); spray%VFPT = 0.0_WP
+!!$       open(unit=105,file=trim(spray%VFPTname),form="formatted",status="old",action="read")
+!!$       write(*,*) 'Reading Vapor Fuel Properties from Table...'
+!!$       do while (.true.)
+!!$          read(unit=1051,fmt='(a)',iostat=ioerr) line
+!!$
+!!$          if (ioerr .ne. 0) then
+!!$             exit
+!!$          end if
+!!$
+!!$          if ( index(line,'!') > 0 .or. index(line,'#') > 0 ) then
+!!$             cycle
+!!$          end if
+!!$          
+!!$          read(line,*)  spray%VFPT(i,1), spray%VFPT(i,2), spray%VFPT(i,3), spray%VFPT(i,4), spray%VFPT(i,5)
+!!$          i = i + 1
+!!$       end do
+!!$       close(unit=1051)
+!!$    end if
+!!$
+!!$  end subroutine readVaporFuelPropertiesTable
 
   subroutine applyBC(spray)
     implicit none
@@ -3413,20 +3580,12 @@ contains
     ! ---------------------------------
     integer, pointer :: kmin, kmax, kmino, kmaxo
     integer :: i
-    real(WP) :: eps = 1E-16_WP
+    real(WP) :: eps = 1E-16_WP, turb_intensity
 
     kmin => spray%kmin; kmax => spray%kmax
     kmino => spray%kmino; kmaxo => spray%kmaxo
 
     ! Left boundary (injector)
-    spray%rho(kmino:kmin-1) = 1.0_WP
-
-    spray%Y_l(kmino:kmin-1) = 1.0_WP
-    spray%Y_v(kmino:kmin-1) = 0.0_WP
-    spray%Y_a(kmino:kmin-1) = 0.0_WP
-    spray%Y_g(kmino:kmin-1) = spray%Y_v(kmino:kmin-1) + spray%Y_a(kmino:kmin-1)
-
-    spray%b(kmino:kmin-1)   = 0.5_WP
 
     if(associated(spray%roi)) then
        !Interpolate
@@ -3434,30 +3593,68 @@ contains
           if (spray%ndtime .ge. spray%roi(i,1) .and. spray%ndtime .lt. spray%roi(i+1,1)) then
              spray%u_l(kmino:kmin-1) = (spray%roi(i+1,2)-spray%roi(i,2))/(spray%roi(i+1,1)-spray%roi(i,1))* &
                      (spray%ndtime - spray%roi(i,1)) + spray%roi(i,2)
+
+             spray%rho(kmino:kmin-1) = (maxval(spray%rho)-minval(spray%rho))*((spray%roi(i+1,2)-spray%roi(i,2))/(spray%roi(i+1,1)-spray%roi(i,1))* &
+                     (spray%ndtime - spray%roi(i,1)) + spray%roi(i,2)) + minval(spray%rho)
+
+             spray%Y_l(kmino:kmin-1) = (spray%roi(i+1,2)-spray%roi(i,2))/(spray%roi(i+1,1)-spray%roi(i,1))* &
+                     (spray%ndtime - spray%roi(i,1)) + spray%roi(i,2)
+
+             spray%d3(kmino:kmin-1) = spray%init_d3*(spray%roi(i+1,2)-spray%roi(i,2))/(spray%roi(i+1,1)-spray%roi(i,1))* &
+                     (spray%ndtime - spray%roi(i,1)) + spray%roi(i,2)
+             spray%d2(kmino:kmin-1) = spray%init_d2*(spray%roi(i+1,2)-spray%roi(i,2))/(spray%roi(i+1,1)-spray%roi(i,1))* &
+                     (spray%ndtime - spray%roi(i,1)) + spray%roi(i,2)
+             spray%dm(kmino:kmin-1) = spray%init_dm*(spray%roi(i+1,2)-spray%roi(i,2))/(spray%roi(i+1,1)-spray%roi(i,1))* &
+                     (spray%ndtime - spray%roi(i,1)) + spray%roi(i,2)
+             spray%dvar(kmino:kmin-1) = spray%init_dvar*(spray%roi(i+1,2)-spray%roi(i,2))/(spray%roi(i+1,1)-spray%roi(i,1))* &
+                     (spray%ndtime - spray%roi(i,1)) + spray%roi(i,2)
           end if
        end do
     else
        spray%u_l(kmino:kmin-1) = 1.0_WP
+       spray%rho(kmino:kmin-1) = 1.0_WP
+       spray%Y_l(kmino:kmin-1) = 1.0_WP
+       spray%d3(kmino:kmin-1) = spray%init_d3
+       spray%d2(kmino:kmin-1) = spray%init_d2
+       spray%dm(kmino:kmin-1) = spray%init_dm
+       spray%dvar(kmino:kmin-1) = spray%init_dvar
     end if
-    !spray%u_l(kmino:kmin-1) = max((1.0_WP/ramp)*min(ramp,spray%ndtime),1.0_WP/ramp)!%1.0;%(1.0/35)*min(35,t)+(t==0)*(1/35
+
+    spray%Y_v(kmino:kmin-1) = 0.0_WP
+    spray%Y_a(kmino:kmin-1) = 1.0_WP-spray%Y_l(kmino:kmin-1)
+    spray%Y_g(kmino:kmin-1) = spray%Y_v(kmino:kmin-1) + spray%Y_a(kmino:kmin-1)
+
+    spray%b(kmino:kmin-1)   = 0.5_WP
 
     spray%u_g(kmino:kmin-1) = 0.0_WP
-
-    spray%d3(kmino:kmin-1) = spray%init_d3
-    spray%d2(kmino:kmin-1) = spray%init_d2
-    spray%dm(kmino:kmin-1) = spray%init_dm
-    spray%dvar(kmino:kmin-1) = spray%init_dvar
 
     spray%Td(kmino:kmin-1) = 1.0_WP 
 
     ! Boundary conditions for k, eps, and zvar are in the gas phase grid
     ! i.e. first cell next to the nozzle exit
-    ! Based on Tamanini (1981) 
-    spray%k_g(kmino:kmin) = (0.01_WP*spray%u_g(kmin))**2
+    ! Based on Tamanini (1981)
+    turb_intensity = 0.16_WP/(spray%VRg(kmin)/spray%DRg(kmin)*spray%Re*spray%u_g(kmin))**0.125_WP
+    if(spray%u_g(kmin) == 0.0_WP) turb_intensity = 0.0_WP
+    
+    spray%k_g(kmino:kmin) = 0.5_WP*(turb_intensity*spray%u_g(kmin))**2
+    !spray%k_g(kmino:kmin) = 1.5_WP*(turb_intensity*spray%u_g(kmin))**2
 
-    spray%eps_g(kmino:kmin) = sqrt(spray%c_k*spray%c_mu*spray%k_g(kmin)*spray%rho(kmin))*spray%k_g(kmin)/spray%b(kmin)
+    !spray%k_g(kmino:kmin) = 1.0E-04_WP
 
-    spray%zvar_g(kmino:kmin) = spray%zvar_g(kmin)
+    ! Based on Tamanini (1981): Production = Dissipation
+    !spray%eps_g(kmino:kmin) = sqrt(0.5_WP*spray%c_k*spray%c_mu/spray%rho(kmin)/spray%Y_g(kmin))*(1.0_WP/spray%DRa/spray%DRg(kmin))**(0.25_WP)\
+    !                        * spray%u_g(kmin)*spray%k_g(kmin)/spray%b(kmin)
+
+    ! For alternative mu_t_g def
+    !spray%eps_g(kmino:kmin) = sqrt(0.5_WP*spray%c_k*spray%c_mu)*(spray%Y_a(kmin)/spray%Y_g(kmin))**(0.25_WP)*spray%k_g(kmin)*spray%u_g(kmin)/spray%b(kmin)
+    
+    !spray%eps_g(kmino:kmin) = sqrt(0.5_WP*spray%c_k*spray%c_mu)*spray%k_g(kmin)*spray%u_g(kmin)/spray%b(kmin)
+    spray%eps_g(kmino:kmin) = 0.5_WP*spray%c_mu*(spray%k_g(kmin)**1.5_WP)/0.07_WP/spray%b(kmin)
+    !spray%eps_g(kmino:kmin) = 1.0E-10_WP
+
+    spray%mu_t_g(kmino:kmin) = 0.0_WP
+
+    spray%zvar_g(kmino:kmin) = 0.0_WP !spray%zvar_g(kmin)
 
     ! Right boundary (Neumann)
     spray%rho(kmax+1:kmaxo) = spray%rho(kmax)
@@ -3508,17 +3705,17 @@ contains
 
        open(unit=100,file=trim(fname),form="formatted",status="unknown",action="write")
 
-       rowfmth = '(A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A)'
+       rowfmth = '(A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A)'
        rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
                   ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
-                  ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, I2, ES15.5E3, ES15.5E3)"
+                  ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, I2, ES15.5E3, ES15.5E3, ES15.5E3)"
 
-       write(100,FMT=rowfmth) '# z<1> ', 'rho<2> ', 'Y_l<3> ', 'Y_v<4> ', 'Y_a<5> ', 'Y_g<6> ', 'u_l<7> ', 'u_g<8> ', 'dm<9> ', 'dvar<10> ', 'd2<11> ', 'd3<12> ', 'Td<13> ', 'Tg<14> ', 'b<15> ', 'k_g<16> ', 'eps_g<17> ', 'mu_t_g<18> ', 'zvar_g<19> ', 'zmix_g<20> ', 'chi_g<21> ', 'chi_g_stl<22> ', 'dsd_type<23> ', 'Pr_g<24> ', 'Sc_g<25> '
+       write(100,FMT=rowfmth) '# z<1> ', 'rho<2> ', 'Y_l<3> ', 'Y_v<4> ', 'Y_a<5> ', 'Y_g<6> ', 'u_l<7> ', 'u_g<8> ', 'dm<9> ', 'dvar<10> ', 'd2<11> ', 'd3<12> ', 'Td<13> ', 'Tg<14> ', 'b<15> ', 'k_g<16> ', 'eps_g<17> ', 'mu_t_g<18> ', 'zvar_g<19> ', 'zmix_g<20> ', 'chi_g<21> ', 'chi_g_stl<22> ', 'dsd_type<23> ', 'Pr_g<24> ', 'Sc_g<25> ', 'c_k<26> '
        do k = kmin,kmax
           write(100,FMT=rowfmt) spray%z(k), spray%rho(k), spray%Y_l(k), spray%Y_v(k), spray%Y_a(k), &
                spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%dvar(k), spray%d2(k), &
                spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k), spray%k_g(k), &
-               spray%eps_g(k), spray%mu_t_g(k), spray%zvar_g(k), spray%zmix_g(k), spray%chi_g(k), spray%chi_g_stl(k), spray%dsd_type(k), spray%Pr_g(k), spray%Sc_g(k)
+               spray%eps_g(k), spray%mu_t_g(k), spray%zvar_g(k), spray%zmix_g(k), spray%chi_g(k), spray%chi_g_stl(k), spray%dsd_type(k), spray%Pr_g(k), spray%Sc_g(k),spray%c_k(k)
        end do
 
        close(unit=100)
@@ -3653,11 +3850,19 @@ contains
 
     spray%time(istep) = spray%ndtime*spray%tau*1000.0_WP   
 
-    do k = spray%kmino,spray%kmaxo
-       if (spray%rho(k)*spray%Y_l(k) .le. 1.0E-03_WP) then
+!!$    do k = spray%kmino,spray%kmaxo
+!!$       if (spray%rho(k)*spray%Y_l(k) .le. 1.0E-03_WP .and. spray%dm(k) == 0.0_WP) then
+!!$          spray%LPL(istep) = spray%D_eff*(spray%z(k)-spray%z(spray%kmin)+0.5_WP*spray%dz)*1000.0_WP
+!!$          exit
+!!$       end if
+!!$    end do
+    k = spray%kmaxo
+    do while(k >= spray%kmino)
+       if (spray%rho(k)*spray%Y_l(k) .ge. 1.0E-03_WP) then
           spray%LPL(istep) = spray%D_eff*(spray%z(k)-spray%z(spray%kmin)+0.5_WP*spray%dz)*1000.0_WP
           exit
        end if
+       k = k - 1
     end do
     
     do k = spray%kmino,spray%kmaxo
@@ -3713,7 +3918,8 @@ contains
                *(log(zz(bound(1):bound(2)))/log(Zmix_st)) &
                *bpdf(bound(1):bound(2)))
           ! Limit maximum scalar dissipation rate to 1000.0 (1/s)
-          spray%chi_g_stl(k) = min(1000_WP*spray%tau,max(0.0_WP,spray%chi_g(k)/z_integral))
+          !spray%chi_g_stl(k) = min(1000_WP*spray%tau,max(0.0_WP,spray%chi_g(k)/z_integral))
+          spray%chi_g_stl(k) = max(0.0_WP,spray%chi_g(k)/z_integral)
 
           ! Integrate over spray volume
           numer = numer + spray%chi_g_stl(k)**1.5_WP*spray%rho(k)*PZmix_st/dz_st*spray%dz*Pi*spray%b(k)**2

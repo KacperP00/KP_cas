@@ -1,6 +1,7 @@
 module spray_defs
   use precision
   use pc_defs
+  use fpt_defs
   use solver_defs
 
   implicit none
@@ -53,7 +54,8 @@ module spray_defs
      real(WP), dimension(:), pointer :: L_f, C_l, p_vap, T_sat, sigma_loc, rho_l_loc, visc_l_loc, lambda_l_loc
 
      ! Fuel properties from table
-     character(len=128), pointer :: LFPTname, VFPTname
+     character(len=128), pointer :: FPTname
+     type(fpt_t), pointer :: fpt
      real(WP), dimension(:,:), pointer :: LFPT, VFPT
      
      ! Fuel vapor properties
@@ -102,7 +104,8 @@ module spray_defs
      ! Turbulence parameters
      logical :: turb_model = .false.
      integer, pointer :: skip_turb
-     real(WP), pointer :: c_k, c_mu, c_eps1, c_eps2, c_zvar
+     real(WP), pointer :: c_mu, c_eps1, c_eps2, c_zvar
+     real(WP), dimension(:), pointer :: c_k
 
      ! Combustion model
      character(len=128), pointer :: combustion_model
@@ -201,8 +204,8 @@ contains
     allocate(spray%spray_angle_model); spray%spray_angle_model = 'noname'
 
     allocate(spray%Fuel); spray%Fuel = 'noname'
-    allocate(spray%LFPTname); spray%LFPTname = 'noname'
-    allocate(spray%VFPTname); spray%VFPTname = 'noname'
+
+    allocate(spray%FPTname); spray%FPTname = 'noname'
 
     allocate(spray%T_fuel); spray%T_fuel = -9999.0_WP
     allocate(spray%sigma); spray%sigma = -9999.0_WP
@@ -257,7 +260,6 @@ contains
 
     allocate(spray%R_gas); spray%R_gas = -9999.0_WP
 
-    allocate(spray%c_k); spray%c_k = -9999.0_WP
     allocate(spray%c_mu); spray%c_mu = -9999.0_WP
     allocate(spray%c_eps1); spray%c_eps1 = -9999.0_WP
     allocate(spray%c_eps2); spray%c_eps2 = -9999.0_WP
@@ -376,6 +378,7 @@ contains
     allocate(spray%dsd_type(spray%nzo)); spray%dsd_type = -9999
     allocate(spray%Td(spray%nzo)); spray%Td = -9999.0_WP
     allocate(spray%Tg(spray%nzo)); spray%Tg = -9999.0_WP
+    allocate(spray%c_k(spray%nzo)); spray%c_k = -9999.0_WP
     allocate(spray%k_g(spray%nzo)); spray%k_g = -9999.0_WP
     allocate(spray%eps_g(spray%nzo)); spray%eps_g = -9999.0_WP
     allocate(spray%mu_t_g(spray%nzo)); spray%mu_t_g = -9999.0_WP
@@ -459,6 +462,7 @@ contains
 
     deallocate(spray%pc_v)
 
+    deallocate(spray%FPTname)
     if (associated(spray%LFPT)) then
        deallocate(spray%LFPT)
     end if

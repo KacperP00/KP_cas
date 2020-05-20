@@ -125,9 +125,13 @@ contains
       real(WP)                  :: Pavg,Hmin,Hmax,Nu
       real(WP)                  :: fT(mduc_%nx1), &
                                    fY(mduc_%nx1,nspec), &
+                                   fS(mduc_%nx1,4), &
                                    chi(mduc_%nx1),&
                                    prog_fl(mduc_%nx1)
-      real(WP)                  :: Zmix_st, Zmix_max, Temp
+      real(WP)                  :: Zmix_st, Zmix_max
+      real(WP)                  :: Temp, sootM00, SootNumDen, &
+                                   sootM10, SootVolume, &
+                                   SootMass, gasDen, cellVol
       integer                   :: i,c, ispec, k
       character(len=str_medium), dimension(:), pointer :: species
       real(WP), dimension(:), pointer :: Yspec, bpdf
@@ -142,7 +146,8 @@ contains
       !if(spray%chi_st(1) == 0.0_WP) return
 
       Zmix_st = 1.0_WP/(1.0_WP+spray%stoic_coeff/spray%Y_O2)
-      Zmix_max = 1.0_WP !maxval(spray%Zmix_g)
+      Zmix_max = maxval(spray%Zmix_g) + 2.0_WP*sqrt(maxval(spray%zvar_g))
+      Zmix_max = min(1.0,Zmix_max)
 
       chi = spray%C_chi*spray%chi_st(1)*(x/Zmix_st)**2*(log(x/Zmix_max)/log(Zmix_st/Zmix_max))
 
@@ -156,6 +161,7 @@ contains
       Hmax = 1.0_WP
 
       ! Advance flamelet
+      !call mduc_advance_flamelet_1d(mduc,spray%dt*spray%tau,Pavg,Hmin,Hmax,chi,0,.false.,fY,fT,fS)
       call mduc_advance_flamelet_1d(mduc,spray%dt*spray%tau,Pavg,Hmin,Hmax,chi,0,.false.,fY,fT)
 
       if(spray%irank .eq. 0) then
@@ -175,20 +181,31 @@ contains
 
          open(unit=100,file=trim(fname),form="formatted",status="replace",action="write")
 
-         write(100,'(<nspec+2>(A))') '#z ','Temperature',(species(i), i=1,nspec)
+         !write(100,'(<nspec+5>(A))') '#z<1> ','Temperature<2> ','SootNumDen<3> ','SootVolume<4> ','SootMass<5> ',(species(i), i=1,nspec)
+         write(100,'(<nspec+2>(A))') '#z<1> ','Temperature<2> ',(species(i), i=1,nspec)
          do k = spray%kmin,spray%kmax
+
+            call betaPDF(spray%Zmix_g(k),spray%Zvar_g(k),mduc_%nx1,x,bpdf,bound)
 
             ! Convolute
             do ispec = 1,nspec
 
-               call betaPDF(spray%Zmix_g(k),spray%Zvar_g(k),mduc_%nx1,x,bpdf,bound)
                Yspec(ispec) = sum(fY(bound(1):bound(2),ispec)*bpdf(bound(1):bound(2)))
 
             end do
 
+!!$            gasDen = spray%rho(k)*spray%rho_l*spray%Y_g(k)
+!!$            cellVol = spray%dz*Pi*spray%b(k)**2*spray%D_eff**3
+!!$            sootM00 = sum(fS(bound(1):bound(2),1)*bpdf(bound(1):bound(2)))
+!!$            SootNumDen = sootM00*gasDen
+!!$            sootM10 = sum(fS(bound(1):bound(2),2)*bpdf(bound(1):bound(2)))
+!!$            SootVolume = sootM10*gasDen*24.0_WP/1800.0_WP*cellVol
+!!$            SootMass = 1800.0_WP*SootVolume
+
             Temp = sum(fT(bound(1):bound(2))*bpdf(bound(1):bound(2)))
 
-            write(100, '(<nspec+2>(ES15.5E3))') spray%z(k),Temp,(Yspec(i), i=1,nspec)
+            !write(100, '(<nspec+5>(ES15.5E3))') spray%z(k),Temp,SootNumDen,SootVolume,SootMass,(Yspec(i), i=1,nspec)
+            write(100, '(<nspec+2>(ES15.5E3))') spray%z(k), Temp, (Yspec(i), i=1,nspec)
 
          end do
          close(unit=100)

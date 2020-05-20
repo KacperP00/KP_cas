@@ -45,7 +45,7 @@ module solver_defs
      type(nr_solver_t), pointer :: nr
 
      ! Strang splitting
-     logical :: strang = .true.
+     logical :: strang = .false.
 
   end type solver_t
 
