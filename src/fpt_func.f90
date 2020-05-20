@@ -58,7 +58,7 @@ contains
 
     ! ---------------------------------  
     logical :: exist_file
-    character(len=128) :: cmd, line, dummy
+    character(len=1024) :: cmd, line, dummy
     integer :: ioerr, i, j, iC, iH, iO
     
     iC = -1; iH = -1; iO = -1
@@ -171,6 +171,9 @@ contains
              i = 1
              do
                 read(unit=1050,fmt='(a)',iostat=ioerr) line
+                if ( index(line,'!') > 0 .or. index(line,'#') > 0 ) then
+                   cycle
+                end if
                 read(line,*) dummy
                 if(trim(dummy) == 'VAPOR') exit
                 read(line,*) fpt%lTemp(i), &
@@ -195,6 +198,9 @@ contains
              i = 1
              do
                 read(unit=1050,fmt='(a)',iostat=ioerr) line
+                if ( index(line,'!') > 0 .or. index(line,'#') > 0 ) then
+                   cycle
+                end if
                 read(line,*) dummy
                 if(trim(dummy) == 'END') exit
                 read(line,*) fpt%vTemp(i), &
@@ -214,6 +220,76 @@ contains
     end if
 
   end subroutine readFuelProperties
+
+  subroutine computeDiffusionCoeffcientWilkeLeeFPT(fpt,p,T,DiffCoeff)
+    implicit none
+
+    ! ---------------------------------------------
+    type(fpt_t), pointer, intent(inout) :: fpt
+    real(WP), intent(in) :: p, T
+    real(WP), intent(out) :: DiffCoeff
+    ! ---------------------------------------------
+    real(WP) :: M_fuel, M_air, M_AB, V_b_fuel, sigma_air, sigma_fuel, sigma_AB, &
+         epsilon_air, epsilon_fuel, epsilon_AB, T_star, A, B, C, D, E, F,&
+         G, H, Omega_D
+
+    M_fuel = fpt%MolecularWeight*1000.0_WP;
+    M_air = 28.96_WP;
+    M_AB = 2.0_WP* (((1/M_air) + (1/M_fuel))**(-1));
+
+    ! V_b = liquid molar volume @ normal boiling point 
+    ! tabled values according to Schroeder (Chaper 4):
+    V_b_fuel =  7.0_WP * ( fpt%ChemicalFormula%C + &
+                           fpt%ChemicalFormula%H + &
+                           fpt%ChemicalFormula%O )
+
+    sigma_air = 3.617_WP ! air /Angström
+    sigma_fuel = 1.18_WP*V_b_fuel**(1/3)  ! fuel /Angström
+    sigma_AB = 0.5_WP* (sigma_air + sigma_fuel)
+
+    epsilon_air = 97.0_WP ! air /K
+    epsilon_fuel = 1.15_WP*fpt%NormalBoilingPoint; ! normal boiling point /K
+    epsilon_AB = (epsilon_air * epsilon_fuel)**(0.5_WP); ! /K
+
+    T_star = T / epsilon_AB
+
+    A = 1.06036_WP; B = 0.15610_WP; C = 0.19300_WP; D = 0.47635_WP;
+    E = 1.03587_WP; F = 1.52996_WP; G = 1.76474_WP; H = 3.89411_WP;
+
+    Omega_D = (A/(T_star**B)) + (C/(exp(D * T_star))) + &
+         (E/(exp(F * T_star))) + (G/(exp(H * T_star)))
+
+    DiffCoeff = ((3.03_WP - 0.98_WP/(M_AB**(0.5_WP)))*(1E-3_WP) &
+         * T**(1.5_WP))/((p/(100000.0_WP))*(M_AB**(0.5_WP)) &
+         * (sigma_AB**2)*Omega_D)/(10000.0_WP)
+
+  end subroutine computeDiffusionCoeffcientWilkeLeeFPT
+
+  subroutine computeDiffusionCoeffcientFullerFPT(fpt,p,T,DiffCoeff)
+    implicit none
+
+    ! ---------------------------------------------
+    type(fpt_t), pointer, intent(inout) :: fpt
+    real(WP), intent(in) :: p, T
+    real(WP), intent(out) :: DiffCoeff
+    ! ---------------------------------------------
+    real(WP) :: M_fuel, M_air, M_AB, Sigma_A, Sigma_B
+
+    M_fuel = fpt%MolecularWeight*1000.0_WP
+    M_air = 28.96_WP
+    M_AB = 2.0_WP* (((1/M_air) + (1/M_fuel))**(-1))
+    Sigma_A = 19.7_WP; ! air, Table 11.1
+    Sigma_B = 15.9_WP * fpt%ChemicalFormula%C + &
+         2.31_WP * fpt%ChemicalFormula%H + &
+         6.11_WP * fpt%ChemicalFormula%O
+
+    ! aromatic rings should be considered differently!!! with -18.3; heterocyclinc rings with also -18.3
+
+    DiffCoeff = (0.00143_WP*T**1.75_WP) / ((p/(100000.0_WP)) &
+         * (M_AB**0.5_WP) * (Sigma_A**(1.0_WP/3.0_WP) &
+         + Sigma_B**(1.0_WP/3.0_WP))**2)/(10000.0_WP)
+
+  end subroutine computeDiffusionCoeffcientFullerFPT
 !!$
 !!$! Solid Density - kg/m^3 (kmol/m^3)
 !!$subroutine fptInterpSolDensity(fpt)
