@@ -625,7 +625,7 @@ contains
 
     b2 = b**2
 
-    S(1,:) = omega_ent*b
+    S(1,:) = omega_ent
     S(2,:) = omega_vap*b2
     S(3,:) = (-f_drag + omega_vap*u_l)*b2
     S(4,:) = omega_k_g_p - omega_k_g_d

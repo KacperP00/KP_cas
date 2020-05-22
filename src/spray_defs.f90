@@ -109,7 +109,7 @@ module spray_defs
 
      ! Combustion model
      character(len=128), pointer :: combustion_model
-     real(WP) :: C_chi = 1.0_WP, Y_O2 = 0.164215_WP
+     real(WP) :: C_chi = 1.0_WP, Y_O2 = 0.164215_WP, Zmix_st
      real(WP), dimension(:), pointer :: zz=>null(), bpdf=>null()
 
      ! Solver

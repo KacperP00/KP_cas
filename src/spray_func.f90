@@ -202,6 +202,8 @@ contains
 
     spray%Zmix_g = (spray%stoic_coeff*spray%Y_v/spray%Y_g-spray%Y_O2*spray%Y_a/spray%Y_g+spray%Y_O2)/(spray%stoic_coeff+spray%Y_O2)
 
+    spray%Zmix_st = 1.0_WP/(1.0_WP+spray%stoic_coeff/spray%Y_O2)
+
     ! Initialize turbulence
     spray%c_k = 7.0_WP; spray%c_mu = 0.09_WP; spray%c_eps1 = 1.44_WP; spray%c_eps2 = 1.92_WP
     spray%c_zvar = 2.0_WP
@@ -2778,8 +2780,8 @@ contains
     
     u_g => spray%u_g; omega_ent => spray%omega_ent;  DRa => spray%DRa
 
-    omega_ent(spray%kmin:spray%kmax) = spray%beta*u_g(spray%kmin:spray%kmax)/DRa
-    !omega_ent(spray%kmin:spray%kmax) = spray%c_k*0.9_WP/spray%Re*(1.0_WP/(1.0_WP+spray%VRa)+1.0_WP/spray%VRtg(spray%kmin:spray%kmax))
+    omega_ent(spray%kmin:spray%kmax) = spray%beta*u_g(spray%kmin:spray%kmax)/DRa*spray%b(spray%kmin:spray%kmax)
+    !omega_ent(spray%kmin:spray%kmax) = 7.0_WP/spray%Re*(1.0_WP/(spray%VRg(spray%kmin:spray%kmax))+spray%VRtg(spray%kmin:spray%kmax))
     !omega_ent(spray%kmin:spray%kmax) = spray%c_k/spray%Re*(1.0_WP/spray%VRtg(spray%kmin:spray%kmax))
     
     !omega_ent(spray%kmin:spray%kmax) = 4.0_WP*spray%beta/DRa*spray%z(spray%kmin:spray%kmax)/sqrt((1.0_WP/DRa-1.0_WP)**2+4.0_WP*spray%b(spray%kmin:spray%kmax)**2/DRa)
@@ -3324,8 +3326,8 @@ contains
 
     ! Assuming only gas phase turbulence induced by gas phase velocity
 
-    spray%c_k = spray%omega_ent*spray%b/(spray%VRtg/spray%Re + 1.0_WP/spray%VRg/spray%Re)
-    spray%c_k(spray%kmino:spray%kmin) = 0.0_WP
+    spray%c_k = spray%omega_ent/(spray%VRtg/spray%Re + 1.0_WP/spray%VRg/spray%Re)
+    !spray%c_k(spray%kmino:spray%kmin) = 0.0_WP
     !spray%c_k = sum(spray%rho*spray%Y_g*spray%b**2*spray%c_k)/sum(spray%rho*spray%Y_g*spray%b**2)
 
     !spray%omega_k_g_p = 0.5_WP*spray%c_k*spray%u_g**2*spray%mu_t_g
@@ -3594,9 +3596,6 @@ contains
              spray%u_l(kmino:kmin-1) = (spray%roi(i+1,2)-spray%roi(i,2))/(spray%roi(i+1,1)-spray%roi(i,1))* &
                      (spray%ndtime - spray%roi(i,1)) + spray%roi(i,2)
 
-             spray%rho(kmino:kmin-1) = (maxval(spray%rho)-minval(spray%rho))*((spray%roi(i+1,2)-spray%roi(i,2))/(spray%roi(i+1,1)-spray%roi(i,1))* &
-                     (spray%ndtime - spray%roi(i,1)) + spray%roi(i,2)) + minval(spray%rho)
-
              spray%Y_l(kmino:kmin-1) = (spray%roi(i+1,2)-spray%roi(i,2))/(spray%roi(i+1,1)-spray%roi(i,1))* &
                      (spray%ndtime - spray%roi(i,1)) + spray%roi(i,2)
 
@@ -3612,13 +3611,14 @@ contains
        end do
     else
        spray%u_l(kmino:kmin-1) = 1.0_WP
-       spray%rho(kmino:kmin-1) = 1.0_WP
        spray%Y_l(kmino:kmin-1) = 1.0_WP
        spray%d3(kmino:kmin-1) = spray%init_d3
        spray%d2(kmino:kmin-1) = spray%init_d2
        spray%dm(kmino:kmin-1) = spray%init_dm
        spray%dvar(kmino:kmin-1) = spray%init_dvar
     end if
+
+    spray%rho(kmino:kmin-1) = 1.0_WP
 
     spray%Y_v(kmino:kmin-1) = 0.0_WP
     spray%Y_a(kmino:kmin-1) = 1.0_WP-spray%Y_l(kmino:kmin-1)
@@ -3827,6 +3827,8 @@ contains
     write(99,FMT=rowfmt) 'Effective jet diameter :',spray%D_eff
     write(99,FMT=rowfmt) 'Max. Mass flow rate(mg/ms) :',spray%rho_l*pi/4*spray%D_eff**2*spray%U_inj*1.0E+03_WP
     write(99,FMT=rowfmt) 'Max. Momentum flow rate(kgm/s^2) :',spray%rho_l*pi/4*spray%D_eff**2*spray%U_inj**2
+    write(99,FMT=*) ''
+    write(99,FMT=rowfmt) 'Stoichiometric mixture fraction :',spray%Zmix_st
 
     close(unit=99)
 
@@ -3918,8 +3920,8 @@ contains
                *(log(zz(bound(1):bound(2)))/log(Zmix_st)) &
                *bpdf(bound(1):bound(2)))
           ! Limit maximum scalar dissipation rate to 1000.0 (1/s)
-          !spray%chi_g_stl(k) = min(1000_WP*spray%tau,max(0.0_WP,spray%chi_g(k)/z_integral))
-          spray%chi_g_stl(k) = max(0.0_WP,spray%chi_g(k)/z_integral)
+          spray%chi_g_stl(k) = min(1000_WP*spray%tau,max(0.0_WP,spray%chi_g(k)/z_integral))
+          !spray%chi_g_stl(k) = max(0.0_WP,spray%chi_g(k)/z_integral)
 
           ! Integrate over spray volume
           numer = numer + spray%chi_g_stl(k)**1.5_WP*spray%rho(k)*PZmix_st/dz_st*spray%dz*Pi*spray%b(k)**2
