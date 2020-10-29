@@ -146,8 +146,13 @@ contains
       !if(spray%chi_st(1) == 0.0_WP) return
 
       Zmix_st = 1.0_WP/(1.0_WP+spray%stoic_coeff/spray%Y_O2)
+
+      ! Warning!!! If you change anything in the following two lines,
+      ! remember to change it also in getScalarDissipationRate spray_func.f90
+      ! Zmix_max < 1.0 results in too high scalar dissipation rate and 
+      ! it becomes hard to ignite. Therefore, Zmix_max = 1.0 is used here.
       Zmix_max = maxval(spray%Zmix_g) + 2.0_WP*sqrt(maxval(spray%zvar_g))
-      Zmix_max = min(1.0,Zmix_max)
+      Zmix_max = 1.0_WP !min(1.0,Zmix_max)
 
       chi = spray%C_chi*spray%chi_st(1)*(x/Zmix_st)**2*(log(x/Zmix_max)/log(Zmix_st/Zmix_max))
 

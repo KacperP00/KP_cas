@@ -230,6 +230,36 @@ contains
   ! -------------------------------------------------- !
   !> @brief advance solution in 1d (inert or reactive)
   ! -------------------------------------------------- !
+#ifdef SOOT
+  subroutine mduc_advance_flamelet_1d(mduc,tstep,pavg,var_min,var_max,chi,inert,reset,fY,fT,fS)
+    implicit none
+
+    type(mduc_t), intent(in) :: mduc
+    real(WP), intent(in) :: tstep,pavg,var_min,var_max
+    real(WP), dimension(:), intent(in) :: chi
+    integer, intent(in) :: inert
+    logical, intent(in) :: reset
+    real(WP), dimension(:,:), intent(inout) :: fY, fS
+    real(WP), dimension(:), intent(in) :: fT
+    ! ---------------------------------
+
+    integer :: nS = 4
+    ! ---------------------------------
+
+#ifdef MDUC
+    if (reset) &
+         call MDUCresetODE(mduc%mem)
+
+    call MDUCflamelet1D(tstep,pavg,var_min,var_max,chi,inert,fY,fT,mduc%mem)
+
+    call MDUCgetsootsolution1D(nS, fS, mduc%mem)
+#endif
+
+    return
+  end subroutine mduc_advance_flamelet_1d
+
+#else
+
   subroutine mduc_advance_flamelet_1d(mduc,tstep,pavg,var_min,var_max,chi,inert,reset,fY,fT)
     implicit none
 
@@ -252,36 +282,7 @@ contains
 
     return
   end subroutine mduc_advance_flamelet_1d
-
-  ! -------------------------------------------------- !
-  !> @brief advance solution in 1d (inert or reactive)
-  ! -------------------------------------------------- !
-!!$  subroutine mduc_advance_flamelet_1d(mduc,tstep,pavg,var_min,var_max,chi,inert,reset,fY,fT,fS)
-!!$    implicit none
-!!$
-!!$    type(mduc_t), intent(in) :: mduc
-!!$    real(WP), intent(in) :: tstep,pavg,var_min,var_max
-!!$    real(WP), dimension(:), intent(in) :: chi
-!!$    integer, intent(in) :: inert
-!!$    logical, intent(in) :: reset
-!!$    real(WP), dimension(:,:), intent(inout) :: fY, fS
-!!$    real(WP), dimension(:), intent(in) :: fT
-!!$    ! ---------------------------------
-!!$
-!!$    integer :: nS = 4
-!!$    ! ---------------------------------
-!!$
-!!$#ifdef MDUC
-!!$    if (reset) &
-!!$         call MDUCresetODE(mduc%mem)
-!!$
-!!$    call MDUCflamelet1D(tstep,pavg,var_min,var_max,chi,inert,fY,fT,mduc%mem)
-!!$
-!!$    call MDUCgetsootsolution1D(nS, fS, mduc%mem)
-!!$#endif
-!!$
-!!$    return
-!!$  end subroutine mduc_advance_flamelet_1d
+#endif
 
   ! ---------------------------------------- !
   !> @brief advance solution in 2d (reactive)

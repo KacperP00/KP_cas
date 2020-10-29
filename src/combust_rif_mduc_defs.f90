@@ -1,6 +1,7 @@
 module combust_mduc_data
    use precision
    use string
+   use spray_defs
 
   ! ==================================================================================== !
   ! define mduc object in order to call model from different modules
@@ -25,26 +26,26 @@ module combust_mduc_data
         TYPE_MDUC_CHI_F_QUAD = 3
  
  
-   type mduc_t
-   ! ==================================================================================== !
-   !!! this derived datatype has a corresponding MPI datatype                           !!!
-   !!! any changes must be consistent with create_mpi_.. !!!
-   ! ==================================================================================== !
-      SEQUENCE
- 
-      integer(8) :: mem          ! memory location
-      !integer :: index          ! mainly to distinguish variables
-      integer :: nx1,nx2         ! number of grid points in each direction
-      integer :: hdim            ! enthalpy dimension in mduc model
-      integer :: transf2d        ! coordinate transformation type in 2D
-      ! activate(1)/deactivate(0) source terms : 
-      ! Nucleation,Condensation,Coagulation,SurfaceGrowth,Oxidation,Fragmentation
-      integer, dimension(:), pointer :: sootActive => null()
-   ! ==================================================================================== !
-   !!! this derived datatype has a corresponding MPI datatype                           !!!
-   !!! any changes must be consistent with create_mpi_.. !!!
-   ! ==================================================================================== !
-   end type mduc_t
+!!$   type mduc_t
+!!$   ! ==================================================================================== !
+!!$   !!! this derived datatype has a corresponding MPI datatype                           !!!
+!!$   !!! any changes must be consistent with create_mpi_.. !!!
+!!$   ! ==================================================================================== !
+!!$      SEQUENCE
+!!$ 
+!!$      integer(8) :: mem          ! memory location
+!!$      !integer :: index          ! mainly to distinguish variables
+!!$      integer :: nx1,nx2         ! number of grid points in each direction
+!!$      integer :: hdim            ! enthalpy dimension in mduc model
+!!$      integer :: transf2d        ! coordinate transformation type in 2D
+!!$      ! activate(1)/deactivate(0) source terms : 
+!!$      ! Nucleation,Condensation,Coagulation,SurfaceGrowth,Oxidation,Fragmentation
+!!$      integer, dimension(:), pointer :: sootActive => null()
+!!$   ! ==================================================================================== !
+!!$   !!! this derived datatype has a corresponding MPI datatype                           !!!
+!!$   !!! any changes must be consistent with create_mpi_.. !!!
+!!$   ! ==================================================================================== !
+!!$   end type mduc_t
  
    type mduc_a_
  

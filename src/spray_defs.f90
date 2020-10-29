@@ -1,5 +1,6 @@
 module spray_defs
   use precision
+  use string
   use pc_defs
   use fpt_defs
   use solver_defs
@@ -22,9 +23,12 @@ module spray_defs
      real(WP), pointer :: MaxCFL, CFL
      real(WP), dimension(:), pointer :: CFL_conv, CFL_bre, CFL_evap
 
+     ! Number of equations and scalars
+     integer :: neq, nsc
+
      ! Non-dimensional numbers
      real(WP), pointer :: Re, We, WR, De, DRa, DRv, VRa, VRv, Pr_l
-     real(WP), dimension(:), pointer :: DRg, VRg, VRtg, TCRg, LR, CR
+     real(WP), dimension(:), pointer :: DRl, DRg, VRl, VRg, VRtg, TCRg, LR, CR, SR
      
      ! Geometric variables
      real(WP), pointer :: noz_D, noz_LD, noz_rD, noz_Dsac
@@ -35,7 +39,7 @@ module spray_defs
                                         k_g, eps_g, mu_t_g, zmix_g, zvar_g, chi_g, chi_g_stl
 
      ! Source terms
-     real(WP), dimension(:), pointer :: omega_ent, omega_vap, omega_vapdm, omega_vapd2, omega_vapd3, &
+     real(WP), dimension(:), pointer :: omega_ent, omega_vap, omega_vapdm, omega_vapd2, omega_vapd3, omega_vapres, &
                                         f_drag, omega_bre1, omega_bre2, omega_bre3, omega_T, omega_k_g_p, &
                                         omega_k_g_d, omega_eps_g_p, omega_eps_g_d, &
                                         omega_zvar_g_p, omega_zvar_g_d
@@ -79,6 +83,12 @@ module spray_defs
      ! Spray angle parameters
      character(len=128), pointer :: spray_angle_model
      real(WP), pointer :: theta, beta, Cnoz, C_theta
+     
+     ! Entrainment model (default is true)
+     logical :: ent_model = .true.
+
+     ! Drag model (default is true)
+     logical :: drag_model = .true.
 
      ! Nozzle flow constants/variables
      real(WP), pointer :: K_in, K_exp, Cc0, Cc, D_eff, const_inj_vel
@@ -92,9 +102,13 @@ module spray_defs
      integer, dimension(:), pointer :: dsd_type
      integer, pointer :: skip_d2, skip_d3
 
+     ! Breakup model (default is true)
+     logical :: bre_model = .true.
      ! Breakup parameters with default values
      real(WP) :: B0 = 0.61_WP, B1 = 10.0_WP, C3 = 2.5_WP, Crel = 1.0_WP
 
+     ! Evaporation model (default is true)
+     logical :: evap_model = .true.
      ! Evaporation parameters
      real(WP) :: Cevap = 1.0_WP
 
@@ -109,9 +123,12 @@ module spray_defs
 
      ! Combustion model
      character(len=128), pointer :: combustion_model
-     real(WP) :: C_chi = 1.0_WP, Y_O2 = 0.164215_WP, Zmix_st
+     real(WP) :: C_chi = 1.0_WP, Y_O2 = 0.164215_WP, Zmix_st, flm_int=1.0E-04_WP
      real(WP), dimension(:), pointer :: zz=>null(), bpdf=>null()
-
+     real(WP), dimension(:,:), pointer :: Sc=>null(), Wt=>null()
+     type(srif_t), pointer :: first_rif=>null()
+     integer :: nflamelet = -9999
+     
      ! Solver
      type(solver_t), pointer :: solver
 
@@ -121,7 +138,8 @@ module spray_defs
      logical :: saveDataFile=.false.
 
      ! Postprocessing
-     real(WP), dimension(:), pointer :: time, LPL, VPL, chi_st
+     real(WP), dimension(:), pointer :: time, LPL, VPL, chi_st, chi_st1
+     real(WP), dimension(:), pointer :: chi_st_m
 
      ! For sensitivity analysis
      real(WP) :: f_rho_l=0.0_WP, f_mu_l=0.0_WP, f_lambda_l=0.0_WP, f_Lv=0.0_WP, f_C_l=0.0_WP, f_Pv=0.0_WP, f_sigma=0.0_WP
@@ -136,7 +154,112 @@ module spray_defs
      ! End of simulation
      logical :: end=.false.
 
-  end type spray_t  
+  end type spray_t
+
+  ! Adapted from CIAO routines by Marco Davidovic
+  type mduc_t
+     ! ==================================================================================== !
+     !!! this derived datatype has a corresponding MPI datatype                           !!!
+     !!! any changes must be consistent with create_mpi_.. !!!
+     ! ==================================================================================== !
+     SEQUENCE
+
+     integer(8) :: mem          ! memory location
+     !integer :: index          ! mainly to distinguish variables
+     integer :: nx1,nx2         ! number of grid points in each direction
+     integer :: hdim            ! enthalpy dimension in mduc model
+     integer :: transf2d        ! coordinate transformation type in 2D
+     ! activate(1)/deactivate(0) source terms : 
+     ! Nucleation,Condensation,Coagulation,SurfaceGrowth,Oxidation,Fragmentation
+     integer, dimension(:), pointer :: sootActive => null()
+     ! ==================================================================================== !
+     !!! this derived datatype has a corresponding MPI datatype                           !!!
+     !!! any changes must be consistent with create_mpi_.. !!!
+     ! ==================================================================================== !
+  end type mduc_t
+
+  type srif_t
+     ! flamelet number
+     integer :: i
+     ! is this flamelet currently solved?
+     logical :: active
+     ! mduc data
+     type(mduc_t), pointer :: mduc
+     ! flow data
+     !type(rif_flow_t), dimension(:),allocatable :: f
+     ! major species fields
+     real(WP), dimension(:), pointer :: Yi_SC => null() 
+     ! flamelet marker (tracking scalar for MRIF)
+     real(WP), dimension(:), pointer :: mark => null()
+     ! flamelet weight (MRIF)
+     real(WP), dimension(:), pointer :: weight => null()
+     ! mask for locally disabling rif
+     integer, dimension(:), pointer :: mask => null()
+     ! progress variable field
+     integer, dimension(:), pointer :: prog => null()
+     character(len=str_medium), dimension(:), allocatable :: species,prog_species
+     integer, dimension(:), allocatable   :: iprog_species
+     real(WP), dimension(:), allocatable :: bpdf, Temp, sootM00, sootM10
+     real(WP), dimension(:,:), allocatable :: Yspec
+     !real(WP) :: Temp, sootM00, sootM10
+     ! flamelet dimension
+     integer :: ndim
+     ! number of species in chemical mechanism
+     integer :: Nspec
+     ! number of non-steady-state species 
+     integer :: NspecS 
+     ! number of major species
+     integer :: NspecT
+     ! soot method (local / conditional)
+     integer :: soot_method 
+     ! number of soot moments
+     integer :: nSootEq
+     ! soot species names
+     character(len=str_medium), dimension(:), pointer :: soot_names => null()
+     ! sott species index
+     integer, dimension(:), pointer :: soot_ispec => null()
+     ! phi threshold
+     real(WP) :: phimin_thresh(2) 
+     ! weight threshold (MRIF)
+     real(WP) :: wmin_thresh
+     ! pdf type (recently changed to integer values)
+     !character(len=str_medium) :: pdf_type(2)
+     integer :: pdf_type(2)
+     ! injection status
+     integer :: inj
+     ! start of chemistry calculation
+     real(WP), dimension(:), pointer :: tinit => null()
+     ! scalar dissipation rate mode (distribution or global-zero)
+     integer, dimension(:), pointer :: chi_mode => null()
+     ! scalar dissipation rate functional form
+     integer :: chi_form  
+     !
+     integer, dimension(:), pointer :: chi_norm => null()
+     ! calculate reference scalar dissipation to scale functional form?
+     logical :: calc_chi_ref
+     ! write frequency in steps
+     integer :: dump_freq
+     ! root process which solves 1d flamelet
+     integer :: root, nproc, irank
+     ! store mduc grid
+     real(WP), dimension(:), pointer :: zz=>null()
+     real(WP), dimension(:), pointer :: chi=>null()
+     ! flamelet solution arrays
+     ! temperature 1d
+     real(WP), dimension(:), pointer :: fT_1d => null()
+     ! all species 1d
+     real(WP), dimension(:,:), pointer :: fY_1d => null()
+     ! major species 1d
+     real(WP), dimension(:,:), pointer :: fYT_1d => null()
+     ! soot source terms 1d
+     real(WP), dimension(:,:), pointer :: fS_1d => null()
+     ! temperature 2d
+     real(WP), dimension(:,:), pointer :: fT_2d => null()
+     ! major species 2d
+     real(WP), dimension(:,:,:), pointer :: fY_2d => null()
+     ! next flamelet (MRIF)
+     type(srif_t), pointer :: next => null()
+  end type srif_t
 
   ! Spray droplet distribution function
   integer, parameter :: &
@@ -357,11 +480,14 @@ contains
     allocate(spray%T_ref(spray%nzo)); spray%T_ref = -9999.0_WP
     allocate(spray%Y_ref(spray%nzo)); spray%Y_ref = -9999.0_WP
 
+    allocate(spray%DRl(spray%nzo)); spray%DRl = -9999.0_WP
     allocate(spray%DRg(spray%nzo)); spray%DRg = -9999.0_WP
+    allocate(spray%VRl(spray%nzo)); spray%VRl = -9999.0_WP
     allocate(spray%VRg(spray%nzo)); spray%VRg = -9999.0_WP
     allocate(spray%VRtg(spray%nzo)); spray%VRtg = -9999.0_WP
     allocate(spray%LR(spray%nzo)); spray%LR = -9999.0_WP
     allocate(spray%CR(spray%nzo)); spray%CR = -9999.0_WP
+    allocate(spray%SR(spray%nzo)); spray%SR = -9999.0_WP
 
     allocate(spray%z(spray%nzo)); spray%z = -9999.0_WP
     allocate(spray%rho(spray%nzo)); spray%rho = -9999.0_WP
@@ -405,6 +531,7 @@ contains
     allocate(spray%omega_vapdm(spray%nzo)); spray%omega_vapdm = -9999.0_WP
     allocate(spray%omega_vapd2(spray%nzo)); spray%omega_vapd2 = -9999.0_WP
     allocate(spray%omega_vapd3(spray%nzo)); spray%omega_vapd3 = -9999.0_WP
+    allocate(spray%omega_vapres(spray%nzo)); spray%omega_vapres = -9999.0_WP
     allocate(spray%f_drag(spray%nzo)); spray%f_drag = -9999.0_WP
     allocate(spray%omega_bre1(spray%nzo)); spray%omega_bre1 = -9999.0_WP
     allocate(spray%omega_bre2(spray%nzo)); spray%omega_bre2 = -9999.0_WP
@@ -418,6 +545,33 @@ contains
     allocate(spray%omega_zvar_g_d(spray%nzo)); spray%omega_zvar_g_d = -9999.0_WP
 
   end subroutine allocate_spray_grid_vars
+
+  subroutine list_destroy( list )
+    type(srif_t), pointer  :: list
+
+    type(srif_t), pointer  :: current
+    type(srif_t), pointer  :: next
+
+    current => list
+    do while ( associated(current%next) )
+       next => current%next
+       deallocate( current%mduc)
+       deallocate( current%Yspec )
+       deallocate( current%species )
+       deallocate( current%bpdf )
+       deallocate( current%Temp )
+       if(associated(current%fS_1d)) deallocate( current%sootM00 )
+       if(associated(current%fS_1d)) deallocate( current%sootM10 )
+       deallocate( current%prog_species )
+       deallocate( current%iprog_species )
+       deallocate( current%fY_1d )
+       deallocate( current%fT_1d )
+       deallocate( current%chi )
+       if(associated(current%fS_1d)) deallocate( current%fS_1d )
+       deallocate( current )
+       current => next
+    enddo
+  end subroutine list_destroy
 
   subroutine deallocate_spray(spray)
     implicit none
@@ -441,7 +595,7 @@ contains
     
     deallocate(spray%VRtg)
     
-    deallocate(spray%WR,spray%De,spray%LR,spray%CR)
+    deallocate(spray%WR,spray%De,spray%LR,spray%CR,spray%SR,spray%DRl,spray%VRl)
 
     deallocate(spray%noz_D,spray%noz_LD,spray%noz_rD,spray%noz_Dsac, spray%num_noz)
     
@@ -507,18 +661,27 @@ contains
 
 #ifdef MDUC_MPI
     deallocate(spray%combustion_model, spray%zz, spray%bpdf)
+    call list_destroy(spray%first_rif)
 #endif
+
+    if (associated(spray%Sc)) then
+       deallocate(spray%Sc)
+    end if
+
+    if (associated(spray%Wt)) then
+       deallocate(spray%Wt)
+    end if
 
     call deallocate_solver(spray%solver)
 
-    deallocate(spray%omega_ent, spray%omega_vap, spray%omega_vapdm, spray%omega_vapd2, spray%omega_vapd3, &
+    deallocate(spray%omega_ent, spray%omega_vap, spray%omega_vapdm, spray%omega_vapd2, spray%omega_vapd3, spray%omega_vapres, &
                spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_bre3, spray%omega_T, &
                spray%omega_k_g_p, spray%omega_k_g_d, spray%omega_eps_g_p, spray%omega_eps_g_d, &
                spray%omega_zvar_g_p, spray%omega_zvar_g_d)
 
     deallocate(spray%outfreq, spray%datafreq)
 
-    deallocate(spray%time, spray%LPL, spray%VPL, spray%chi_st)
+    deallocate(spray%time, spray%LPL, spray%VPL, spray%chi_st, spray%chi_st_m, spray%chi_st1)
 
     deallocate(spray%fixed_Re, spray%fixed_We,  spray%fixed_DRa, spray%fixed_DRv, spray%fixed_VRa, spray%fixed_VRv, spray%fixed_De)
 

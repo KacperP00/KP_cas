@@ -1,14 +1,14 @@
-!----------------------------------------!
-! CAS: Cross-sectionally Averaged Spray  !
-! This program solves cross-sectionally  !
-! averaged one-D multiphase equations    !
-! describing spray formation             !
-!                                        !
-! Author: Abhishek Y. Deshmukh           !
-! Contact: a.deshmukh@itv.rwth-aachen.de !
-!----------------------------------------!
+!------------------------------------------------------------!
+! CARTS: Cross-sectionally Averaged Reactive Turbulent Spray !
+! This program solves cross-sectionally averaged one-D       !
+! multiphase equations describing spray formation along with !
+! turbulence modeling and combustion modeling                !
+!                                                            !
+! Author: Abhishek Y. Deshmukh                               !
+! Contact: a.deshmukh@itv.rwth-aachen.de                     !
+!------------------------------------------------------------!
 
-program cas
+program carts
 
   use parser
   use spray_defs
@@ -78,7 +78,7 @@ program cas
 
 #ifdef MDUC_MPI
   call MPI_barrier(MPI_COMM_WORLD,ierr)
-  call spray_combust_poststep_mrif(spray)
+  call spray_combust_poststep(spray)
 
   end if
 #endif
@@ -90,4 +90,4 @@ program cas
   call MPI_FINALIZE ( ierr )
 #endif
 
-end program cas
+end program carts

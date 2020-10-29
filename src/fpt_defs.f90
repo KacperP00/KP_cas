@@ -17,7 +17,7 @@ module fpt_defs
      real(WP), pointer :: MolecularWeight, Tcrit, pcrit, vcrit
      
      real(WP), pointer :: MeltingPoint, NormalBoilingPoint
-     real(WP), pointer :: DiffusionCoefficientWilkeLee, DiffusionCoefficientFuller
+     real(WP), pointer :: DiffusionCoefficientWilkeLee, DiffusionCoefficientFuller, DiffusionCoefficientTheory
 
      real(WP), dimension(:), pointer :: lTemp, vTemp
 
@@ -64,6 +64,7 @@ contains
     nullify(fpt%NormalBoilingPoint)
     nullify(fpt%DiffusionCoefficientWilkeLee)
     nullify(fpt%DiffusionCoefficientFuller)
+    nullify(fpt%DiffusionCoefficientTheory)
 
     nullify(fpt%lTemp,fpt%vTemp)
 
@@ -168,6 +169,7 @@ contains
 
     deallocate(fpt%DiffusionCoefficientWilkeLee)
     deallocate(fpt%DiffusionCoefficientFuller)
+    deallocate(fpt%DiffusionCoefficientTheory)
 
     deallocate(fpt%lTemp,fpt%vTemp)
 

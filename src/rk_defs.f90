@@ -6,7 +6,7 @@ module rk_defs
 
   type rktvd_solver_t
      character(len=32) :: scheme = 'noname'
-     integer :: stage = 0, order = 0, niter, nzo, neq
+     integer :: stage = 0, order = 0, niter, nzo, neq, nsc
      real(WP), dimension(:,:), pointer :: coeff(:,:) => null()
      real(WP), dimension(:,:,:), pointer :: RK => null(), Res => null()
    end type rktvd_solver_t
@@ -20,8 +20,8 @@ contains
     ! ---------------------------------
 
     allocate(solver%coeff(solver%stage,2*solver%order))
-    allocate(solver%RK(solver%stage,solver%neq,solver%nzo))
-    allocate(solver%Res(solver%stage,solver%neq,solver%nzo))
+    allocate(solver%RK(solver%stage,solver%neq+solver%nsc,solver%nzo))
+    allocate(solver%Res(solver%stage,solver%neq+solver%nsc,solver%nzo))
 
   end subroutine allocate_rktvd
 

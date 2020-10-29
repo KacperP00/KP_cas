@@ -31,7 +31,7 @@ module pc_defs
      real(WP), dimension(:), pointer :: FlammabilityLimits, FlammabilityLimitTemps
      
      real(WP), pointer :: solDensity, liqDensity, IG_vapDensity, HeatOfVap, solHeatCapacity, liqHeatCapacity, &
-                          IG_HeatCapacity, SecondViralCoef, DiffusionCoefficientWilkeLee, DiffusionCoefficientFuller
+                          IG_HeatCapacity, SecondViralCoef, DiffusionCoefficientWilkeLee, DiffusionCoefficientFuller, DiffusionCoefficientTheory, DiffusionCoefficientHighPres
 
      type(pc_prop_t), pointer :: solDensityMol, liqDensityMol, vapPressure, HeatOfVapMol, solHeatCapacityMol, &
                                  liqHeatCapacityMol, IG_HeatCapacityMol, SecondViralCoefMol, liqViscosity, vapViscosity, &
@@ -245,6 +245,8 @@ contains
 
     nullify(pc%DiffusionCoefficientWilkeLee)
     nullify(pc%DiffusionCoefficientFuller)
+    nullify(pc%DiffusionCoefficientTheory)
+    nullify(pc%DiffusionCoefficientHighPres)
 
     nullify(pc)
 
@@ -447,6 +449,8 @@ contains
 
     allocate(pc%DiffusionCoefficientWilkeLee); pc%DiffusionCoefficientWilkeLee =-9999.0_WP
     allocate(pc%DiffusionCoefficientFuller); pc%DiffusionCoefficientFuller =-9999.0_WP
+    allocate(pc%DiffusionCoefficientTheory); pc%DiffusionCoefficientTheory =-9999.0_WP
+    allocate(pc%DiffusionCoefficientHighPres); pc%DiffusionCoefficientHighPres =-9999.0_WP
 
   end subroutine allocate_pc
 
@@ -637,6 +641,8 @@ contains
 
     deallocate(pc%DiffusionCoefficientWilkeLee)
     deallocate(pc%DiffusionCoefficientFuller)
+    deallocate(pc%DiffusionCoefficientTheory)
+    deallocate(pc%DiffusionCoefficientHighPres)
 
     deallocate(pc)
 

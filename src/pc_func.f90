@@ -7,7 +7,8 @@ module pc_func
             computeVapPressure, computeHeatOfVap, computeSolHeatCapacity, computeLiqHeatCapacity, &
             computeIG_HeatCapacity, computeSeconfViralCoef, computeLiqViscosity, &
             computeVapViscosity, computeLiqThermalConductivity, computeSurfaceTension, &
-            computeDiffusionCoeffcientWilkeLee, computeDiffusionCoeffcientFuller
+            computeDiffusionCoefficientWilkeLee, computeDiffusionCoefficientFuller, &
+            computeDiffusionCoefficientTheory, computeDiffusionCoefficientHighPres
 
 contains
 
@@ -678,7 +679,7 @@ end subroutine computeSurfaceTension
 ! Diffusion Coefficients - m^2/s
 ! According to J. Poling, The Properties of Gases and Liquids, 5th edition
 
-subroutine computeDiffusionCoeffcientWilkeLee(pc)
+subroutine computeDiffusionCoefficientWilkeLee(pc)
   implicit none
 
   ! ---------------------------------------------
@@ -690,7 +691,7 @@ subroutine computeDiffusionCoeffcientWilkeLee(pc)
 
   M_fuel = pc%MolecularWeight;
   M_air = 28.96_WP;
-  M_AB = 2.0_WP* (((1/M_air) + (1/M_fuel))**(-1));
+  M_AB = 2.0_WP/((1/M_air) + (1/M_fuel));
   
   ! V_b = liquid molar volume @ normal boiling point 
   ! tabled values according to Schroeder (Chaper 4):
@@ -699,9 +700,9 @@ subroutine computeDiffusionCoeffcientWilkeLee(pc)
                          pc%ChemicalFormula%O )
 
   sigma_air = 3.617_WP ! air /Angström
-  sigma_fuel = 1.18_WP*V_b_fuel**(1/3)  ! fuel /Angström
+  sigma_fuel = 1.18_WP*V_b_fuel**(1.0_WP/3.0_WP)  ! fuel /Angström
   sigma_AB = 0.5_WP* (sigma_air + sigma_fuel)
-  
+
   epsilon_air = 97.0_WP ! air /K
   epsilon_fuel = 1.15_WP*pc%NormalBoilingPoint; ! normal boiling point /K
   epsilon_AB = (epsilon_air * epsilon_fuel)**(0.5_WP); ! /K
@@ -718,9 +719,9 @@ subroutine computeDiffusionCoeffcientWilkeLee(pc)
                                   * pc%T**(1.5_WP))/((pc%p/(100000.0_WP))*(M_AB**(0.5_WP)) &
                                   * (sigma_AB**2)*Omega_D)/(10000.0_WP)
 
-end subroutine computeDiffusionCoeffcientWilkeLee
+end subroutine computeDiffusionCoefficientWilkeLee
 
-subroutine computeDiffusionCoeffcientFuller(pc)
+subroutine computeDiffusionCoefficientFuller(pc)
   implicit none
 
   ! ---------------------------------------------
@@ -730,7 +731,7 @@ subroutine computeDiffusionCoeffcientFuller(pc)
 
   M_fuel = pc%MolecularWeight
   M_air = 28.96_WP
-  M_AB = 2.0_WP* (((1/M_air) + (1/M_fuel))**(-1))
+  M_AB = 2.0_WP/((1/M_air) + (1/M_fuel))
   Sigma_A = 19.7_WP; ! air, Table 11.1
   Sigma_B = 15.9_WP * pc%ChemicalFormula%C + &
             2.31_WP * pc%ChemicalFormula%H + &
@@ -742,7 +743,90 @@ subroutine computeDiffusionCoeffcientFuller(pc)
                                 * (M_AB**0.5_WP) * (Sigma_A**(1.0_WP/3.0_WP) &
                                 + Sigma_B**(1.0_WP/3.0_WP))**2)/(10000.0_WP)
  
-end subroutine computeDiffusionCoeffcientFuller
+end subroutine computeDiffusionCoefficientFuller
+
+subroutine computeDiffusionCoefficientTheory(pc)
+  implicit none
+
+  ! ---------------------------------------------
+  type(pc_t), pointer, intent(inout) :: pc
+  ! ---------------------------------------------
+  real(WP) :: M_fuel, M_air, M_AB, V_b_fuel, sigma_air, sigma_fuel, sigma_AB, &
+              epsilon_air, epsilon_fuel, epsilon_AB, T_star, A, B, C, D, E, F,&
+              G, H, Omega_D
+
+  M_fuel = pc%MolecularWeight;
+  M_air = 28.96_WP;
+  M_AB = 2.0_WP/((1/M_air) + (1/M_fuel));
+  
+  ! V_b = liquid molar volume @ normal boiling point 
+  ! tabled values according to Schroeder (Chaper 4):
+  V_b_fuel =  7.0_WP * ( pc%ChemicalFormula%C + &
+                         pc%ChemicalFormula%H + &
+                         pc%ChemicalFormula%O )
+
+  sigma_air = 3.617_WP ! air /Angström
+  sigma_fuel = 1.18_WP*V_b_fuel**(1.0_WP/3.0_WP)  ! fuel /Angström
+  sigma_AB = 0.5_WP* (sigma_air + sigma_fuel)
+
+  epsilon_air = 97.0_WP ! air /K
+  epsilon_fuel = 1.15_WP*pc%NormalBoilingPoint; ! normal boiling point /K
+  epsilon_AB = (epsilon_air * epsilon_fuel)**(0.5_WP); ! /K
+
+  T_star = pc%T / epsilon_AB
+
+  A = 1.06036_WP; B = 0.15610_WP; C = 0.19300_WP; D = 0.47635_WP;
+  E = 1.03587_WP; F = 1.52996_WP; G = 1.76474_WP; H = 3.89411_WP;
+
+  Omega_D = (A/(T_star**B)) + (C/(exp(D * T_star))) + &
+            (E/(exp(F * T_star))) + (G/(exp(H * T_star)))
+
+  pc%DiffusionCoefficientTheory = 0.00266_WP*pc%T**(1.5_WP)/((pc%p/(100000.0_WP))*(M_AB**(0.5_WP)) &
+                                  * (sigma_AB**2)*Omega_D)/(10000.0_WP)
+
+end subroutine computeDiffusionCoefficientTheory
+
+subroutine computeDiffusionCoefficientHighPres(pc,Y_a,Y_v)
+  implicit none
+
+  ! ---------------------------------------------
+  type(pc_t), pointer, intent(inout) :: pc
+  real(WP), intent(in) :: Y_a, Y_v
+  ! ---------------------------------------------
+  real(WP) :: G0, G, mu0, mu, omega, omega_a, omega_v, Pcr, Pcr_a, Pcr_v, Pr, &
+              b, c, rho0, rho
+  real(WP) :: p0 = 101325.0_WP
+
+  rho0 = p0
+  rho = pc%p
+  mu = pc%vapViscosity%val
+  pc%p = p0
+  call computeDiffusionCoefficientTheory(pc)
+  call computeVapViscosity(pc)
+
+  G0 = pc%DiffusionCoefficientTheory
+  mu0 = pc%vapViscosity%val
+
+  omega_a = 0.0335_WP
+  omega_v = pc%AcentricFactor
+  ! Compute Acentric factor for mixture
+  omega = Y_a*omega_a + Y_v*omega_v
+
+  Pcr_a = 3.786E+06_WP
+  Pcr_v = pc%pcrit
+  ! Compute critical pressure for mixture
+  Pcr = Y_a*Pcr_a + Y_v*Pcr_v
+
+  b = -0.27_WP - 0.38_WP*omega
+  c = -0.05_WP + 0.1*omega
+  Pr = pc%p/Pcr
+
+  G = (G0*rho0)/rho*1.07_WP*(mu/mu0)**(b+c*Pr)
+
+  pc%DiffusionCoefficientHighPres = G !- 0.07_WP*G0
+  pc%p = rho
+
+end subroutine computeDiffusionCoefficientHighPres
 
 real(WP) function computeVal(pc,eqn,T,A,B,C,D,E)
  implicit none

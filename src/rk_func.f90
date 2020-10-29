@@ -23,6 +23,8 @@ contains
 
     solver%neq = spray%solver%neq
 
+    solver%nsc = spray%solver%nsc
+
     solver%nzo = spray%nzo
 
     ! Set type of RK scheme

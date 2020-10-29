@@ -98,6 +98,14 @@ contains
                   read(line(idx+1:len(line)),*) spray%init_d3
                else if(param .eq. 'Initial Dvar') then
                   read(line(idx+1:len(line)),*) spray%init_dvar
+               else if(param .eq. 'Use entrainment model') then
+                  read(line(idx+1:len(line)),*) spray%ent_model
+               else if(param .eq. 'Use drag model') then
+                  read(line(idx+1:len(line)),*) spray%drag_model
+               else if(param .eq. 'Use breakup model') then
+                  read(line(idx+1:len(line)),*) spray%bre_model
+               else if(param .eq. 'Use evaporation model') then
+                  read(line(idx+1:len(line)),*) spray%evap_model
                else if(param .eq. 'B0') then
                   read(line(idx+1:len(line)),*) spray%B0
                else if(param .eq. 'B1') then
@@ -146,6 +154,10 @@ contains
                   read(line(idx+1:len(line)),*) spray%turb_model
                else if(param .eq. 'Combustion model') then
                   read(line(idx+1:len(line)),*) spray%combustion_model
+               else if(param .eq. 'Flamelet interval') then
+                  read(line(idx+1:len(line)),*) spray%flm_int
+               else if(param .eq. 'Number of flamelets') then
+                  read(line(idx+1:len(line)),*) spray%nflamelet
                else if(param .eq. 'Y_O2') then
                   read(line(idx+1:len(line)),*) spray%Y_O2
                else if(param .eq. 'Fixed Re') then
