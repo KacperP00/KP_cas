@@ -14,7 +14,7 @@ module spray_defs
      character(len=128), pointer :: inp_fname
 
      ! Number of grid points
-     integer, pointer :: Nz, nzo, step
+     integer, pointer :: Nz, nzo, step, nro
      integer, pointer :: kmin, kmax, kmino, kmaxo
 
      ! Numerics
@@ -35,8 +35,8 @@ module spray_defs
      integer, pointer :: num_noz     
 
      ! Flow variables
-     real(WP), dimension(:), pointer :: z, rho, Y_l, Y_v, Y_a, Y_g, u_l, u_g, d2, dm, d3, dvar, Td, b, Tg, &
-                                        k_g, eps_g, mu_t_g, zmix_g, zvar_g, chi_g, chi_g_stl
+     real(WP), dimension(:), pointer :: z, rho, Y_l, Y_v, Y_a, Y_g, u_l, u_g, d2, dm, d3, dvar, Td, b, Tg, Tv, &
+                                        k_g, eps_g, mu_t_g, zmix_g, zvar_g, chi_g, chi_g_stl, b_old
 
      ! Source terms
      real(WP), dimension(:), pointer :: omega_ent, omega_vap, omega_vapdm, omega_vapd2, omega_vapd3, omega_vapres, &
@@ -98,7 +98,7 @@ module spray_defs
      integer, pointer :: nd
      real(WP), pointer :: init_dm, init_d2, init_d3, init_dvar, d10, d20, d30, dgf
      real(WP), dimension(:), pointer :: h
-     real(WP), dimension(:,:), pointer :: di, dsd, CD, Red, Shd, Nud, dsdlam
+     real(WP), dimension(:,:), pointer :: di, dsd, CD, Red, Shd, Nud, dsdlam, Tdi
      integer, dimension(:), pointer :: dsd_type
      integer, pointer :: skip_d2, skip_d3
 
@@ -120,15 +120,25 @@ module spray_defs
      integer, pointer :: skip_turb
      real(WP), pointer :: c_mu, c_eps1, c_eps2, c_zvar
      real(WP), dimension(:), pointer :: c_k
+     character(len=128), pointer :: ck_type
+     real(WP) :: ck_val = -9999.0_WP
 
      ! Combustion model
      character(len=128), pointer :: combustion_model
      real(WP) :: C_chi = 1.0_WP, Y_O2 = 0.164215_WP, Zmix_st, flm_int=1.0E-04_WP
-     real(WP), dimension(:), pointer :: zz=>null(), bpdf=>null()
-     real(WP), dimension(:,:), pointer :: Sc=>null(), Wt=>null()
+     real(WP), dimension(:), pointer :: zz=>null(), bpdf=>null(), alpha=>null(), MassPDF=>null()
+     real(WP), dimension(:), pointer :: Tf=>null(), SootNumDen=>null(), SootVolume=>null(), SootMass=>null()
+     real(WP), dimension(:,:), pointer :: Sc=>null(), Wt=>null(), Yspec=>null()
      type(srif_t), pointer :: first_rif=>null()
      integer :: nflamelet = -9999
-     
+     ! 2D profiles of Zmix and Zvar
+     real(WP), dimension(:,:), pointer :: Zmix2D=>null(), Zvar2D=>null(), r=>null(), rho2D=>null(), rho_g2D=>null(), gVF2D=>null()
+     real(WP), dimension(:,:), pointer :: Tf2D=>null(), SootNumDen2D=>null(), SootVolume2D=>null(), SootMass2D=>null()
+     real(WP), dimension(:,:,:), pointer :: Yspec2D=>null()
+     real(WP), dimension(:), pointer :: xi=>null()
+     logical :: twoD = .false.
+     real(WP) :: TotSootMass
+
      ! Solver
      type(solver_t), pointer :: solver
 
@@ -201,6 +211,8 @@ module spray_defs
      integer, dimension(:), allocatable   :: iprog_species
      real(WP), dimension(:), allocatable :: bpdf, Temp, sootM00, sootM10
      real(WP), dimension(:,:), allocatable :: Yspec
+     real(WP), dimension(:,:), allocatable :: Temp2D, sootM002D, sootM102D
+     real(WP), dimension(:,:,:), allocatable :: Yspec2D
      !real(WP) :: Temp, sootM00, sootM10
      ! flamelet dimension
      integer :: ndim
@@ -246,7 +258,7 @@ module spray_defs
      real(WP), dimension(:), pointer :: chi=>null()
      ! flamelet solution arrays
      ! temperature 1d
-     real(WP), dimension(:), pointer :: fT_1d => null()
+     real(WP), dimension(:), pointer :: fT_1d => null(), frrho_1d => null()
      ! all species 1d
      real(WP), dimension(:,:), pointer :: fY_1d => null()
      ! major species 1d
@@ -290,6 +302,7 @@ contains
 
     allocate(spray%Nz); spray%Nz = -9999
     allocate(spray%nzo); spray%nzo = -9999
+    allocate(spray%nro); spray%nro = -9999
     allocate(spray%step); spray%step = -9999
     allocate(spray%kmin); spray%kmin = -9999
     allocate(spray%kmax); spray%kmax = -9999
@@ -379,7 +392,8 @@ contains
 
     allocate(spray%skip_turb); spray%skip_turb = -9999
     allocate(spray%skip_d2); spray%skip_d2 = -9999
-    allocate(spray%skip_d3); spray%skip_d3 = -9999    
+    allocate(spray%skip_d3); spray%skip_d3 = -9999
+    allocate(spray%ck_type); spray%ck_type = 'Dynamic'
 
     allocate(spray%R_gas); spray%R_gas = -9999.0_WP
 
@@ -504,6 +518,7 @@ contains
     allocate(spray%dsd_type(spray%nzo)); spray%dsd_type = -9999
     allocate(spray%Td(spray%nzo)); spray%Td = -9999.0_WP
     allocate(spray%Tg(spray%nzo)); spray%Tg = -9999.0_WP
+    allocate(spray%Tv(spray%nzo)); spray%Tv = -9999.0_WP
     allocate(spray%c_k(spray%nzo)); spray%c_k = -9999.0_WP
     allocate(spray%k_g(spray%nzo)); spray%k_g = -9999.0_WP
     allocate(spray%eps_g(spray%nzo)); spray%eps_g = -9999.0_WP
@@ -513,8 +528,11 @@ contains
     allocate(spray%chi_g(spray%nzo)); spray%chi_g = -9999.0_WP
     allocate(spray%chi_g_stl(spray%nzo)); spray%chi_g_stl = -9999.0_WP
     allocate(spray%b(spray%nzo)); spray%b = -9999.0_WP
+    allocate(spray%b_old(spray%nzo)); spray%b_old = -9999.0_WP
+    allocate(spray%alpha(spray%nzo)); spray%alpha = -9999.0_WP
 
     allocate(spray%di(spray%nd,spray%nzo)); spray%di = -9999.0_WP
+    !allocate(spray%Tdi(spray%nd,spray%nzo)); spray%Tdi = -9999.0_WP
     allocate(spray%dsd(spray%nd,spray%nzo)); spray%dsd = -9999.0_WP
     allocate(spray%h(spray%nzo)); spray%h = -9999.0_WP
     allocate(spray%CD(spray%nd,spray%nzo)); spray%CD = -9999.0_WP
@@ -523,6 +541,16 @@ contains
     allocate(spray%Nud(spray%nd,spray%nzo)); spray%Nud = -9999.0_WP
  
     allocate(spray%dsdlam(4,spray%nzo)); spray%dsdlam = -9999.0_WP
+    
+    if(spray%twoD) then
+       allocate(spray%Zmix2D(spray%nzo,spray%nro+1)); spray%Zmix2D = -9999.0_WP
+       allocate(spray%Zvar2D(spray%nzo,spray%nro+1)); spray%Zvar2D = -9999.0_WP
+       allocate(spray%r(spray%nzo,spray%nro+1)); spray%r = -9999.0_WP
+       allocate(spray%rho2D(spray%nzo,spray%nro+1)); spray%rho2D = -9999.0_WP
+       allocate(spray%rho_g2D(spray%nzo,spray%nro+1)); spray%rho_g2D = -9999.0_WP
+       allocate(spray%gVF2D(spray%nzo,spray%nro+1)); spray%gVF2D = -9999.0_WP
+       allocate(spray%xi(spray%nro+1)); spray%xi = -9999.0_WP
+    end if
 
     call allocate_solver(spray%solver,spray%nzo)
 
@@ -557,11 +585,16 @@ contains
        next => current%next
        deallocate( current%mduc)
        deallocate( current%Yspec )
+       deallocate( current%Yspec2D )
        deallocate( current%species )
        deallocate( current%bpdf )
        deallocate( current%Temp )
+       deallocate( current%Temp2D )
        if(associated(current%fS_1d)) deallocate( current%sootM00 )
+       if(associated(current%fS_1d)) deallocate( current%sootM002D )
        if(associated(current%fS_1d)) deallocate( current%sootM10 )
+       if(associated(current%fS_1d)) deallocate( current%sootM102D )
+       if(associated(current%fS_1d)) deallocate( current%frrho_1d )
        deallocate( current%prog_species )
        deallocate( current%iprog_species )
        deallocate( current%fY_1d )
@@ -583,7 +616,7 @@ contains
 
     deallocate(spray%inp_fname)
 
-    deallocate(spray%Nz,spray%nzo,spray%step,spray%kmin,spray%kmax,spray%kmino,spray%kmaxo)
+    deallocate(spray%Nz,spray%nzo,spray%nro,spray%step,spray%kmin,spray%kmax,spray%kmino,spray%kmaxo)
 
     deallocate(spray%z,spray%Lz,spray%dz)
 
@@ -604,9 +637,10 @@ contains
     deallocate(spray%rho,spray%Y_l,spray%Y_v,spray%Y_a, spray%Y_g, &
                spray%u_l,spray%u_g, &
                spray%d3,spray%d2,spray%dm,spray%dvar, &
-               spray%Td,spray%b,spray%Tg, &
+               spray%Td,spray%b, spray%b_old, spray%Tg, spray%Tv, &
                spray%k_g,spray%eps_g,spray%mu_t_g, &
-               spray%zmix_g, spray%zvar_g, spray%chi_g, spray%chi_g_stl)
+               spray%zmix_g, spray%zvar_g, spray%chi_g, spray%chi_g_stl, &
+               spray%alpha)
 
     deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l, spray%lambda_l,spray%C_l, &
                spray%rho_l_loc, spray%sigma_loc, spray%visc_l_loc, spray%lambda_l_loc, &
@@ -649,20 +683,30 @@ contains
 
     deallocate(spray%init_dm, spray%init_d2, spray%init_d3, spray%init_dvar, spray%dgf)
 
-    deallocate(spray%skip_turb, spray%skip_d2, spray%skip_d3)
+    deallocate(spray%skip_turb, spray%skip_d2, spray%skip_d3, spray%ck_type)
 
     deallocate(spray%dsd, spray%dsd_type, spray%CD, spray%Red, spray%Shd, spray%Nud, spray%dsdlam)
 
-    deallocate(spray%di,spray%h)
+    deallocate(spray%di,spray%h)!,spray%Tdi)
 
     deallocate(spray%R_gas)
 
     deallocate(spray%c_k, spray%c_mu, spray%c_eps1, spray%c_eps2, spray%c_zvar)
 
 #ifdef MDUC_MPI
-    deallocate(spray%combustion_model, spray%zz, spray%bpdf)
+    deallocate(spray%combustion_model, spray%zz, spray%bpdf, spray%MassPDF)
+    deallocate(spray%Tf, spray%SootNumDen, spray%SootVolume, spray%SootMass, spray%Yspec)
+
+    if(spray%twoD) then
+       deallocate(spray%Tf2D, spray%SootNumDen2D, spray%SootVolume2D, spray%SootMass2D, spray%Yspec2D)
+    end if
+
     call list_destroy(spray%first_rif)
 #endif
+
+    if(spray%twoD) then
+       deallocate(spray%Zmix2D, spray%Zvar2D, spray%xi, spray%r, spray%rho2D, spray%rho_g2D, spray%gVF2D)
+    end if
 
     if (associated(spray%Sc)) then
        deallocate(spray%Sc)

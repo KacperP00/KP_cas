@@ -872,6 +872,19 @@ real(WP) function eqn100(pc,T,A,B,C,D,E)
 
 end function eqn100
 
+! This is integral of equation 100 over temperature T:[0,T]
+! To get this equation number, just add 1000 to original equation
+real(WP) function eqn1100(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn1100 = A*T + (B/2.0_WP)*T**2 + (C/3.0_WP)*T**3 + (D/4.0_WP)*T**4 + (E/5.0_WP)*T**5
+
+end function eqn1100
+
 real(WP) function eqn101(pc,T,A,B,C,D,E)
   implicit none
   ! --------------------------------------------
@@ -882,6 +895,21 @@ real(WP) function eqn101(pc,T,A,B,C,D,E)
   eqn101 = exp(A + B/T + C*log(T) + D*(T**E))
 
 end function eqn101
+
+! This is integral of equation 100 over temperature T:[0,T]
+! To get this equation number, just add 1000 to original equation
+! TODO
+real(WP) function eqn1101(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn1101 = exp(A + B/T + C*log(T) + D*(T**E))
+  call abort("Error! Integral eqn1101 not implemented...")
+
+end function eqn1101
 
 real(WP) function eqn102(pc,T,A,B,C,D,E)
   implicit none
@@ -894,6 +922,21 @@ real(WP) function eqn102(pc,T,A,B,C,D,E)
 
 end function eqn102
 
+! This is integral of equation 102 over temperature T:[0,T]
+! To get this equation number, just add 1000 to original equation
+! TODO
+real(WP) function eqn1102(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn1102 = (A * T**B) / (1 + C/T + D/(T**2))
+  call abort("Error! Integral eqn1102 not implemented...")
+
+end function eqn1102
+
 real(WP) function eqn104(pc,T,A,B,C,D,E)
   implicit none
   ! --------------------------------------------
@@ -905,6 +948,21 @@ real(WP) function eqn104(pc,T,A,B,C,D,E)
 
 end function eqn104
 
+! This is integral of equation 104 over temperature T:[0,T]
+! To get this equation number, just add 1000 to original equation
+! TODO
+real(WP) function eqn1104(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn1104 = A + (B/T) + (C/((T)**3)) + (D/((T)**8)) + (E/((T)**9))
+  call abort("Error! Integral eqn1101 not implemented...")
+
+end function eqn1104
+
 real(WP) function eqn105(pc,T,A,B,C,D,E)
   implicit none
   ! --------------------------------------------
@@ -915,6 +973,21 @@ real(WP) function eqn105(pc,T,A,B,C,D,E)
   eqn105 = A/(B**(1+(1-T/C)**D))
 
 end function eqn105
+
+! This is integral of equation 105 over temperature T:[0,T]
+! To get this equation number, just add 1000 to original equation
+! TODO
+real(WP) function eqn1105(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn1105 = A/(B**(1+(1-T/C)**D))
+  call abort("Error! Integral eqn1101 not implemented...")
+
+end function eqn1105
 
 real(WP) function eqn106(pc,T,A,B,C,D,E)
   implicit none
@@ -930,6 +1003,22 @@ real(WP) function eqn106(pc,T,A,B,C,D,E)
 
 end function eqn106
 
+! This is integral of equation 106 over temperature T:[0,T]
+! To get this equation number, just add 1000 to original equation
+! TODO
+real(WP) function eqn1106(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+  real(WP) :: Tred
+  Tred = T / pc%Tcrit;
+  eqn1106 = A * (1 - Tred)**(B + C*Tred + D*Tred**2 + E*Tred**3)
+  call abort("Error! Integral eqn1106 not implemented...")
+
+end function eqn1106
+
 real(WP) function eqn107(pc,T,A,B,C,D,E)
   implicit none
   ! --------------------------------------------
@@ -943,6 +1032,25 @@ real(WP) function eqn107(pc,T,A,B,C,D,E)
   eqn107 = A + B*(n/sinh(n))**2 + D*(m/cosh(m))**2;
 
 end function eqn107
+
+! This is integral of equation 106 over temperature T:[0,T]
+! To get this equation number, just add 1000 to original equation
+! TODO
+real(WP) function eqn1107(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  real(WP) :: n, m
+
+  n = C/T
+  m = E/T
+  eqn1107 = A + B*(n/sinh(n))**2 + D*(m/cosh(m))**2;
+  call abort("Error! Integral eqn1107 not implemented...")
+
+end function eqn1107
 
 real(WP) function eqn114(pc,T,A,B,C,D,E)
   implicit none

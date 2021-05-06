@@ -11,7 +11,8 @@ module combust_mduc_interface
 
   ! public members
   ! =================================
-  public :: mduc_init,mduc_init_flow,mduc_set_data_dir,mduc_set_pressure
+
+  public :: mduc_init,mduc_init_flow,mduc_set_data_dir,mduc_set_pressure, mduc_set_file_prefix
 
   public :: mduc_get_time,mduc_update_time,mduc_get_grid_size,mduc_get_grid_1D,mduc_get_grid_2D, &
        mduc_grid_locate,mduc_get_point_H,mduc_get_point_T,mduc_get_point_Y, mduc_is_parallel
@@ -124,6 +125,29 @@ contains
     return
   end subroutine mduc_set_data_dir
 
+  ! --------------------------------------------- !
+  !> @brief define path for flamelet data files   !
+  ! --------------------------------------------- !
+  subroutine mduc_set_file_prefix(mduc,prefix)
+    implicit none
+
+    type(mduc_t),pointer, intent(inout) :: mduc
+    character(len=*), intent(in) :: prefix
+    ! ---------------------------------
+    character(len=str_medium) :: cprefix
+    ! ---------------------------------
+
+#ifdef MDUC  
+
+    call add_end_char(prefix,cprefix)
+
+    call MDUCsetFilePrefix(cprefix, mduc%mem)
+
+#endif
+
+    return
+  end subroutine mduc_set_file_prefix
+
   ! ========================================================== !
   !> @brief initialize mduc flow quantities
   ! ========================================================== !
@@ -231,7 +255,7 @@ contains
   !> @brief advance solution in 1d (inert or reactive)
   ! -------------------------------------------------- !
 #ifdef SOOT
-  subroutine mduc_advance_flamelet_1d(mduc,tstep,pavg,var_min,var_max,chi,inert,reset,fY,fT,fS)
+  subroutine mduc_advance_flamelet_1d(mduc,tstep,pavg,var_min,var_max,chi,inert,reset,fY,fT,frrho,fS)
     implicit none
 
     type(mduc_t), intent(in) :: mduc
@@ -240,7 +264,7 @@ contains
     integer, intent(in) :: inert
     logical, intent(in) :: reset
     real(WP), dimension(:,:), intent(inout) :: fY, fS
-    real(WP), dimension(:), intent(in) :: fT
+    real(WP), dimension(:), intent(in) :: fT, frrho
     ! ---------------------------------
 
     integer :: nS = 4
@@ -252,7 +276,7 @@ contains
 
     call MDUCflamelet1D(tstep,pavg,var_min,var_max,chi,inert,fY,fT,mduc%mem)
 
-    call MDUCgetsootsolution1D(nS, fS, mduc%mem)
+    call MDUCgetsootsolution1D(nS, fS, frrho, mduc%mem)
 #endif
 
     return

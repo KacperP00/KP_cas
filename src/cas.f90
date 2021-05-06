@@ -78,7 +78,11 @@ program cas
 
 #ifdef MDUC_MPI
   call MPI_barrier(MPI_COMM_WORLD,ierr)
+!!$  if(spray%twoD) then
+!!$     call spray_combust_poststep_mrif_2D(spray)
+!!$  else
   call spray_combust_poststep_mrif(spray)
+!!$  end if
 
   end if
 #endif

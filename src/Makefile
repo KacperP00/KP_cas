@@ -3,8 +3,10 @@ BINDIR = ../bin
 MODDIR = ../mod
 OBJDIR = ../obj
 
-
 #withMDUC = YES
+
+#Only for ndodecane
+#withSOOT = YES
 
 ifeq ($(withMDUC),YES)
 
@@ -12,12 +14,36 @@ ifeq ($(withMDUC),YES)
 FC = mpiifort
 
 # LINK MDUC LIBRARY
+ifeq ($(withSOOT),YES)
+MDUC_DIR = /home/ad738098/codes/mduc_soot
+MDUC_INC = -I$(MDUC_DIR)/include
+#MDUC_LIB = -L$(MDUC_DIR)/lib -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_ndo_soot -lmduc -lmduc_chem -lmduc_mechanism_LIB = -L$(MDUC_DIR)/lib -lmduc -lmduc_chem -lmduc_mechanism
+MDUC_LIB = -L$(MDUC_DIR)/lib -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_ndo_pah_nox -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_ndo_pah_nox -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_dnbe_soot -lmduc -lmduc_chem -lmduc_mechanism
+else
 MDUC_DIR = /home/ad738098/codes/mduc
 MDUC_INC = -I$(MDUC_DIR)/include
-MDUC_LIB = -L$(MDUC_DIR)/lib_ome0to5 -lmduc -lmduc_chem -lmduc_mechanism
+MDUC_LIB = -L$(MDUC_DIR)/lib_ndodecaneCai -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_ndodecaneCaiBig -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_ndo_soot -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_ome0to5 -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_dinbutylether -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_1octanol -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_diethoxymethane -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_1_3_dioxolane -lmduc -lmduc_chem -lmduc_mechanism
+
+#MDUC_LIB = -L$(MDUC_DIR)/lib_nheptane_cai -lmduc -lmduc_chem -lmduc_mechanism
+endif
 
 # LINK SUNDIALS
+ifeq ($(withSOOT),YES)
+SDIAL = /home/itv/compile_centos7/lib/sundials/3.2.1_intel19.0_intelmpi_2018_mkl/Install_DIR
+else
 SDIAL = /home/itv/compile_centos7/lib/sundials/2.7.0_intel19.0_intelmpi_2018_mkl/Install_DIR
+endif
 #SDIAL = /home/ad738098/codes/sundials/2.7.0_intel19.0_intelmpi_2018_mkl/Install_DIR
 
 # set up Sundials library
@@ -41,7 +67,11 @@ SDIAL_LIB := -L$(SDIAL)/lib $(SDIAL_LINK) -Wl,-rpath,$(SDIAL)/lib
 INCFLAGS = $(MODDIR) $(MDUC_INC) $(SDIAL_INC)
 LDFLAGS = -mkl -limf -lm $(MDUC_LIB) $(SDIAL_LIB)
 
-MDUCFLAGS = -DMDUC_MPI -DMDUC -DSUNDIALS_FROM_2_7 -DAPPROXEXP3
+ifeq ($(withSOOT),YES)
+MDUCFLAGS = -DMDUC_MPI -DMDUC -DSOOT -DSUNDIALS_FROM_3_2 -DPREITER -DAPPROXEXP3 #-DINTEL
+else
+MDUCFLAGS = -DMDUC_MPI -DMDUC -DSUNDIALS_FROM_2_7 -DPREITER -DAPPROXEXP3 #-DINTEL
+endif
 
 else
 
@@ -86,9 +116,9 @@ CASOPT = cas_opt
 # objects
 ifeq ($(withMDUC),YES)
 F90FILES = precision.f90 math.f90 string.f90 \
-      pc_defs.f90 pc_database.f90 pc_func.f90 fpt_defs.f90 fpt_func.f90 combust_rif_mduc_defs.f90 combust_mduc.f90 \
-      rk_defs.f90 solver_defs.f90 spray_defs.f90 parser.f90 rk_func.f90 solver_func.f90 spray_combust.f90 spray_func.f90 \
-      cas.f90
+      pc_defs.f90 pc_database.f90 pc_func.f90 fpt_defs.f90 fpt_func.f90 \
+      rk_defs.f90 solver_defs.f90 spray_defs.f90 parser.f90 rk_func.f90 solver_func.f90 combust_rif_mduc_defs.f90 \
+      combust_mduc.f90 spray_combust.f90 monitor_memory.f90 spray_func.f90 cas.f90
 
 else
 F90FILES = precision.f90 math.f90 string.f90 \

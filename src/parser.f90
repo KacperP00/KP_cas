@@ -80,6 +80,8 @@ contains
                   read(line(idx+1:len(line)),*) spray%Nz
                else if(param .eq. 'Length') then
                   read(line(idx+1:len(line)),*) spray%Lz
+               else if(param .eq. 'Number of radial grid points') then
+                  read(line(idx+1:len(line)),*) spray%nro
                else if(param .eq. 'Maximum CFL') then
                   read(line(idx+1:len(line)),*) spray%MaxCFL
                else if(param .eq. 'Maximum time') then
@@ -152,12 +154,18 @@ contains
                   read(line(idx+1:len(line)),*) spray%outfreq
                else if(param .eq. 'Turbulence model') then
                   read(line(idx+1:len(line)),*) spray%turb_model
+               else if(param .eq. 'C_k type') then
+                  read(line(idx+1:len(line)),*) spray%ck_type
+               else if(param .eq. 'C_k') then
+                  read(line(idx+1:len(line)),*) spray%ck_val
                else if(param .eq. 'Combustion model') then
                   read(line(idx+1:len(line)),*) spray%combustion_model
                else if(param .eq. 'Flamelet interval') then
                   read(line(idx+1:len(line)),*) spray%flm_int
                else if(param .eq. 'Number of flamelets') then
                   read(line(idx+1:len(line)),*) spray%nflamelet
+               else if(param .eq. 'Use 2D profiles for convolution') then
+                  read(line(idx+1:len(line)),*) spray%twoD
                else if(param .eq. 'Y_O2') then
                   read(line(idx+1:len(line)),*) spray%Y_O2
                else if(param .eq. 'Fixed Re') then

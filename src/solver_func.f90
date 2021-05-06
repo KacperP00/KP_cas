@@ -1274,7 +1274,7 @@ contains
 
     ! ---------------------------------
     type(pc_t), pointer :: pc_l
-    real(WP), dimension(:,:), pointer :: W=>null(), Sc=>null()
+    real(WP), dimension(:,:), pointer :: W=>null(), Sc=>null(), Tdi=>null(), dsd=>null()
     real(WP), dimension(:), pointer :: rho=>null(), Y_l=>null(), Y_v=>null(), Y_a=>null(), Y_g=>null(), &
                                        u_l=>null(), u_g=>null(), d3=>null(), d2=>null(), dm=>null(), dvar=>null(), &
                                        Td=>null(), b=>null(), k_g=>null(), eps_g=>null(), zvar_g=>null(), &
@@ -1282,11 +1282,11 @@ contains
 
     real(WP), pointer :: DRv=>null(), DRa=>null()
     real(WP), dimension(spray%nzo) :: T_low, T_high
-    real(WP) :: nu, eps = 1.0E-16_WP
+    real(WP) :: nu, eps = 1.0E-16_WP, C_scale
     integer :: k, i
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
-    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar; Td => spray%Td; b => spray%b
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar; Td => spray%Td; Tdi => spray%Tdi; dsd => spray%dsd; b => spray%b
     k_g => spray%k_g; eps_g => spray%eps_g; zvar_g => spray%zvar_g; mu_t_g => spray%mu_t_g; chi_g => spray%chi_g
     DRv => spray%DRv; DRa => spray%DRa; DRg => spray%DRg
     W => spray%solver%W
@@ -1313,6 +1313,7 @@ contains
        Y_a(k) = max(0.0_WP,1.0_WP - Y_l(k) - Y_v(k))
        Y_g(k) = 1.0_WP - Y_l(k)
        rho(k) = 1.0_WP/(Y_l(k) + DRv*Y_v(k) + DRa*Y_a(k))
+       spray%b_old(k) = b(k)
        b(k) = max(0.5_WP,sqrt((W(1,k)+W(2,k)+W(7,k))/rho(k)))
 
        if(Y_l(k) > 1.0E-06_WP) then
@@ -1341,7 +1342,20 @@ contains
 
           T_high(k) = spray%T_sat(k)/spray%T_fuel
           Td(k) = max(T_low(k),min(T_high(k),W(9,k)/W(7,k)))
-
+          
+          ! Correct temperature of diameter classes with mean Temperature
+          C_scale = 1.0_WP
+          if(Td(k)>0.0_WP) then
+             C_scale = sum(Tdi(:,k)*dsd(:,k))/Td(k)
+          end if
+          if(C_scale > 0.0_WP) then
+             Tdi(:,k) = Tdi(:,k)/C_scale
+          else
+             Tdi(:,k) = Td(k)
+          end if
+          where(Tdi(:,k) < T_low(k)) Tdi(:,k) = T_low(k)
+          where(Tdi(:,k) > T_high(k)) Tdi(:,k) = T_high(k)
+          where(Tdi(:,k) /= Tdi(:,k)) Tdi(:,k) = Td(k)
        end if
 
        if(Y_l(k) <= 1e-06) then
@@ -1402,7 +1416,7 @@ contains
           do i=1,spray%nsc-1
              Sc(i,k) = max(0.0_WP,W(i+spray%neq,k)/(W(1,k)+W(2,k)+W(7,k)))
           end do
-          Sc(spray%nsc,k) = spray%Y_v(k) - sum(Sc(1:spray%nsc,k))
+          Sc(spray%nsc,k) = spray%Y_v(k) - sum(Sc(1:spray%nsc-1,k))
        end if
 
     end do
@@ -1417,8 +1431,10 @@ contains
     ! Local gas temperature adjusted by vapor temperature
     ! Warning: This approach results in jumps in gas and reference temperature, 
     ! which cause jumps in gaseous properties.
-    where(spray%Td > 0.0_WP) spray%Tg = (spray%Y_v*(spray%Td - spray%De*spray%CR*spray%LR) &
-                                      +  spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
+    !where(spray%Td > 0.0_WP) spray%Tg = (spray%Y_v*(spray%Td - spray%De*spray%CR*spray%LR) &
+    !                                  +  spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
+    where(spray%Td > 0.0_WP) spray%Tg = &
+         (spray%Y_v*spray%Tv(k) + spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
 
     !spray%mu_t_g = spray%c_mu*spray%k_g**2/spray%eps_g
     !spray%c_mu*sqrt(1.0_WP/spray%DRa/spray%DRg)*spray%k_g**2/spray%eps_g
@@ -1435,8 +1451,9 @@ contains
     if(spray%nsc > 0) then
        do i=1,spray%nsc
           spray%Wt(i,:) = spray%Sc(i,:)/spray%Y_v !(spray%stoic_coeff*spray%Sc(i,:)/spray%Y_g-spray%Y_O2*spray%Y_a/spray%Y_g+spray%Y_O2)/(spray%stoic_coeff+spray%Y_O2)/spray%Zmix_g
+          !spray%Wt(i,:) = (spray%stoic_coeff*spray%Sc(i,:)/spray%Y_g-spray%Y_O2*spray%Y_a/spray%Y_g/spray%nsc+spray%Y_O2/spray%nsc)/(spray%stoic_coeff+spray%Y_O2)/spray%Zmix_g
        end do
-       where(spray%Wt /= spray%Wt) spray%Wt = 0.0_WP
+       where(spray%Wt /= spray%Wt .or. spray%Wt < 0.0_WP) spray%Wt = 0.0_WP
     end if
 
     !spray%zmix_g = 12*12.0107_WP*spray%Y_v/spray%MW_f + 26*1.00794_WP*spray%Y_v/spray%MW_f & ! Fuel
