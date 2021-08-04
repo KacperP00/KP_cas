@@ -1434,12 +1434,13 @@ contains
     !where(spray%Td > 0.0_WP) spray%Tg = (spray%Y_v*(spray%Td - spray%De*spray%CR*spray%LR) &
     !                                  +  spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
     where(spray%Td > 0.0_WP) spray%Tg = &
-         (spray%Y_v*spray%Tv(k) + spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
+         (spray%Y_v*spray%Tv/spray%T_fuel + spray%Y_a*spray%T_a/spray%T_fuel)/spray%Y_g
 
     !spray%mu_t_g = spray%c_mu*spray%k_g**2/spray%eps_g
     !spray%c_mu*sqrt(1.0_WP/spray%DRa/spray%DRg)*spray%k_g**2/spray%eps_g
 
     !spray%Tg = spray%T_a/spray%T_fuel
+    !First cell is a BC
     spray%mu_t_g(spray%kmin) = 0.0_WP
     ! n-dodecane
     !nu = 3.475402137_WP
