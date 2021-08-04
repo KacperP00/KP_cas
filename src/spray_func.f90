@@ -34,7 +34,7 @@ contains
     integer, pointer :: kmin, kmax, kmino, kmaxo
     integer :: k, ierr
     real(WP) :: scal, Cm, Cvar, var, nu
-    real(WP), dimension(spray%kmino:spray%kmaxo) :: T_d
+    real(WP), dimension(:), pointer :: T_d
 
     kmin => spray%kmin; kmax => spray%kmax
     kmino => spray%kmino; kmaxo => spray%kmaxo
@@ -258,11 +258,18 @@ contains
     !spray%k_g = 1.0E-04_WP
     !spray%eps_g = 1.0E-010_WP
 
-    ! TEST
+    ! TEST: 
     !spray%mu_t_g = spray%c_mu*spray%rho*sqrt(spray%Y_a*spray%Y_g)*spray%k_g**2/spray%eps_g
     !spray%mu_t_g = spray%c_mu*sqrt(1.0/spray%DRa/spray%DRa)*spray%k_g**2/spray%eps_g
     !spray%mu_t_g = spray%c_mu/spray%DRg*spray%k_g**2/spray%eps_g
+
+    !Average density according to Tamanini 1981
     spray%mu_t_g = spray%c_mu*sqrt(spray%rho_ra*spray%rho_l/spray%DRg)*spray%k_g**2/spray%eps_g*(0.5_WP*spray%U_inj**2*spray%tau)
+    
+    !Average density according to derivation in CnF2021 paper 
+    !-> Tests didn't show any difference compared to Tamanini's suggestion for average density
+    !spray%mu_t_g = spray%c_mu*spray%rho*spray%rho_l*spray%k_g**2/spray%eps_g*(0.5_WP*spray%U_inj**2*spray%tau)
+
     where (spray%eps_g == 0.0_WP) spray%mu_t_g = 0.0_WP
 
     spray%chi_g = spray%c_zvar*spray%eps_g/spray%k_g*spray%zvar_g
@@ -296,9 +303,11 @@ contains
     call compute_varNonDparams(spray)
 
     ! Get fuel vapor temperature at liquid temperature
+    allocate(T_d(spray%nzo)); T_d = -9999.0_WP
     T_d = spray%Td*spray%T_fuel
     call getVaporFuelTemperature(spray,T_d)
-    
+    deallocate(T_d)
+
     ! Initialize source terms to zeros
     spray%omega_ent  = 0.0_WP; spray%omega_vap  = 0.0_WP; spray%omega_vapdm  = 0.0_WP; 
     spray%omega_vapd2  = 0.0_WP; spray%omega_vapd3  = 0.0_WP; spray%f_drag  = 0.0_WP;
@@ -3935,6 +3944,10 @@ contains
         integral = 2.0_WP*sum(rho*xi*h)
         ! R from Musculus et al. (2009) is not the same as could be computed from jet half-width
         RR = spray%b(k)*1.545_WP !spray%z(k)*spray%beta*1.545_WP
+        
+        ! Testing: NOT FINAL
+        !RR = spray%b(k)*2.67*(1.0/spray%DRa)**0.16_WP
+
         bR2 = (spray%b(k)/RR)**2!(1.0_WP-sqrt(0.5_WP))**(2.0_WP/alpha(k))
         ! Since there will be numerical error in the evaluation of integral, 
         ! it makes sense to use rho_hat computed from the profile here
@@ -4636,18 +4649,18 @@ contains
 
        open(unit=100,file=trim(fname),form="formatted",status="unknown",action="write")
 
-       rowfmth = '(A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A)'
+       rowfmth = '(A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A)'
        rowfmt = "(ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
                   ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, &
                   ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, I2, ES15.5E3, ES15.5E3, &
-                  ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
+                  ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3, ES15.5E3)"
 
-       write(100,FMT=rowfmth) '# z<1> ', 'rho<2> ', 'Y_l<3> ', 'Y_v<4> ', 'Y_a<5> ', 'Y_g<6> ', 'u_l<7> ', 'u_g<8> ', 'dm<9> ', 'dvar<10> ', 'd2<11> ', 'd3<12> ', 'Td<13> ', 'Tg<14> ', 'b<15> ', 'k_g<16> ', 'eps_g<17> ', 'mu_t_g<18> ', 'zvar_g<19> ', 'zmix_g<20> ', 'chi_g<21> ', 'chi_g_stl<22> ', 'dsd_type<23> ', 'Pr_g<24> ', 'Sc_g<25> ', 'c_k<26> ', 'VRg<27> ', 'VRtg<28> ', 'SR<29> ', 'DRl<30> ', 'Y_ref<31>', 'alpha<32>'
+       write(100,FMT=rowfmth) '# z<1> ', 'rho<2> ', 'Y_l<3> ', 'Y_v<4> ', 'Y_a<5> ', 'Y_g<6> ', 'u_l<7> ', 'u_g<8> ', 'dm<9> ', 'dvar<10> ', 'd2<11> ', 'd3<12> ', 'Td<13> ', 'Tg<14> ', 'b<15> ', 'k_g<16> ', 'eps_g<17> ', 'mu_t_g<18> ', 'zvar_g<19> ', 'zmix_g<20> ', 'chi_g<21> ', 'chi_g_stl<22> ', 'dsd_type<23> ', 'Pr_g<24> ', 'Sc_g<25> ', 'c_k<26> ', 'VRg<27> ', 'VRtg<28> ', 'SR<29> ', 'DRl<30> ', 'Y_ref<31>', 'alpha<32>', 'T_v<33>'
        do k = kmin,kmax
           write(100,FMT=rowfmt) spray%z(k), spray%rho(k), spray%Y_l(k), spray%Y_v(k), spray%Y_a(k), &
                spray%Y_g(k), spray%u_l(k), spray%u_g(k), spray%dm(k), spray%dvar(k), spray%d2(k), &
                spray%d3(k), spray%Td(k), spray%Tg(k), spray%b(k), spray%k_g(k), &
-               spray%eps_g(k), spray%mu_t_g(k), spray%zvar_g(k), spray%zmix_g(k), spray%chi_g(k), spray%chi_g_stl(k), spray%dsd_type(k), spray%Pr_g(k), spray%Sc_g(k),spray%c_k(k),spray%VRg(k),spray%VRtg(k),spray%SR(k),spray%DRl(k),spray%Y_ref(k),spray%alpha(k)
+               spray%eps_g(k), spray%mu_t_g(k), spray%zvar_g(k), spray%zmix_g(k), spray%chi_g(k), spray%chi_g_stl(k), spray%dsd_type(k), spray%Pr_g(k), spray%Sc_g(k),spray%c_k(k),spray%VRg(k),spray%VRtg(k),spray%SR(k),spray%DRl(k),spray%Y_ref(k),spray%alpha(k),spray%Tv(k)
        end do
 
        close(unit=100)
