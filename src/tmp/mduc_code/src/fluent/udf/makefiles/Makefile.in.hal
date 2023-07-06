@@ -1,0 +1,32 @@
+# external libraries
+MDUC_DIR=/home/doe1pal/mduc_fluent_check
+SDIAL_DIR=/gpfs3/applications/sundials/2.4.0/openmpi/1.4.4/gnu/4.1.2
+MDUC_UDF_DEFINE= -DMDUC_SPRAY -DMDUC_MPI #-DMDUC_MPI_WRITE
+
+# set Fluent release information
+FLUENT_DIR = $(patsubst %/fluent/bin/,%,$(dir $(shell which fluent)))
+
+FLUENT_VERS = $(notdir $(FLUENT_DIR))
+ifeq (${FLUENT_VERS},v140)
+	FLUENT_INC= /gpfs3/applications/ansys/14.0/v140/fluent
+	RELEASE= 14.0.0
+	MPI_DIR= $(dir $(FLUENT_INC))commonfiles/MPI/Platform/8.1.2/linx64
+	SDIAL_DIR=/home/doe1pal/libs/sundials/2.4.0/pcmpi/8.1.2/gnu/4.1.2
+else ifeq (${FLUENT_VERS},v145)
+	FLUENT_INC= /gpfs3/applications/ansys/14.5/v145/fluent
+	RELEASE= 14.5.0
+else ifeq (${FLUENT_VERS},v150)
+	FLUENT_INC= /gpfs3/applications/ansys/15.0/v150/fluent
+	RELEASE= 15.0.0
+	SDIAL_DIR=/home/doe1pal/libs/sundials/2.4.0/pcmpi/9.1/gnu/4.1.2
+	MPI_DIR= $(dir $(FLUENT_INC))commonfiles/MPI/Platform/9.1/linx64
+else ifeq (${FLUENT_VERS},v120)
+	FLUENT_INC= /gpfs3/applications/ansys/12.1/v121/fluent
+	RELEASE= 12.1.2
+else
+	FLUENT_INC= /gpfs3/applications/ansys/13.0/v130/fluent
+	RELEASE= 13.0.0
+endif
+
+# set the compiler
+CC= $(MPI_DIR)/bin/mpicc

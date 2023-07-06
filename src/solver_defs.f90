@@ -33,7 +33,7 @@ module solver_defs
                                         S2_m, f_p, f_m, f_t
 
      ! Number of spray equations
-     integer :: neq = 13
+     integer :: neq = 14
 
      ! Number of additional scalars
      integer :: nsc = 0

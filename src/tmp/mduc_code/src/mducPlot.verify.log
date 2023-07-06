@@ -1,0 +1,6 @@
+compiling mechanism from directory mechanism/
+mpiicc -fp-model precise -DSUNDIALS_FROM_3_2 -DFM_VS_MDUC -DFMSTICK -DCOUNTERFLOW -DPREITER -DACCESS_MPI -I/work/md777659/spray_model_development/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/include -O0 -g -traceback -c plot/mducPlot.c -o /work/md777659/spray_model_development/codes/mduc_code/obj/mducPlot.o
+mpiicc -fp-model precise -DSUNDIALS_FROM_3_2 -DFM_VS_MDUC -DFMSTICK -DCOUNTERFLOW -DPREITER -DACCESS_MPI -I/work/md777659/spray_model_development/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/include -O0 -g -traceback -c plot/gnuplotScript.c -o /work/md777659/spray_model_development/codes/mduc_code/obj/gnuplotScript.o
+mpiicc /work/md777659/spray_model_development/codes/mduc_code/obj/mducPlot.o /work/md777659/spray_model_development/codes/mduc_code/obj/gnuplotScript.o -o /work/md777659/spray_model_development/codes/mduc_code/bin/mducPlot \
+-L/work/md777659/spray_model_development/codes/mduc_code/lib -lmduc -limf -lm -L/work/md777659/spray_model_development/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/lib -lsundials_cvodes -lsundials_ida -lsundials_kinsol -lsundials_nvecserial -lsundials_nvecparallel -Wl,-rpath,/work/md777659/spray_model_development/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/lib
+=== making in debug mode

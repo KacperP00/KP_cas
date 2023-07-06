@@ -1,0 +1,135 @@
+#ifndef __MAGICFILE__
+#define __MAGICFILE__
+#define MECHANISM "nHeptane.short"
+
+typedef enum SpeciesLabel {
+
+	/* Computed species s.. */
+	/* Steady-state species ss.. */
+	sN2 = 0,
+	sO2 = 1,
+	sH = 2,
+	sOH = 3,
+	sO = 4,
+	sH2 = 5,
+	sH2O = 6,
+	sHO2 = 7,
+	sH2O2 = 8,
+	sCO = 9,
+	sCO2 = 10,
+	sCH = 11,
+	sCHO = 12,
+	sCH2OH = 13,
+	s3XCH2 = 14,
+	sCH3 = 15,
+	sCH2O = 16,
+	sCH4 = 17,
+	sC2H6 = 18,
+	sC2H2 = 19,
+	sC2H3 = 20,
+	sC2H4 = 21,
+	sC2H5 = 22,
+	sC3H6 = 23,
+	sNXC3H7 = 24,
+	sPXC4H9 = 25,
+	s1XC5H11 = 26,
+	s1XC7H15 = 27,
+	s2XC7H15 = 28,
+	sNXC7H16 = 29,
+	s1C7H15O2XC7H15O2 = 30,
+	s1HEOOHX2XC7H15O2 = 31,
+	sOOC7OOHXO2C7H14OOH = 32,
+	sHOOC7OOHXHOOC7H13OOH = 33,
+	sOC7OOHXOC7H13OOH = 34,
+	sOC7H13O = 35,
+	sEnd
+} SpeciesLabel;
+
+
+typedef enum ReactionLabel {
+	/* Reactions */
+	r1f = 0,
+	r1b = 1,
+	r3f = 2,
+	r3b = 3,
+	r4f = 4,
+	r4b = 5,
+	r6f = 6,
+	r6b = 7,
+	r5 = 8,
+	r9 = 9,
+	r10 = 10,
+	r11 = 11,
+	r12f = 12,
+	r12b = 13,
+	r13f = 14,
+	r13b = 15,
+	rn26 = 16,
+	rn27 = 17,
+	r14 = 18,
+	r14p = 19,
+	r14pp = 20,
+	rn35 = 21,
+	r15 = 22,
+	rn44 = 23,
+	r16 = 24,
+	r17 = 25,
+	r18 = 26,
+	r145 = 27,
+	rn34 = 28,
+	rn36f = 29,
+	rn36b = 30,
+	r62 = 31,
+	r69 = 32,
+	rn86 = 33,
+	r21 = 34,
+	r22 = 35,
+	r23 = 36,
+	r24 = 37,
+	r25 = 38,
+	rn131 = 39,
+	r26 = 40,
+	r149 = 41,
+	rn164 = 42,
+	r27 = 43,
+	r28 = 44,
+	r206f = 45,
+	r206b = 46,
+	r29 = 47,
+	r32 = 48,
+	r34 = 49,
+	r35 = 50,
+	r445 = 51,
+	r36 = 52,
+	r669 = 53,
+	r37 = 54,
+	r685 = 55,
+	r38 = 56,
+	r693 = 57,
+	r39 = 58,
+	r709 = 59,
+	r40 = 60,
+	rl21f = 61,
+	rl21b = 62,
+	rl22f = 63,
+	rl22b = 64,
+	r42f = 65,
+	r42b = 66,
+	r43 = 67,
+	r44 = 68,
+	r45 = 69,
+	r46 = 70,
+	r47 = 71,
+	/* PAHReactions */
+	/* SootReactions */
+	rEnd
+} ReactionLabel;
+
+
+typedef enum TirdBodyLabel {
+
+	mM1 = 0,
+	mEnd
+} TirdBodyLabel;
+
+#endif

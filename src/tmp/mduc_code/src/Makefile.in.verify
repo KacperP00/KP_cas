@@ -1,0 +1,27 @@
+# compile options
+#CHEMMECH = NXC12H26
+CHEMMECH = NXC12H26_v3
+MDUC_ACCESS = ACCESS_MPI
+
+# Compiler and archiver
+CC   = mpiicc
+CXX  = mpiicpc
+F90  = mpiifort
+F77  = mpiifort
+LD   = mpiicc
+AR  = xiar rcv
+RL  = echo
+
+# External libraries
+SDIAL = 
+
+# Compiler flags
+CFLAGS   = -fp-model precise -DSUNDIALS_FROM_3_2 -DFM_VS_MDUC -DFMSTICK -DCOUNTERFLOW -DPREITER
+F90FLAGS = -fpp
+F77FLAGS =
+LDFLAGS  = -limf -lm
+INCFLAGS = 
+DBGFLAGS = -O0 -g -traceback
+OPTFLAGS = -O3 -ip
+SOFLAGS  = -fPIC -shared -g
+

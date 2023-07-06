@@ -50,8 +50,12 @@ contains
                   read(line(idx+1:len(line)),*) spray%FPTname
                else if(param .eq. 'Fuel molecular weight') then
                   read(line(idx+1:len(line)),*) spray%MW_f
+               else if(param .eq. 'Fuel molecular volume') then
+                  read(line(idx+1:len(line)),*) spray%Mvol
                else if(param .eq. 'Use nozzle flow model') then
                   read(line(idx+1:len(line)),*) spray%noz_flow_model
+               else if(param .eq. 'Flash boiling') then
+                  read(line(idx+1:len(line)),*) spray%flash_boiling
                else if(param .eq. 'Injection pressure') then
                   read(line(idx+1:len(line)),*) spray%P_inj
                else if(param .eq. 'Nozzle exit diameter') then
@@ -114,6 +118,10 @@ contains
                   read(line(idx+1:len(line)),*) spray%B1
                else if(param .eq. 'C3') then
                   read(line(idx+1:len(line)),*) spray%C3
+               else if(param .eq. 'D0') then
+                  read(line(idx+1:len(line)),*) spray%D0
+               else if(param .eq. 'D1') then
+                  read(line(idx+1:len(line)),*) spray%D1
                else if(param .eq. 'Crel') then
                   read(line(idx+1:len(line)),*) spray%Crel
                else if(param .eq. 'Cevap') then
@@ -138,6 +146,8 @@ contains
                   read(line(idx+1:len(line)),*) spray%beta
                else if(param .eq. 'ROI profile') then
                   read(line(idx+1:len(line)),*) spray%roi_file
+               else if(param .eq. 'Saturation PT profile') then
+                  read(line(idx+1:len(line)),*) spray%satPT_file
                else if(param .eq. 'Strang splitting') then
                   read(line(idx+1:len(line)),*) spray%solver%strang
                else if(param .eq. 'RK scheme') then

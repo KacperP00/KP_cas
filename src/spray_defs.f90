@@ -32,6 +32,8 @@ module spray_defs
      
      ! Geometric variables
      real(WP), pointer :: noz_D, noz_LD, noz_rD, noz_Dsac
+     ! Variables to avoid extremely small time-step sizes
+
      integer, pointer :: num_noz     
 
      ! Flow variables
@@ -40,6 +42,7 @@ module spray_defs
 
      ! Source terms
      real(WP), dimension(:), pointer :: omega_ent, omega_vap, omega_vapdm, omega_vapd2, omega_vapd3, omega_vapres, &
+                                        omega_exp, omega_expdm, omega_expd2, omega_expd3, &
                                         f_drag, omega_bre1, omega_bre2, omega_bre3, omega_T, omega_k_g_p, &
                                         omega_k_g_d, omega_eps_g_p, omega_eps_g_d, &
                                         omega_zvar_g_p, omega_zvar_g_d
@@ -54,8 +57,12 @@ module spray_defs
      type(pc_t), dimension(:), pointer :: pc_v
  
      ! Fuel properties
-     real(WP), pointer :: T_fuel, sigma, rho_l, visc_l, lambda_l, MW_f, MP, NBP, stoic_coeff
-     real(WP), dimension(:), pointer :: L_f, C_l, p_vap, T_sat, sigma_loc, rho_l_loc, visc_l_loc, lambda_l_loc
+      real(WP), pointer :: P_bub, L_fb, L_fbub, C_lb, T_fuel, T_boil, T_crit, sigma,  sigmab, sigma_bub, rho_l, rho_lb, &
+                                        rho_lbub, visc_l, visc_lb, lambda_l, lambda_lb, MW_f, MVol, MP, NBP, stoic_coeff
+      real(WP), dimension(:), pointer :: L_f, C_l, p_vap, T_sat, sigma_loc, rho_l_loc, visc_l_loc, lambda_l_loc
+
+     ! Analytical heat transfer correction factor
+     real(WP), dimension(:,:), pointer :: f2
 
      ! Fuel properties from table
      character(len=128), pointer :: FPTname
@@ -74,16 +81,24 @@ module spray_defs
      ! Reference variables for evaporation model
      real(WP), dimension(:), pointer :: T_ref, Y_ref, rho_rv, visc_rv, lambda_rv, Cp_rv, G_rv, rho_ra, visc_ra, lambda_ra, Cp_ra
 
+     ! Bubble parameter 
+     real(WP), dimension(:), pointer :: Rdot, Nbub, db
+
      ! Injector/Injection parameters
      character(len=128), pointer :: roi_file
      real(WP), dimension(:,:), pointer :: roi
      real(WP), pointer :: P_inj, C_d, Anoz, U_inj, inj_mass
      logical :: noz_flow_model = .false.
+     logical :: flash_boiling = .true.
 
      ! Spray angle parameters
      character(len=128), pointer :: spray_angle_model
-     real(WP), pointer :: theta, beta, Cnoz, C_theta
-     
+     real(WP), pointer ::  Cnoz, C_theta, theta, beta
+     !real(WP), dimension(:), pointer :: theta, beta
+
+     ! Saturation P-T file
+     character(len=128), pointer :: satPT_file
+
      ! Entrainment model (default is true)
      logical :: ent_model = .true.
 
@@ -105,7 +120,7 @@ module spray_defs
      ! Breakup model (default is true)
      logical :: bre_model = .true.
      ! Breakup parameters with default values
-     real(WP) :: B0 = 0.61_WP, B1 = 10.0_WP, C3 = 2.5_WP, Crel = 1.0_WP
+     real(WP) :: B0 = 0.61_WP, B1 = 10.0_WP, C3 = 2.5_WP, Crel = 1.0_WP, D0 = 1.0_WP, D1 = 1.0_WP
 
      ! Evaporation model (default is true)
      logical :: evap_model = .true.
@@ -148,7 +163,7 @@ module spray_defs
      logical :: saveDataFile=.false.
 
      ! Postprocessing
-     real(WP), dimension(:), pointer :: time, LPL, VPL, chi_st, chi_st1
+     real(WP), dimension(:), pointer :: time, LPL, VPL, chi_st, chi_st1, utip, dtip
      real(WP), dimension(:), pointer :: chi_st_m
 
      ! For sensitivity analysis
@@ -342,13 +357,25 @@ contains
     allocate(spray%Fuel); spray%Fuel = 'noname'
 
     allocate(spray%FPTname); spray%FPTname = 'noname'
-
     allocate(spray%T_fuel); spray%T_fuel = -9999.0_WP
+    allocate(spray%T_boil); spray%T_boil = -9999.0_WP
+    allocate(spray%T_crit); spray%T_crit = -9999.0_WP
+    allocate(spray%P_bub); spray%P_bub = -9999.0_WP
     allocate(spray%sigma); spray%sigma = -9999.0_WP
+    allocate(spray%sigmab); spray%sigmab = -9999.0_WP
+    allocate(spray%sigma_bub); spray%sigma_bub = -9999.0_WP
     allocate(spray%rho_l); spray%rho_l = -9999.0_WP
+    allocate(spray%rho_lb); spray%rho_lb = -9999.0_WP
+    allocate(spray%rho_lbub); spray%rho_lbub = -9999.0_WP
     allocate(spray%visc_l); spray%visc_l = -9999.0_WP
+    allocate(spray%visc_lb); spray%visc_lb = -9999.0_WP
     allocate(spray%lambda_l); spray%lambda_l = -9999.0_WP
+    allocate(spray%lambda_lb); spray%lambda_lb = -9999.0_WP
+    allocate(spray%C_lb); spray%C_lb = -9999.0_WP
+    allocate(spray%L_fb); spray%L_fb = -9999.0_WP
+    allocate(spray%L_fbub); spray%L_fbub = -9999.0_WP
     allocate(spray%MW_f); spray%MW_f = -9999.0_WP
+    allocate(spray%MVol); spray%MVol = -9999.0_WP
     allocate(spray%MP); spray%MP = -9999.0_WP
     allocate(spray%NBP); spray%NBP = -9999.0_WP
     allocate(spray%stoic_coeff); spray%stoic_coeff = -9999.0_WP
@@ -369,6 +396,7 @@ contains
     allocate(spray%Cp_v); spray%Cp_v = -9999.0_WP
 
     allocate(spray%roi_file); spray%roi_file = 'noname'
+    allocate(spray%satPT_file); spray%satPT_file = 'noname'
     allocate(spray%P_inj); spray%P_inj = -9999.0_WP
     allocate(spray%C_d); spray%C_d = -9999.0_WP
     allocate(spray%Anoz); spray%Anoz = -9999.0_WP
@@ -494,6 +522,9 @@ contains
     allocate(spray%T_ref(spray%nzo)); spray%T_ref = -9999.0_WP
     allocate(spray%Y_ref(spray%nzo)); spray%Y_ref = -9999.0_WP
 
+    !allocate(spray%theta(spray%nzo)); spray%theta = 0.0_WP
+    !allocate(spray%beta(spray%nzo)); spray%beta = 0.0_WP
+
     allocate(spray%DRl(spray%nzo)); spray%DRl = -9999.0_WP
     allocate(spray%DRg(spray%nzo)); spray%DRg = -9999.0_WP
     allocate(spray%VRl(spray%nzo)); spray%VRl = -9999.0_WP
@@ -518,7 +549,7 @@ contains
     allocate(spray%dsd_type(spray%nzo)); spray%dsd_type = -9999
     allocate(spray%Td(spray%nzo)); spray%Td = -9999.0_WP
     allocate(spray%Tg(spray%nzo)); spray%Tg = -9999.0_WP
-    allocate(spray%Tv(spray%nzo)); spray%Tv = -9999.0_WP
+    allocate(spray%Tv(spray%nzo)); spray%Tv = 0.0_WP
     allocate(spray%c_k(spray%nzo)); spray%c_k = -9999.0_WP
     allocate(spray%k_g(spray%nzo)); spray%k_g = -9999.0_WP
     allocate(spray%eps_g(spray%nzo)); spray%eps_g = -9999.0_WP
@@ -532,6 +563,7 @@ contains
     allocate(spray%alpha(spray%nzo)); spray%alpha = -9999.0_WP
 
     allocate(spray%di(spray%nd,spray%nzo)); spray%di = -9999.0_WP
+    allocate(spray%f2(spray%nd,spray%nzo)); spray%f2 = 1.0_WP
     !allocate(spray%Tdi(spray%nd,spray%nzo)); spray%Tdi = -9999.0_WP
     allocate(spray%dsd(spray%nd,spray%nzo)); spray%dsd = -9999.0_WP
     allocate(spray%h(spray%nzo)); spray%h = -9999.0_WP
@@ -542,6 +574,10 @@ contains
  
     allocate(spray%dsdlam(4,spray%nzo)); spray%dsdlam = -9999.0_WP
     
+    allocate(spray%Rdot(spray%nd)); spray%Rdot = 0.0_WP
+    allocate(spray%Nbub(spray%nd)); spray%Nbub = 0.0_WP
+    allocate(spray%db(spray%nd)); spray%db = 0.0_WP
+
     if(spray%twoD) then
        allocate(spray%Zmix2D(spray%nzo,spray%nro+1)); spray%Zmix2D = -9999.0_WP
        allocate(spray%Zvar2D(spray%nzo,spray%nro+1)); spray%Zvar2D = -9999.0_WP
@@ -560,6 +596,12 @@ contains
     allocate(spray%omega_vapd2(spray%nzo)); spray%omega_vapd2 = -9999.0_WP
     allocate(spray%omega_vapd3(spray%nzo)); spray%omega_vapd3 = -9999.0_WP
     allocate(spray%omega_vapres(spray%nzo)); spray%omega_vapres = -9999.0_WP
+
+    allocate(spray%omega_exp(spray%nzo)); spray%omega_exp = -9999.0_WP
+    allocate(spray%omega_expdm(spray%nzo)); spray%omega_expdm = -9999.0_WP
+    allocate(spray%omega_expd2(spray%nzo)); spray%omega_expd2 = -9999.0_WP
+    allocate(spray%omega_expd3(spray%nzo)); spray%omega_expd3 = -9999.0_WP
+
     allocate(spray%f_drag(spray%nzo)); spray%f_drag = -9999.0_WP
     allocate(spray%omega_bre1(spray%nzo)); spray%omega_bre1 = -9999.0_WP
     allocate(spray%omega_bre2(spray%nzo)); spray%omega_bre2 = -9999.0_WP
@@ -642,9 +684,14 @@ contains
                spray%zmix_g, spray%zvar_g, spray%chi_g, spray%chi_g_stl, &
                spray%alpha)
 
-    deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l, spray%lambda_l,spray%C_l, &
+    deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%lambda_l,spray%C_l, &
+               spray%T_boil,spray%T_crit,spray%sigmab,spray%sigma_bub,spray%rho_lb,spray%rho_lbub,spray%visc_lb,spray%lambda_lb,spray%C_lb,spray%L_fb, &
                spray%rho_l_loc, spray%sigma_loc, spray%visc_l_loc, spray%lambda_l_loc, &
-               spray%p_vap,spray%T_sat, spray%MW_f,spray%L_f,spray%MP,spray%NBP,spray%stoic_coeff)
+               spray%P_bub,spray%p_vap,spray%T_sat,spray%MW_f,spray%MVol,spray%L_f,spray%MP,spray%NBP,spray%stoic_coeff)
+
+    deallocate(spray%Rdot, spray%Nbub, spray%db)
+
+    deallocate(spray%f2)
 
     deallocate(spray%pc_l)
 
@@ -671,7 +718,7 @@ contains
 
     deallocate(spray%T_ref, spray%Y_ref)
 
-    deallocate(spray%roi_file, spray%roi)
+    deallocate(spray%satPT_file, spray%roi_file, spray%roi)
 
     deallocate(spray%P_inj, spray%Anoz, spray%C_d, spray%U_inj, spray%inj_mass)
 
@@ -719,13 +766,14 @@ contains
     call deallocate_solver(spray%solver)
 
     deallocate(spray%omega_ent, spray%omega_vap, spray%omega_vapdm, spray%omega_vapd2, spray%omega_vapd3, spray%omega_vapres, &
-               spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_bre3, spray%omega_T, &
-               spray%omega_k_g_p, spray%omega_k_g_d, spray%omega_eps_g_p, spray%omega_eps_g_d, &
-               spray%omega_zvar_g_p, spray%omega_zvar_g_d)
+            spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_bre3, spray%omega_exp, spray%omega_expdm, spray%omega_expd2, spray%omega_expd3, &
+            spray%omega_T, spray%omega_k_g_p, spray%omega_k_g_d, spray%omega_eps_g_p, spray%omega_eps_g_d, &
+            spray%omega_zvar_g_p, spray%omega_zvar_g_d)
+
 
     deallocate(spray%outfreq, spray%datafreq)
 
-    deallocate(spray%time, spray%LPL, spray%VPL, spray%chi_st, spray%chi_st_m, spray%chi_st1)
+    deallocate(spray%time, spray%LPL, spray%VPL, spray%chi_st, spray%chi_st_m, spray%chi_st1, spray%utip, spray%dtip)
 
     deallocate(spray%fixed_Re, spray%fixed_We,  spray%fixed_DRa, spray%fixed_DRv, spray%fixed_VRa, spray%fixed_VRv, spray%fixed_De)
 

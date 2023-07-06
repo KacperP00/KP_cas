@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsundials_fsunmatrixdense.a  CMakeFiles/sundials_fsunmatrixdense_static.dir/fsunmatrix_dense.c.o
+/usr/bin/ranlib libsundials_fsunmatrixdense.a

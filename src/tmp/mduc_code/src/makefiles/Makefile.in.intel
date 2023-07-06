@@ -1,0 +1,27 @@
+# compile options
+#CHEMMECH  = nHeptane.short
+CHEMMECH = propane_gri211
+MDUC_ACCESS =
+
+# Compiler and archiver
+CC  = icc
+CXX = icc
+F90 = ifort
+F77 = ifort
+LD  = icc
+AR  = ar rcv
+RL  = ranlib
+
+# External libraries
+SDIAL = /opt/sundials/intel
+
+# Compiler flags
+CFLAGS   = 
+F90FLAGS = 
+F77FLAGS =
+LDFLAGS  = 
+INCFLAGS = 
+DBGFLAGS = -g -O0
+OPTFLAGS = -O3 -xW -ip -g
+SOFLAGS  = -fPIC -shared -g
+

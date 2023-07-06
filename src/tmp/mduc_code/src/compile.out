@@ -1,0 +1,116 @@
+compiling mechanism from directory mechanism/
+gcc -MM -MG flamelet/flamelet1D.c | sed -e "s|^\(.*\)\.o:|/home/md777659/codes/mduc_code/dep/flamelet1D.d /home/md777659/codes/mduc_code/obj/flamelet1D.o:|" > /home/md777659/codes/mduc_code/dep/flamelet1D.d
+compiling mechanism from directory mechanism/
+mpiicc -fp-model precise -DSUNDIALS_FROM_3_2 -DPREITER  -DACCESS_MPI -I/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/include -O3 -ip -c flamelet/flamelet1D.c -o /home/md777659/codes/mduc_code/obj/flamelet1D.o
+mpiicc -fp-model precise -DSUNDIALS_FROM_3_2 -DPREITER  -DACCESS_MPI -I/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/include -O3 -ip -c flamelet/flamelet2D.c -o /home/md777659/codes/mduc_code/obj/flamelet2D.o
+mpiicc -fp-model precise -DSUNDIALS_FROM_3_2 -DPREITER  -DACCESS_MPI -I/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/include -O3 -ip -c flamelet/steadyFlamelet.c -o /home/md777659/codes/mduc_code/obj/steadyFlamelet.o
+mpiicc -fp-model precise -DSUNDIALS_FROM_3_2 -DPREITER  -DACCESS_MPI -I/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/include -O3 -ip -c eos/eosFluid.c -o /home/md777659/codes/mduc_code/obj/eosFluid.o
+mpiicc -fp-model precise -DSUNDIALS_FROM_3_2 -DPREITER  -DACCESS_MPI -I/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/include -O3 -ip -c eos/pengRobinson.c -o /home/md777659/codes/mduc_code/obj/pengRobinson.o
+mpiicc -fp-model precise -DSUNDIALS_FROM_3_2 -DPREITER  -DACCESS_MPI -I/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/include -O3 -ip -c eos/helmholtzEOS.c -o /home/md777659/codes/mduc_code/obj/helmholtzEOS.o
+mpiicc -fp-model precise -DSUNDIALS_FROM_3_2 -DPREITER  -DACCESS_MPI -I/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/include -O3 -ip -c engine/engine.c -o /home/md777659/codes/mduc_code/obj/engine.o
+mpiicc -fp-model precise -DSUNDIALS_FROM_3_2 -DPREITER  -DACCESS_MPI -I/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/include -O3 -ip -c engine/engineUtils.c -o /home/md777659/codes/mduc_code/obj/engineUtils.o
+xiar rcv /home/md777659/codes/mduc_code/lib/libmduc.a /home/md777659/codes/mduc_code/obj/NXC12H26.o /home/md777659/codes/mduc_code/obj/init.o /home/md777659/codes/mduc_code/obj/destroy.o /home/md777659/codes/mduc_code/obj/fileIO.o /home/md777659/codes/mduc_code/obj/parser.o /home/md777659/codes/mduc_code/obj/display.o /home/md777659/codes/mduc_code/obj/utils.o /home/md777659/codes/mduc_code/obj/rk4solver.o /home/md777659/codes/mduc_code/obj/solve1D.o /home/md777659/codes/mduc_code/obj/solve2D.o /home/md777659/codes/mduc_code/obj/metric.o /home/md777659/codes/mduc_code/obj/solveUtils.o /home/md777659/codes/mduc_code/obj/scalarDiss.o /home/md777659/codes/mduc_code/obj/accessMDUC.o /home/md777659/codes/mduc_code/obj/fortranMDUC.o /home/md777659/codes/mduc_code/obj/series.o /home/md777659/codes/mduc_code/obj/errFunc.o /home/md777659/codes/mduc_code/obj/hypergeometric.o /home/md777659/codes/mduc_code/obj/polyInt.o /home/md777659/codes/mduc_code/obj/chemKinIO.o /home/md777659/codes/mduc_code/obj/flameMasterIO.o /home/md777659/codes/mduc_code/obj/ceaIO.o /home/md777659/codes/mduc_code/obj/vtkIO.o /home/md777659/codes/mduc_code/obj/iFileIO.o /home/md777659/codes/mduc_code/obj/chemInit.o /home/md777659/codes/mduc_code/obj/chemMech.o /home/md777659/codes/mduc_code/obj/transport.o /home/md777659/codes/mduc_code/obj/chemTable.o /home/md777659/codes/mduc_code/obj/chemUtils.o /home/md777659/codes/mduc_code/obj/soot.o /home/md777659/codes/mduc_code/obj/sootHMOM.o /home/md777659/codes/mduc_code/obj/sootHMOM_f.o /home/md777659/codes/mduc_code/obj/wiebe.o /home/md777659/codes/mduc_code/obj/statsUtils.o /home/md777659/codes/mduc_code/obj/betaPDF.o /home/md777659/codes/mduc_code/obj/smlPDF.o /home/md777659/codes/mduc_code/obj/gaussPDF.o /home/md777659/codes/mduc_code/obj/flameletInit.o /home/md777659/codes/mduc_code/obj/flameletUtils.o /home/md777659/codes/mduc_code/obj/flamelet1D.o /home/md777659/codes/mduc_code/obj/flamelet2D.o /home/md777659/codes/mduc_code/obj/steadyFlamelet.o /home/md777659/codes/mduc_code/obj/eosFluid.o /home/md777659/codes/mduc_code/obj/pengRobinson.o /home/md777659/codes/mduc_code/obj/helmholtzEOS.o /home/md777659/codes/mduc_code/obj/engine.o /home/md777659/codes/mduc_code/obj/engineUtils.o;
+xiar: executing 'ar'
+a - /home/md777659/codes/mduc_code/obj/NXC12H26.o
+a - /home/md777659/codes/mduc_code/obj/init.o
+a - /home/md777659/codes/mduc_code/obj/destroy.o
+a - /home/md777659/codes/mduc_code/obj/fileIO.o
+a - /home/md777659/codes/mduc_code/obj/parser.o
+a - /home/md777659/codes/mduc_code/obj/display.o
+a - /home/md777659/codes/mduc_code/obj/utils.o
+a - /home/md777659/codes/mduc_code/obj/rk4solver.o
+a - /home/md777659/codes/mduc_code/obj/solve1D.o
+a - /home/md777659/codes/mduc_code/obj/solve2D.o
+a - /home/md777659/codes/mduc_code/obj/metric.o
+a - /home/md777659/codes/mduc_code/obj/solveUtils.o
+a - /home/md777659/codes/mduc_code/obj/scalarDiss.o
+a - /home/md777659/codes/mduc_code/obj/accessMDUC.o
+a - /home/md777659/codes/mduc_code/obj/fortranMDUC.o
+a - /home/md777659/codes/mduc_code/obj/series.o
+a - /home/md777659/codes/mduc_code/obj/errFunc.o
+a - /home/md777659/codes/mduc_code/obj/hypergeometric.o
+a - /home/md777659/codes/mduc_code/obj/polyInt.o
+a - /home/md777659/codes/mduc_code/obj/chemKinIO.o
+a - /home/md777659/codes/mduc_code/obj/flameMasterIO.o
+a - /home/md777659/codes/mduc_code/obj/ceaIO.o
+a - /home/md777659/codes/mduc_code/obj/vtkIO.o
+a - /home/md777659/codes/mduc_code/obj/iFileIO.o
+a - /home/md777659/codes/mduc_code/obj/chemInit.o
+a - /home/md777659/codes/mduc_code/obj/chemMech.o
+a - /home/md777659/codes/mduc_code/obj/transport.o
+a - /home/md777659/codes/mduc_code/obj/chemTable.o
+a - /home/md777659/codes/mduc_code/obj/chemUtils.o
+a - /home/md777659/codes/mduc_code/obj/soot.o
+a - /home/md777659/codes/mduc_code/obj/sootHMOM.o
+a - /home/md777659/codes/mduc_code/obj/sootHMOM_f.o
+a - /home/md777659/codes/mduc_code/obj/wiebe.o
+a - /home/md777659/codes/mduc_code/obj/statsUtils.o
+a - /home/md777659/codes/mduc_code/obj/betaPDF.o
+a - /home/md777659/codes/mduc_code/obj/smlPDF.o
+a - /home/md777659/codes/mduc_code/obj/gaussPDF.o
+a - /home/md777659/codes/mduc_code/obj/flameletInit.o
+a - /home/md777659/codes/mduc_code/obj/flameletUtils.o
+a - /home/md777659/codes/mduc_code/obj/flamelet1D.o
+a - /home/md777659/codes/mduc_code/obj/flamelet2D.o
+a - /home/md777659/codes/mduc_code/obj/steadyFlamelet.o
+a - /home/md777659/codes/mduc_code/obj/eosFluid.o
+a - /home/md777659/codes/mduc_code/obj/pengRobinson.o
+a - /home/md777659/codes/mduc_code/obj/helmholtzEOS.o
+a - /home/md777659/codes/mduc_code/obj/engine.o
+a - /home/md777659/codes/mduc_code/obj/engineUtils.o
+echo /home/md777659/codes/mduc_code/lib/libmduc.a
+/home/md777659/codes/mduc_code/lib/libmduc.a
+xiar rcv /home/md777659/codes/mduc_code/lib/libmduc_mechanism.a /home/md777659/codes/mduc_code/obj/NXC12H26.o;
+xiar: executing 'ar'
+a - /home/md777659/codes/mduc_code/obj/NXC12H26.o
+echo /home/md777659/codes/mduc_code/lib/libmduc_mechanism.a
+/home/md777659/codes/mduc_code/lib/libmduc_mechanism.a
+xiar rcv /home/md777659/codes/mduc_code/lib/libmduc_io.a /home/md777659/codes/mduc_code/obj/chemKinIO.o /home/md777659/codes/mduc_code/obj/flameMasterIO.o /home/md777659/codes/mduc_code/obj/ceaIO.o /home/md777659/codes/mduc_code/obj/vtkIO.o /home/md777659/codes/mduc_code/obj/iFileIO.o;
+xiar: executing 'ar'
+a - /home/md777659/codes/mduc_code/obj/chemKinIO.o
+a - /home/md777659/codes/mduc_code/obj/flameMasterIO.o
+a - /home/md777659/codes/mduc_code/obj/ceaIO.o
+a - /home/md777659/codes/mduc_code/obj/vtkIO.o
+a - /home/md777659/codes/mduc_code/obj/iFileIO.o
+echo /home/md777659/codes/mduc_code/lib/libmduc_io.a
+/home/md777659/codes/mduc_code/lib/libmduc_io.a
+xiar rcv /home/md777659/codes/mduc_code/lib/libmduc_chem.a /home/md777659/codes/mduc_code/obj/chemInit.o /home/md777659/codes/mduc_code/obj/chemMech.o /home/md777659/codes/mduc_code/obj/transport.o /home/md777659/codes/mduc_code/obj/chemTable.o /home/md777659/codes/mduc_code/obj/chemUtils.o /home/md777659/codes/mduc_code/obj/soot.o /home/md777659/codes/mduc_code/obj/sootHMOM.o /home/md777659/codes/mduc_code/obj/sootHMOM_f.o /home/md777659/codes/mduc_code/obj/wiebe.o;
+xiar: executing 'ar'
+a - /home/md777659/codes/mduc_code/obj/chemInit.o
+a - /home/md777659/codes/mduc_code/obj/chemMech.o
+a - /home/md777659/codes/mduc_code/obj/transport.o
+a - /home/md777659/codes/mduc_code/obj/chemTable.o
+a - /home/md777659/codes/mduc_code/obj/chemUtils.o
+a - /home/md777659/codes/mduc_code/obj/soot.o
+a - /home/md777659/codes/mduc_code/obj/sootHMOM.o
+a - /home/md777659/codes/mduc_code/obj/sootHMOM_f.o
+a - /home/md777659/codes/mduc_code/obj/wiebe.o
+echo /home/md777659/codes/mduc_code/lib/libmduc_chem.a
+/home/md777659/codes/mduc_code/lib/libmduc_chem.a
+xiar rcv /home/md777659/codes/mduc_code/lib/libmduc_stats.a /home/md777659/codes/mduc_code/obj/statsUtils.o /home/md777659/codes/mduc_code/obj/betaPDF.o /home/md777659/codes/mduc_code/obj/smlPDF.o /home/md777659/codes/mduc_code/obj/gaussPDF.o;
+xiar: executing 'ar'
+a - /home/md777659/codes/mduc_code/obj/statsUtils.o
+a - /home/md777659/codes/mduc_code/obj/betaPDF.o
+a - /home/md777659/codes/mduc_code/obj/smlPDF.o
+a - /home/md777659/codes/mduc_code/obj/gaussPDF.o
+echo /home/md777659/codes/mduc_code/lib/libmduc_stats.a
+/home/md777659/codes/mduc_code/lib/libmduc_stats.a
+xiar rcv /home/md777659/codes/mduc_code/lib/libmduc_flamelet.a /home/md777659/codes/mduc_code/obj/flameletInit.o /home/md777659/codes/mduc_code/obj/flameletUtils.o /home/md777659/codes/mduc_code/obj/flamelet1D.o /home/md777659/codes/mduc_code/obj/flamelet2D.o /home/md777659/codes/mduc_code/obj/steadyFlamelet.o;
+xiar: executing 'ar'
+a - /home/md777659/codes/mduc_code/obj/flameletInit.o
+a - /home/md777659/codes/mduc_code/obj/flameletUtils.o
+a - /home/md777659/codes/mduc_code/obj/flamelet1D.o
+a - /home/md777659/codes/mduc_code/obj/flamelet2D.o
+a - /home/md777659/codes/mduc_code/obj/steadyFlamelet.o
+echo /home/md777659/codes/mduc_code/lib/libmduc_flamelet.a
+/home/md777659/codes/mduc_code/lib/libmduc_flamelet.a
+xiar rcv /home/md777659/codes/mduc_code/lib/libmduc_eos.a /home/md777659/codes/mduc_code/obj/eosFluid.o /home/md777659/codes/mduc_code/obj/pengRobinson.o /home/md777659/codes/mduc_code/obj/helmholtzEOS.o;
+xiar: executing 'ar'
+a - /home/md777659/codes/mduc_code/obj/eosFluid.o
+a - /home/md777659/codes/mduc_code/obj/pengRobinson.o
+a - /home/md777659/codes/mduc_code/obj/helmholtzEOS.o
+echo /home/md777659/codes/mduc_code/lib/libmduc_eos.a
+/home/md777659/codes/mduc_code/lib/libmduc_eos.a
+mpiicc /home/md777659/codes/mduc_code/obj/mducMain.o /home/md777659/codes/mduc_code/obj/mducTools.o /home/md777659/codes/mduc_code/obj/postProcess.o -o /home/md777659/codes/mduc_code/bin/mduc \
+-L/home/md777659/codes/mduc_code/lib -lmduc -limf -lm -L/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/lib -lsundials_cvodes -lsundials_ida -lsundials_kinsol -lsundials_nvecserial -lsundials_nvecparallel -Wl,-rpath,/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install/lib
+=== making in opt mode

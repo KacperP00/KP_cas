@@ -1,0 +1,1 @@
+/opt/intel/Compiler/19.0/1.144/rwthlnk/bin/intel64/icc -fPIC -O2 -fp-model precise -DNDEBUG  -shared -Wl,-soname,libsundials_fsunmatrixsparse.so.1 -o libsundials_fsunmatrixsparse.so.1.2.1 CMakeFiles/sundials_fsunmatrixsparse_shared.dir/fsunmatrix_sparse.c.o -Wl,-rpath,/home/md777659/codes/sundials/sundials-3.2.1/build/src/sunmat_sparse: libsundials_sunmatrixsparse.so.1.2.1 -lm 

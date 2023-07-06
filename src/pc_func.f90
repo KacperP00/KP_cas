@@ -3,7 +3,7 @@ module pc_func
   use pc_defs
   use pc_database
 
-  public :: choosePC, computeSolDensity, computeLiqDensity, computeIG_vapDensity, &
+  public :: choosePC, computeBoilingTemperature, computeSolDensity, computeLiqDensity, computeIG_vapDensity, &
             computeVapPressure, computeHeatOfVap, computeSolHeatCapacity, computeLiqHeatCapacity, &
             computeIG_HeatCapacity, computeSeconfViralCoef, computeLiqViscosity, &
             computeVapViscosity, computeLiqThermalConductivity, computeSurfaceTension, &
@@ -32,7 +32,7 @@ contains
 
        call pc_ndodecane(pc)
 
-    case('1butanol','1-butanol','1-Butanol','n-butanol','n-Butanol, Butan-1-ol')
+    case('1butanol','1-butanol','1-Butanol','n-butanol','n-Butanol', 'nbutanol', 'Butan-1-ol')
 
        call pc_1butanol(pc)
 
@@ -212,9 +212,13 @@ contains
 
        call pc_isohexane(pc)
 
-    case('isooctane','iso-octane')
+    case('isooctane','iso-octane','2,2,4-trimethylpentane')
 
        call pc_isooctane(pc)
+
+    case('methylheptane','2-methylheptane')
+
+       call pc_2methylheptane(pc)
 
     case('isopentane','iso-pentane','butane','2-methylbutane')
 
@@ -329,12 +333,18 @@ subroutine computeLiqDensity(pc)
                                        pc%liqDensityMol%C,&
                                        pc%liqDensityMol%D,&
                                        pc%liqDensityMol%E)
-  else if (pc%T <= pc%liqDensityMol%range(1,1)) then
-     !Write(*,*) 'Warning! liqDensity out of range. Setting it for minimum of the range...'
+  else if (pc%T .ne. 0.0_WP .and. pc%T <= pc%liqDensityMol%range(1,1)) then
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! liquid density out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%liqDensityMol%range(1,1)
      pc%liqDensityMol%val = pc%liqDensityMol%range(1,2)
   else if (pc%T >= pc%liqDensityMol%range(2,1)) then
-     !Write(*,*) 'Warning! liqDensity out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! liquid density out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%liqDensityMol%range(2,1)
      pc%liqDensityMol%val = pc%liqDensityMol%range(2,2)
   end if
@@ -374,12 +384,18 @@ subroutine computeVapPressure(pc)
                                         pc%vapPressure%C,&
                                         pc%vapPressure%D,&
                                         pc%vapPressure%E)
-  else if (pc%T <= pc%vapPressure%range(1,1)) then
-     !Write(*,*) 'Warning! vapPressure out of range. Setting it for minimum of the range...'
+  else if (pc%T .ne. 0.0_WP .and. pc%T <= pc%vapPressure%range(1,1)) then
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! vapor pressure out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%vapPressure%range(1,1)
      pc%vapPressure%val = pc%vapPressure%range(1,2)
   else if (pc%T >= pc%vapPressure%range(2,1)) then
-     !Write(*,*) 'Warning! vapPressure out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! vapor pressure out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%vapPressure%range(2,1)
      pc%vapPressure%val = pc%vapPressure%range(2,2)
   end if
@@ -402,12 +418,18 @@ subroutine computeHeatOfVap(pc)
                                          pc%HeatOfVapMol%C,&
                                          pc%HeatOfVapMol%D,&
                                          pc%HeatOfVapMol%E)
-  else if (pc%T <= pc%HeatOfVapMol%range(1,1)) then
-     !Write(*,*) 'Warning! HeatOfVap out of range. Setting it for minimum of the range...'
+  else if (pc%T .ne. 0.0_WP .and. pc%T <= pc%HeatOfVapMol%range(1,1)) then
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! latent heat out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%HeatOfVapMol%range(1,1)
      pc%HeatOfVapMol%val = pc%HeatOfVapMol%range(1,2)
   else if (pc%T >= pc%HeatOfVapMol%range(2,1)) then
-     !Write(*,*) 'Warning! HeatOfVap out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! latent heat out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%HeatOfVapMol%range(2,1)
      pc%HeatOfVapMol%val = pc%HeatOfVapMol%range(2,2)
   end if
@@ -433,11 +455,17 @@ subroutine computeSolHeatCapacity(pc)
                                                pc%solHeatCapacityMol%D,&
                                                pc%solHeatCapacityMol%E)
   else if (pc%T <= pc%solHeatCapacityMol%range(1,1)) then
-     !Write(*,*) 'Warning! HeatCapacity out of range. Setting it for minimum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! solid heat capacity out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%solHeatCapacityMol%range(1,1)
      pc%solHeatCapacityMol%val = pc%solHeatCapacityMol%range(1,2)
   else if (pc%T >= pc%solHeatCapacityMol%range(2,1)) then
-     !Write(*,*) 'Warning! HeatCapacity out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! solid heat capacity out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%solHeatCapacityMol%range(2,1)
      pc%solHeatCapacityMol%val = pc%solHeatCapacityMol%range(2,2)
   end if
@@ -462,12 +490,18 @@ subroutine computeLiqHeatCapacity(pc)
                                                pc%liqHeatCapacityMol%C,&
                                                pc%liqHeatCapacityMol%D,&
                                                pc%liqHeatCapacityMol%E)
-  else if (pc%T <= pc%liqHeatCapacityMol%range(1,1)) then
-     !Write(*,*) 'Warning! liqHeatCapacity out of range. Setting it for minimum of the range...'
+  else if (pc%T .ne. 0.0_WP .and. pc%T <= pc%liqHeatCapacityMol%range(1,1)) then
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! liquid heat capacity out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%liqHeatCapacityMol%range(1,1)
      pc%liqHeatCapacityMol%val = pc%liqHeatCapacityMol%range(1,2)
-  else if (pc%T >= pc%liqHeatCapacityMol%range(2,1)) then
-     !Write(*,*) 'Warning! liqHeatCapacity out of range. Setting it for maximum of the range...'
+  else if (pc%T .ne. 0.0_WP .and. pc%T >= pc%liqHeatCapacityMol%range(2,1)) then
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! liquid heat capacity out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%liqHeatCapacityMol%range(2,1)
      pc%liqHeatCapacityMol%val = pc%liqHeatCapacityMol%range(2,2)
   end if
@@ -492,12 +526,18 @@ subroutine computeIG_HeatCapacity(pc)
                                                pc%IG_HeatCapacityMol%C,&
                                                pc%IG_HeatCapacityMol%D,&
                                                pc%IG_HeatCapacityMol%E)
-  else if (pc%T <= pc%IG_HeatCapacityMol%range(1,1)) then
-     !Write(*,*) 'Warning! IG_HeatCapacity out of range. Setting it for minimum of the range...'
+  else if (pc%T .ne. 0.0_WP .and. pc%T <= pc%IG_HeatCapacityMol%range(1,1)) then
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! vapor heat capacity out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%IG_HeatCapacityMol%range(1,1)
      pc%IG_HeatCapacityMol%val = pc%IG_HeatCapacityMol%range(1,2)
   else if (pc%T >= pc%IG_HeatCapacityMol%range(2,1)) then
-     !Write(*,*) 'Warning! IG_HeatCapacity out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! vapor heat capacity out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%IG_HeatCapacityMol%range(2,1)
      pc%IG_HeatCapacityMol%val = pc%IG_HeatCapacityMol%range(2,2)
   end if
@@ -523,11 +563,17 @@ subroutine computeSeconfViralCoef(pc)
                                                pc%SecondViralCoefMol%D,&
                                                pc%SecondViralCoefMol%E)
   else if (pc%T <= pc%SecondViralCoefMol%range(1,1)) then
-     !Write(*,*) 'Warning! SecondViralCoef out of range. Setting it for minimum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! Second viral coeff out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%SecondViralCoefMol%range(1,1)
      pc%SecondViralCoefMol%val = pc%SecondViralCoefMol%range(1,2)
   else if (pc%T >= pc%SecondViralCoefMol%range(2,1)) then
-     !Write(*,*) 'Warning! SecondViralCoef out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! Second viral coeff out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%SecondViralCoefMol%range(2,1)
      pc%SecondViralCoefMol%val = pc%SecondViralCoefMol%range(2,2)
   end if
@@ -552,12 +598,18 @@ subroutine computeLiqViscosity(pc)
                                          pc%liqViscosity%C,&
                                          pc%liqViscosity%D,&
                                          pc%liqViscosity%E)
-  else if (pc%T <= pc%liqViscosity%range(1,1)) then
-     !Write(*,*) 'Warning! liqViscosity out of range. Setting it for minimum of the range...'
+  else if (pc%T .ne. 0.0_WP .and. pc%T <= pc%liqViscosity%range(1,1)) then
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! liquid viscosity out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%liqViscosity%range(1,1)
      pc%liqViscosity%val = pc%liqViscosity%range(1,2)
   else if (pc%T >= pc%liqViscosity%range(2,1)) then
-     !Write(*,*) 'Warning! liqViscosity out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! liquid viscosity out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%liqViscosity%range(2,1)
      pc%liqViscosity%val = pc%liqViscosity%range(2,2)
   end if
@@ -581,11 +633,17 @@ subroutine computeVapViscosity(pc)
                                          pc%vapViscosity%D,&
                                          pc%vapViscosity%E)
   else if (pc%T <= pc%vapViscosity%range(1,1)) then
-     !Write(*,*) 'Warning! vapViscosity out of range. Setting it for minimum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! vapor viscosity out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%vapViscosity%range(1,1)
      pc%vapViscosity%val = pc%vapViscosity%range(1,2)
   else if (pc%T >= pc%vapViscosity%range(2,1)) then
-     !Write(*,*) 'Warning! vapViscosity out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! vapor viscosity out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%vapViscosity%range(2,1)
      pc%vapViscosity%val = pc%vapViscosity%range(2,2)
   end if
@@ -608,12 +666,18 @@ subroutine computeLiqThermalConductivity(pc)
                                                    pc%liqThermalConductivity%C,&
                                                    pc%liqThermalConductivity%D,&
                                                    pc%liqThermalConductivity%E)
-  else if (pc%T <= pc%liqThermalConductivity%range(1,1)) then
-     !Write(*,*) 'Warning! liqThermalConductivity out of range. Setting it for minimum of the range...'
+  else if (pc%T .ne. 0.0_WP .and. pc%T <= pc%liqThermalConductivity%range(1,1)) then
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! liquid thermal cond. out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%liqThermalConductivity%range(1,1)
      pc%liqThermalConductivity%val = pc%liqThermalConductivity%range(1,2)
   else if (pc%T >= pc%liqThermalConductivity%range(2,1)) then
-     !Write(*,*) 'Warning! liqThermalConductivity out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! liquid thermal cond. out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%liqThermalConductivity%range(2,1)
      pc%liqThermalConductivity%val = pc%liqThermalConductivity%range(2,2)
   end if
@@ -637,11 +701,17 @@ subroutine computeVapThermalConductivity(pc)
                                                    pc%vapThermalConductivity%D,&
                                                    pc%vapThermalConductivity%E)
   else if (pc%T <= pc%vapThermalConductivity%range(1,1)) then
-     !Write(*,*) 'Warning! vapThermalConductivity out of range. Setting it for minimum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! vapor thermal cond. out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%vapThermalConductivity%range(1,1)
      pc%vapThermalConductivity%val = pc%vapThermalConductivity%range(1,2)
   else if (pc%T >= pc%vapThermalConductivity%range(2,1)) then
-     !Write(*,*) 'Warning! vapThermalConductivity out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! vapor thermal cond. out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%vapThermalConductivity%range(2,1)
      pc%vapThermalConductivity%val = pc%vapThermalConductivity%range(2,2)
   end if
@@ -664,17 +734,98 @@ subroutine computeSurfaceTension(pc)
                                            pc%SurfaceTension%C,&
                                            pc%SurfaceTension%D,&
                                            pc%SurfaceTension%E)
-  else if (pc%T <= pc%SurfaceTension%range(1,1)) then
-     !Write(*,*) 'Warning! SurfaceTension out of range. Setting it for minimum of the range...'
+  else if (pc%T .ne. 0.0_WP .and. pc%T <= pc%SurfaceTension%range(1,1)) then
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! SurfaceTension out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%SurfaceTension%range(1,1)
      pc%SurfaceTension%val = pc%SurfaceTension%range(1,2)
   else if (pc%T >= pc%SurfaceTension%range(2,1)) then
-     !Write(*,*) 'Warning! SurfaceTension out of range. Setting it for maximum of the range...'
+    if(pc%name=='isooctane')then
+     Write(*,*) 'Warning! SurfaceTension out of range.  Stoping the simulation...'
+     stop
+    end if
      !pc%T = pc%SurfaceTension%range(2,1)
      pc%SurfaceTension%val = pc%SurfaceTension%range(2,2)
   end if
 
 end subroutine computeSurfaceTension
+
+subroutine computeBoilingTemperature(satPT_file,Pin,Tb)
+  implicit none
+
+  !---------------------------------
+  character(len=128), pointer, intent(in) :: satPT_file
+  real(WP), dimension(:,:), pointer :: PsatTsat
+  !---------------------------------
+  logical :: exist_file
+  character(len=128) :: line
+  integer :: nlines, ioerr, i, idx
+  real(WP) :: w1, w2, Pin 
+  real(WP), intent(out) :: Tb
+  integer :: bin, step, low, high
+  
+    if(associated(PsatTsat)) return
+
+    inquire(file=trim(satPT_file), exist=exist_file)
+
+    i = 1
+
+    if(exist_file) then
+
+    !reading saturation temperature from  file
+    nlines = 0 
+    open (unit=104, file =trim(satPT_file))
+    do
+     read(unit=104,fmt=*,iostat=ioerr)
+     if (ioerr/=0) exit
+       nlines = nlines + 1
+     end do
+    close(unit=104)
+
+       allocate(PsatTsat(nlines,2)); PsatTsat = 0.0_WP
+       open(unit=105,file=trim(satPT_file),form="formatted",status="old",action="read")
+       !write(*,*) 'Reading saturation PT profile...'
+       do while (.true.)
+          read(unit=105,fmt='(a)',iostat=ioerr) line
+
+          if (ioerr .ne. 0) then
+             exit
+          end if
+
+          read(line,*)  PsatTsat(i,1), PsatTsat(i,2)       !coulmn 1: Pv, column 2: Tv
+
+          i = i + 1
+       end do
+       close(unit=105)
+     end if
+
+     high = size(PsatTsat(:,2))
+     low  = 1
+     step = 1
+     ! Pin is given in bar, unit conversion of Pin is required since Psat(18) is by default here given in MPa
+     Pin = Pin
+     do while (((high-low).ge.2).and.step.lt.100)
+       if (PsatTsat(ceiling((high+low)*0.5),1).lt.Pin) then
+         low = ceiling((high+low)*0.5)
+       else
+         high = ceiling((high+low)*0.5)
+       end if
+         step = step + 1
+     end do
+     if (step.ge.100 .or. (high-low).gt.2) then
+        write(*,*) "Bisection failed!"
+     end if
+     bin = high - 1
+     bin = max(bin,1)
+     w1 = (PsatTsat(bin+1,1) - Pin) / (PsatTsat(bin+1,1) - PsatTsat(bin,1))
+     w2 = 1.0_WP - w1
+     Tb = w1*PsatTsat(bin,2) + w2*PsatTsat(bin+1,2)
+
+     deallocate(PsatTsat)
+
+end subroutine computeBoilingTemperature
 
 ! Diffusion Coefficients - m^2/s
 ! According to J. Poling, The Properties of Gases and Liquids, 5th edition
@@ -855,6 +1006,26 @@ real(WP) function computeVal(pc,eqn,T,A,B,C,D,E)
      computeVal = eqn114(pc,T,A,B,C,D,E)
   case (115)
      computeVal = eqn115(pc,T,A,B,C,D,E)
+  case (116)
+     computeVal = eqn116(pc,T,A,B,C,D,E)
+  case (117)
+     computeVal = eqn117(pc,T,A,B,C,D,E)
+  case (118)
+     computeVal = eqn118(pc,T,A,B,C,D,E)
+  case (119)
+     computeVal = eqn119(pc,T,A,B,C,D,E)
+  case (120)
+     computeVal = eqn120(pc,T,A,B,C,D,E)
+  case (121)
+     computeVal = eqn121(pc,T,A,B,C,D,E)
+  case (122)
+     computeVal = eqn122(pc,T,A,B,C,D,E)
+  case (123)
+     computeVal = eqn123(pc,T,A,B,C,D,E)
+  case (124)
+     computeVal = eqn124(pc,T,A,B,C,D,E)
+  case (125)
+     computeVal = eqn125(pc,T,A,B,C,D,E)
   case default 
      write(*,*) 'No equation available to compute property.'
   end select
@@ -1079,5 +1250,123 @@ real(WP) function eqn115(pc,T,A,B,C,D,E)
   eqn115 = A + B*t1 + C*t1**2 + D*t1**3 + E*t1**(-2)
 
 end function eqn115
+
+real(WP) function eqn116(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+  real(WP) :: Tred
+
+  Tred = T / pc%Tcrit
+  eqn116 = (1.0E+03_WP/pc%MolecularWeight)*(A/(B**((1-Tred)**C))) ! in kmol/m3
+
+end function eqn116
+
+real(WP) function eqn117(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn117 = 133.322_WP*(10**(A + B/T + C*log10(T) + D*T + E*(T**2))) ! in Pa
+
+end function eqn117
+
+real(WP) function eqn118(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+  real(WP) :: Tred
+
+  Tred = T / pc%Tcrit
+  eqn118 = 1.0E+06_WP*(A*(1-Tred)**B) ! in J/kmol
+
+end function eqn118
+
+real(WP) function eqn119(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn119 = 1.0E+03_WP*(A + B*T + C*T**2 + D*T**3) !in J/kmol.K
+
+end function eqn119
+
+real(WP) function eqn120(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn120 = 1.0E-07_WP*(A + B*T + C*T**2) !in Pa.s
+
+end function eqn120
+
+real(WP) function eqn121(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn121 = 1.0E-03_WP*(10**(A + B/T + + C*T + D*T**2)) !in Pa.s
+
+end function eqn121
+
+real(WP) function eqn122(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn122 = (A + B*T + C*T**2) !in W/m.K
+
+end function eqn122
+
+real(WP) function eqn123(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+  real(WP) :: Tred
+
+  Tred = T/pc%Tcrit
+  eqn123 = 10**(A+B*(1-Tred)**(2/7)) !in W/m.K
+
+end function eqn123
+
+real(WP) function eqn124(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+  real(WP) :: Tred
+
+  Tred = T/pc%Tcrit
+  eqn124 = 1.0E-03_WP*(A*(1-Tred)**B) !in N/m
+
+end function eqn124
+
+real(WP) function eqn125(pc,T,A,B,C,D,E)
+  implicit none
+  ! --------------------------------------------
+  type(pc_t), pointer, intent(in) :: pc
+  real(WP), intent(in) :: T, A, B, C, D, E
+  ! --------------------------------------------
+
+  eqn125 = 1.0E+03_WP*(A + B*T + C*T**2 + D*T**3 + E*T**4) !in J/kmol.K
+
+end function eqn125
 
 end module pc_func

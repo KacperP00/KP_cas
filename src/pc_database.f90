@@ -8498,7 +8498,6 @@ contains
 
   end subroutine pc_isohexane
 
-
   subroutine pc_isooctane(pc)
     implicit none
 
@@ -8506,11 +8505,139 @@ contains
     type(pc_t), pointer, intent(inout) :: pc
     ! ---------------------------------------------
 
-
-
-
     ! all alternative names
     pc%name = 'isooctane';
+    pc%CAS = '540-84-1';
+    ! components
+    pc%ChemicalFormula%C = 8;         
+    pc%ChemicalFormula%H = 18;
+    pc%ChemicalFormula%O = 0;
+
+    pc%MolecularWeight = 114.231_WP;   ! kg/kmol    
+    pc%Tcrit = 543.96_WP;              ! K    
+    pc%pcrit = 2.5680E6_WP;            ! Pa 
+    pc%vcrit = 0.46800_WP;             ! m^3/kmol 
+    pc%CritCompressFactor = 0.266_WP;  ! -
+
+    pc%MeltingPoint = 166.85_WP;              ! K
+    pc%TripletPointT = 165.76_WP;              ! K
+    pc%TripletPointp = 0.000E-0_WP;           ! Pa
+    pc%NormalBoilingPoint = 372.39_WP;        ! K
+    pc%liqMolarVolume = 0.1651_WP;            ! m^3/kmol
+
+    pc%IG_HeatOfFormation = -0.0000E0_WP;             ! J/kmol
+    pc%IG_GibbsOfFormation = 0.0000E0_WP;             ! J/kmol
+    pc%IG_AbsoluteEntropy =  0.0000E0_WP;             ! J/kmolK
+    pc%HeatFusionAtMeltPoint =  0.0000E0_WP;          ! J/kmol
+    pc%StandardNetHeatOfCombustion = -0.0000E0_WP;    ! J/kmol
+    pc%StandardGibbsOfFormation = MAX_REAL_WP;        ! J/kmol
+    pc%StandardHeatOfFormation = MAX_REAL_WP;         ! J/kmol
+    pc%StandardAbsoluteEntropy = MAX_REAL_WP;         ! J/kmolK   
+
+    pc%AcentricFactor = 0.3030_WP;            ! -
+    pc%RadiusOfGyration = 4.091E-10_WP;       ! m
+    pc%SolubilityParameter = 0.0000E0_WP;     ! (J/m^3)^.5 
+    pc%DipoleMoment = 0.0_WP;                 ! C^m
+    pc%VanDerWaalsVolume = 0.00000_WP;        ! m^3/kmol
+
+    pc%VanDerWaalsArea = 0.0000E0_WP;                           ! m^2/kmol
+    pc%RefractiveIndex = 0.0000_WP;                             ! -
+    pc%FlashPoint = 261.15_WP;                                  ! K
+    pc%FlammabilityLimits = (/ 0.0_WP, 0.0_WP /);               ! vol-!
+    pc%FlammabilityLimitTemps = (/ MAX_REAL_WP, MAX_REAL_WP /); ! K
+    pc%AutoignitionTemp = 690.928_WP;                            ! K
+
+    pc%liqDensityMol%A = 0.24563_WP;
+    pc%liqDensityMol%B = 0.27373_WP;
+    pc%liqDensityMol%C = 0.28460_WP;
+    pc%liqDensityMol%D = 0.0_WP;
+    pc%liqDensityMol%E = 0.0_WP;
+    pc%liqDensityMol%range(:,1) = (/ 165.78_WP, 543.96_WP /);
+    pc%liqDensityMol%eqn = 116;
+
+    pc%vapPressure%A =  50.3422_WP;
+    pc%vapPressure%B = -3.2789E03_WP;
+    pc%vapPressure%C = -1.6111E01_WP;
+    pc%vapPressure%D =  7.4260E-03_WP;
+    pc%vapPressure%E = -9.1804E-14_WP;
+    pc%vapPressure%range(:,1) = (/ 165.78_WP, 543.96_WP /);
+    pc%vapPressure%eqn = 117;
+
+    pc%HeatOfVapMol%A = 42.901_WP;
+    pc%HeatOfVapMol%B = 0.281_WP;
+    pc%HeatOfVapMol%C = 0.0_WP;
+    pc%HeatOfVapMol%D = 0.0_WP;
+    pc%HeatOfVapMol%E = 0.0_WP;
+    pc%HeatOfVapMol%range(:,1) = (/ 165.78_WP, 543.96_WP /);
+    pc%HeatOfVapMol%eqn = 118; 
+
+    pc%liqHeatCapacityMol%A = 122.772_WP;
+    pc%liqHeatCapacityMol%B = 7.9485E-01_WP;
+    pc%liqHeatCapacityMol%C = -2.4977E-03_WP;
+    pc%liqHeatCapacityMol%D = 3.5652E-06_WP;
+    pc%liqHeatCapacityMol%E = 0.0_WP;
+    pc%liqHeatCapacityMol%range(:,1) = (/ 167.0_WP, 490.0_WP /);
+    pc%liqHeatCapacityMol%eqn = 119;
+
+    pc%vapViscosity%A = 4.636_WP;
+    pc%vapViscosity%B = 2.0622E-01_WP;
+    pc%vapViscosity%C = -3.2545E-05_WP;
+    pc%vapViscosity%D = 0.0_WP;
+    pc%vapViscosity%E = 0.0_WP;
+    pc%vapViscosity%range(:,1) = (/ 200.0_WP, 992.0_WP /);    ! Ideally the given viscosity range started from 355 K
+    pc%vapViscosity%eqn = 120;
+
+    pc%liqViscosity%A = -15.0420_WP;
+    pc%liqViscosity%B = 2.0021E+03_WP;
+    pc%liqViscosity%C = 3.7102E-02_WP; 
+    pc%liqViscosity%D = -3.4486E-05_WP;
+    pc%liqViscosity%E = 0.0_WP;
+    pc%liqViscosity%range(:,1) = (/ 167.0_WP, 544.0_WP /);   ! Ideally the given viscosity range started from 273 K
+    pc%liqViscosity%eqn = 121;
+
+    pc%vapThermalConductivity%A = -0.00622_WP;
+    pc%vapThermalConductivity%B = 4.1978E-05_WP;
+    pc%vapThermalConductivity%C = 7.7251E-08_WP;
+    pc%vapThermalConductivity%D = 0.0_WP;
+    pc%vapThermalConductivity%E = 0.0_WP;
+    pc%vapThermalConductivity%range(:,1) = (/ 200.0_WP, 580.0_WP /);  ! Ideally the given thermal conductivity range started from 355 K
+    pc%vapThermalConductivity%eqn = 122; 
+
+    pc%liqThermalConductivity%A = -1.6144_WP;
+    pc%liqThermalConductivity%B = 0.7698_WP;
+    pc%liqThermalConductivity%C = 0.0_WP;
+    pc%liqThermalConductivity%D = 0.0_WP;
+    pc%liqThermalConductivity%E = 0.0_WP;
+    pc%liqThermalConductivity%range(:,1) = (/ 166.0_WP, 517.0_WP /);
+    pc%liqThermalConductivity%eqn = 123;
+
+    pc%SurfaceTension%A = 47.434_WP;
+    pc%SurfaceTension%B = 1.1975_WP;
+    pc%SurfaceTension%C = 0.0_WP;
+    pc%SurfaceTension%D = 0.0_WP;
+    pc%SurfaceTension%E = 0.0_WP;
+    pc%SurfaceTension%range(:,1) = (/ 165.78_WP, 543.96_WP /);
+    pc%SurfaceTension%eqn = 124;    
+
+    pc%IG_HeatCapacityMol%A = -21.703_WP;
+    pc%IG_HeatCapacityMol%B = 8.5849E-01_WP;
+    pc%IG_HeatCapacityMol%C = -5.5323E-04_WP;
+    pc%IG_HeatCapacityMol%D = 2.0892E-07_WP;
+    pc%IG_HeatCapacityMol%E = -3.7285E-11_WP;
+    pc%IG_HeatCapacityMol%range(:,1) = (/ 200.00_WP, 1500.00_WP /);
+    pc%IG_HeatCapacityMol%eqn = 125;
+
+  end subroutine pc_isooctane
+
+  subroutine pc_2methylheptane(pc)
+    implicit none
+
+    ! ---------------------------------------------
+    type(pc_t), pointer, intent(inout) :: pc
+    ! ---------------------------------------------
+
+    ! all alternative names
+    pc%name = '2methylheptane';
     pc%CAS = '107-83-5';
     ! components
     pc%ChemicalFormula%C = 8;         
@@ -8672,8 +8799,7 @@ contains
     pc%SurfaceTension%range(:,2) = (/ 3.3166E-02_WP, 0.0_WP /);
     pc%SurfaceTension%eqn = 106;    
 
-  end subroutine pc_isooctane
-
+  end subroutine pc_2methylheptane
 
   subroutine pc_isopentane(pc)
     implicit none
@@ -10803,9 +10929,6 @@ contains
     type(pc_t), pointer, intent(inout) :: pc
     ! ---------------------------------------------
 
-
-
-
     ! all alternative names
     pc%name = 'npentane';
     pc%CAS = '109-66-0';
@@ -10815,7 +10938,7 @@ contains
     pc%ChemicalFormula%O = 0;
 
     pc%MolecularWeight = 72.150_WP;    ! kg/kmol    
-    pc%Tcrit = 469.10_WP;              ! K    
+    pc%Tcrit = 469.70_WP;              ! K    
     pc%pcrit = 3.3700E6_WP;            ! Pa 
     pc%vcrit = 0.31300_WP;             ! m^3/kmol 
     pc%CritCompressFactor = 0.270_WP;  ! -

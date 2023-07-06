@@ -1,0 +1,29 @@
+
+# compiler
+#CC= /rwthfs/rz/SW/ANSYS/v140/commonfiles/MPI/Platform/8.1.2/linx64/bin/mpicc
+#CC=/rwthfs/rz/SW/ANSYS/v140/commonfiles/MPI/Intel/4.0.2/linx64/bin/mpicc
+MPI_DIR=/rwthfs/rz/SW/ANSYS/v150/commonfiles/MPI/Intel/4.1/linx64
+#CC= /rwthfs/rz/SW/ANSYS/v150/commonfiles/MPI/Platform/9.1/linx64/bin/mpicc
+#CC=${MPICC} 
+# external libraries
+#MDUC_DIR=/home/md777659/ITV/Hiwi/mduc/trunk
+MDUC_DIR=/home/md777659/ITV/02_Research/01_Codes/mduc/mduc_150106_fluent
+#SDIAL_DIR= /home/md777659/ITV/MA/sundials/2.4.0_intel12_lapack
+SDIAL_DIR=/home/md777659/ITV/02_Research/01_Codes/sundials/2.4.0_intel12_intelmpi
+#SDIAL_DIR = /home/md777659/ITV/Hiwi/sundials/2.4.0_intel12_lapack
+#LAPACK_DIR= /home/itv/lib/lapack/3.4.0_intel12
+#LAPACK_DIR=
+MDUC_UDF_DEFINE= -DMDUC_SPRAY -DMDUC_MPI #-DMDUC_MPI_WRITE
+#MDUC_UDF_DEFINE= -DMDUC_MPI #-DMDUC_MPI_WRITE
+
+# set Fluent release information
+FLUENT_VERS="R15"
+ifeq (${FLUENT_VERS},"R14")
+	FLUENT_INC= /rwthfs/rz/SW/ANSYS/v140/fluent
+	RELEASE= 14.0.0
+else
+	FLUENT_INC= /rwthfs/rz/SW/ANSYS/v150/fluent
+	RELEASE= 15.0.0
+endif
+CC=$(MPI_DIR)/bin/mpicc
+#CC=/rwthfs/rz/SW/ANSYS/v150/commonfiles/MPI/Intel/4.1/linx64/bin/mpicc

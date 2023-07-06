@@ -1,0 +1,67 @@
+# compile options
+PARALLEL=TRUE
+#CHEMMECH = propane_gri211
+#CHEMMECH = Spec_57_Reac_304
+CHEMMECH  = ionhtol.pollutantsnoxGRI
+#CHEMMECH = nHeptane.allstar
+#CHEMMECH = nHeptane.short
+# don't use this #CHEMMECH  = nHeptane.allstarnew_oksred25
+MDUC_ACCESS = #MDUC_JBETA_ADAPT SUNDIALS_2_3 #MDUC_PDF_LM 
+ifdef PARALLEL
+	MDUC_ACCESS += ACCESS_MPI
+endif
+
+#MPI_DIR=/rwthfs/rz/SW/ANSYS/v140/commonfiles/MPI/Platform/8.1.2/linx64
+#MPI_DIR=/rwthfs/rz/SW/ANSYS/v140/commonfiles/MPI/Intel/4.0.2/linx64
+#MPI_DIR=/rwthfs/rz/SW/ANSYS/v150/commonfiles/MPI/Platform/9.1/linx64
+MPI_DIR=/rwthfs/rz/SW/ANSYS/v150/commonfiles/MPI/Intel/4.1/linx64
+#MPI_DIR=/opt/intel/impi/4.1.3.049/
+#MPI_DIR=/opt/MPI/openmpi-1.6.5/linux/gcc
+MPI_BIN=${MPI_DIR}/bin
+MPI_LIB=-L${MPI_DIR}/lib
+MPI_INC=-I${MPI_DIR}/include
+#MPI_LIB=/rwthfs/rz/SW/ANSYS/v150/fluent/fluent15.0.0/multiport/mpi/lnamd64/pcmpi/lib
+#MPI_INC=/rwthfs/rz/SW/ANSYS/v150/fluent/fluent15.0.0/multiport/mpi/lnamd64/pcmpi/include
+# Compiler and archiver
+ifdef PARALLEL
+#  CC = ${MPICC}
+#  LD = ${MPICC}
+#  CC = mpicc
+#  LD = mpicc
+   CC = ${MPI_BIN}/mpicc
+   LD = ${MPI_BIN}/mpicc
+else
+  CC = gcc
+  LD = gcc
+endif
+AR  = ar rcv
+RL  = ranlib
+
+# External libraries
+#= /gpfs3/applications/sundials/2.4.0/intel/11.1
+#SDIAL  = /gpfs3/applications/sundials/2.4.0/gnu/4.1.
+#SDIAL = /software/sundials/2.4.0/openmpi/1.4.3/intel/11.1
+#SDIAL = /home/itv/lib/sundials/2.4.0_intel12_lapack/
+#SDIAL = /home/md777659/ITV/MA/sundials/2.4.0_intel12_lapack
+SDIAL = /home/md777659/ITV/02_Research/01_Codes/sundials/2.4.0_intel12_intelmpi
+#SDIAL = /home/md777659/ITV/02_Research/01_Codes/sundials/2.4.0_intel12_fluentmpi
+#SDIAL =/home/md777659/ITV/MA/sundials/2.4.0_gcc44_openmpi
+#SDIAL = 2.4.0_intel_ansysMPI15_lapack
+#SDIAL = 2.4.0_intel_intelmpi_lapack
+#SDIAL = /home/md777659/ITV/MA/sundials/2.4.0_gnu_lapack
+#SDIAL = /home/itv/lib/sundials/2.4.0_gcc44/
+#SDIAL = /software/sundials/2.4.0/openmpi/1.4.3/gnu/4.1.2
+#SDIAL = /home/itv/lib/sundials/2.4.0_intel12/
+#SDIAL = /gpfs3/applications/sundials/2.4.0/openmpi/1.4.4/intel/12.1
+
+# Compiler flags
+CFLAGS   = 
+LDFLAGS = 
+INCFLAGS = 
+DBGFLAGS = -g -O0
+OPTFLAGS = -O3 -xSSE4.2 -ip -g
+SOFLAGS  = -fPIC -shared -g
+
+ifdef PARALLEL
+ LDFLAGS += ${MPI_LIB}
+endif

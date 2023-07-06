@@ -1,0 +1,87 @@
+! ============================================================================ !
+!           Multi-dimensional Unsteady Combustion Solver Input File            !
+! ============================================================================ !
+title     "MDUC output"
+author    "Eric Doran"
+mechanism compiled
+! ----------------------- driver/solver specifications ----------------------- !
+pressure-mode       isobaric
+chi-mode            from-flamelet
+pdf-mode         beta       
+diffusion-mode   { 1 0 0 }  ! set to 0 to turn off diffusion
+! ------------------------------ I/O variables ------------------------------- !
+monitor-file         mduc_monitor_1
+write-frequency       1
+print-frequency       1
+chi-data-directory   chi/
+data-directory        results
+write-data-file	      spray_A_.rif
+flow-data-file        spray_A_.flo
+file-number-style     time-step
+absolute-tolerance    1.0e-15
+relative-tolerance    1.0e-6
+soot-tolerance        1.0e-24
+output-w              0
+soot-outout-Mxmyp     1
+output-rho            1
+output-total-enthalpy 1
+output-conv-vel       1
+dump-error-file       1
+soot-output-src       1
+!read-data-file        combustion_init.rif
+!read-rates-file        combustion_init.rif
+! ------------------------- define time information -------------------------- !
+start-time           0.04e-3      [s]
+final-time	     2.0e-3    [s]
+time-step-size       1.0e-5    [s]
+
+! ---------------- declare flow parameters/reference scalars ----------------- !
+time-mode input
+
+! -------------------------------- soot model -------------------------------- !
+soot-model          HMOM
+soot-mode           1
+soot-moment-order   1
+soot-active-source* nucleation condensation coagulation surface-growth oxidation
+!soot-PAH-species* A4-C16H10 A2-C10H8 A3-C14H10 A2R5-C12H8 P2-C12H10 A3R5-C16H10 FLTN-C16H10 A4R5-C18H10
+soot-PAH-species* A4XC16H10 A2XC10H8 A3XC14H10 A2R5 P2XC12H10 A3R5 FLTN A4R5
+!#(default: all | nucleation condensation coagulation surface-growth oxidation fragmentation)
+soot-active-mom* all
+!#(default: all | number-density volume surface volume-var vol-surf-covar surface-var delta-weight)
+!#alt: M00 M10 M01 M20 M11 M02
+read-transport-data  1
+transport-data-file  NXC12H26.chtrans
+radiation            1
+ambient-temperature  500.0
+thermophoresis       1
+soot-diffusion       1
+! ----------------- initialise flamelet boundary conditions ------------------ !
+pressure 5.96035E+06
+
+FLAMELET 1
+  # grid setup
+  dimensions   1
+  gridPoints1  120
+  gridPivot1   { 0.25 }
+  gridPercent1 { 0.80 }
+
+  # boundary conditions
+  OxidizerSide
+  begin
+    Temperature = 903.9 [K]
+    N2 = 0.719867
+    O2 = 0.164215
+    CO2 = 0.093629
+    H2O	= 0.022292
+  end
+
+  FuelSide1
+  begin
+    Liquid-cp   = 2451.9 [J/(kg-K)]
+    Latent-heat = 3.2524e5 [J/kg]
+    Temp-ref    = 364.2 [K]
+    Temperature = 373 [K]
+    NXC12H26    = 1.0
+  end 
+ENDFLAMELET
+! =============================== END OF FILE ================================ !

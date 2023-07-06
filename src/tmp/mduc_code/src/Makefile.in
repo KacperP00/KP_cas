@@ -1,0 +1,32 @@
+# compile options
+CHEMMECH = NXC12H26
+MDUC_ACCESS = ACCESS_MPI
+
+# Compiler and archiver
+#CC   =scorep --user mpiicc
+#CXX  =scorep --user mpiicpc
+#F90  =scorep --user mpiifort
+#F77  =scorep --user mpiifort
+#LD   =scorep --user mpiicc
+CC   = mpiicc
+CXX  = mpiicpc
+F90  = mpiifort
+F77  = mpiifort
+LD   = mpiicc
+AR  = xiar rcv
+RL  = echo
+
+# External libraries
+#SDIAL=/home/md777659/codes/mduc_code/src/../../sundials/sundials-3.2.1/install
+SDIAL = /home/ad738098/codes/sundials/2.7.0_intel19.0_intelmpi_2018_mkl/Install_DIR/
+
+# Compiler flags
+CFLAGS   = -fp-model precise -DSUNDIALS_FROM_2_7 -DPREITER #-DCHIPREITER
+F90FLAGS = -fpp
+F77FLAGS =
+LDFLAGS  = -limf -lm
+INCFLAGS = 
+DBGFLAGS = -O0 -g -traceback
+OPTFLAGS = -O3 -ip
+SOFLAGS  = -fPIC -shared -g
+

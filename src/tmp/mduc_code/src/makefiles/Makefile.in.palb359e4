@@ -1,0 +1,25 @@
+# compile options
+#CHEMMECH  = nHeptane.short
+#CHEMMECH = propane_gri211
+CHEMMECH = ionhtol.pollutantsnoxGRI
+MDUC_ACCESS = ACCESS_STATS
+
+# Compiler and archiver
+CC  = icc
+CXX = icc
+LD  = icc
+AR  = ar rcv
+RL  = ranlib
+
+# External libraries
+SDIAL = /software/sundials/2.4.0/intel-mpi/4.0/intel/11.1
+
+# Compiler flags
+CFLAGS   = 
+F90FLAGS = 
+F77FLAGS =
+LDFLAGS  = 
+INCFLAGS = 
+DBGFLAGS = -g -O0
+OPTFLAGS = -O3 -xSSE4.2 -ip -g
+SOFLAGS  = -fPIC -shared -g

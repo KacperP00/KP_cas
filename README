@@ -6,3 +6,9 @@ OR
 2. Run 'make all_opt' to compile with optimization options
 
 *Default Makefile is written for Intel fortran compiler. A Makefile for GNU fortran compiler is in ./Makefiles/
+
+To run the code
+
+1. Enter into the 'example > Aleiferis injector' directory
+2. Copy the executable or create a shortcut link 
+3. Run using the input file 'cas.in'

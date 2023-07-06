@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsundials_fsunmatrixsparse.a  CMakeFiles/sundials_fsunmatrixsparse_static.dir/fsunmatrix_sparse.c.o
+/usr/bin/ranlib libsundials_fsunmatrixsparse.a

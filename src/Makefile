@@ -17,9 +17,9 @@ FC = mpiifort
 ifeq ($(withSOOT),YES)
 MDUC_DIR = /home/ad738098/codes/mduc_soot
 MDUC_INC = -I$(MDUC_DIR)/include
-#MDUC_LIB = -L$(MDUC_DIR)/lib -lmduc -lmduc_chem -lmduc_mechanism
-#MDUC_LIB = -L$(MDUC_DIR)/lib_ndo_soot -lmduc -lmduc_chem -lmduc_mechanism_LIB = -L$(MDUC_DIR)/lib -lmduc -lmduc_chem -lmduc_mechanism
 MDUC_LIB = -L$(MDUC_DIR)/lib -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib_ndo_soot -lmduc -lmduc_chem -lmduc_mechanism
+#MDUC_LIB = -L$(MDUC_DIR)/lib -lmduc -lmduc_chem -lmduc_mechanism
 #MDUC_LIB = -L$(MDUC_DIR)/lib_ndo_pah_nox -lmduc -lmduc_chem -lmduc_mechanism
 #MDUC_LIB = -L$(MDUC_DIR)/lib_ndo_pah_nox -lmduc -lmduc_chem -lmduc_mechanism
 #MDUC_LIB = -L$(MDUC_DIR)/lib_dnbe_soot -lmduc -lmduc_chem -lmduc_mechanism
