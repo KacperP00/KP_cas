@@ -12,3 +12,13 @@ To run the code
 1. Enter into the 'example > Aleiferis injector' directory
 2. Copy the executable or create a shortcut link 
 3. Run using the input file 'cas.in'
+
+
+#### Citation ####
+If you use this code for your research, please cite the following publications:
+
+1. A. Y. Deshmukh, T. Grenga, M. Davidovic, L. Schumacher, J. Palmer, M.A. Reddemann, R. Kneer and H. Pitsch. A reduced-order model for multiphase simulation of transient inert sprays in the context of compression ignition engines. Int. J. Multiph. Flow, vol. 147, page 103872, 2022. doi: http://dx.doi.org/10.1016/j.ijmultiphaseflow.2021.103872
+
+2. A. Y. Deshmukh, M. Davidovic, T. Grenga, R. Lakshmanan, L. Cai and H. Pitsch. A reduced-order model for turbulent reactive sprays in compression ignition engines. Combust. Flame, vol. 236, page 111751, 2022. doi: http://dx.doi.org/10.1016/j.combustflame.2021.111751
+
+3. A. Saha, A. Y. Deshmukh, T. Grenga, and H. Pitsch. Physics-based reduced-order modeling of flash-boiling sprays in the context of internal combustion engines. (Submitted to International Journal of Multiphase Flow)
