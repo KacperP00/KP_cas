@@ -1078,7 +1078,7 @@ real(WP) function eqn1101(pc,T,A,B,C,D,E)
   ! --------------------------------------------
 
   eqn1101 = exp(A + B/T + C*log(T) + D*(T**E))
-  call abort("Error! Integral eqn1101 not implemented...")
+  call abort()
 
 end function eqn1101
 
@@ -1104,7 +1104,7 @@ real(WP) function eqn1102(pc,T,A,B,C,D,E)
   ! --------------------------------------------
 
   eqn1102 = (A * T**B) / (1 + C/T + D/(T**2))
-  call abort("Error! Integral eqn1102 not implemented...")
+  call abort()
 
 end function eqn1102
 
@@ -1130,7 +1130,7 @@ real(WP) function eqn1104(pc,T,A,B,C,D,E)
   ! --------------------------------------------
 
   eqn1104 = A + (B/T) + (C/((T)**3)) + (D/((T)**8)) + (E/((T)**9))
-  call abort("Error! Integral eqn1101 not implemented...")
+  call abort()
 
 end function eqn1104
 
@@ -1156,7 +1156,7 @@ real(WP) function eqn1105(pc,T,A,B,C,D,E)
   ! --------------------------------------------
 
   eqn1105 = A/(B**(1+(1-T/C)**D))
-  call abort("Error! Integral eqn1101 not implemented...")
+  call abort()
 
 end function eqn1105
 
@@ -1186,7 +1186,7 @@ real(WP) function eqn1106(pc,T,A,B,C,D,E)
   real(WP) :: Tred
   Tred = T / pc%Tcrit;
   eqn1106 = A * (1 - Tred)**(B + C*Tred + D*Tred**2 + E*Tred**3)
-  call abort("Error! Integral eqn1106 not implemented...")
+  call abort()
 
 end function eqn1106
 
@@ -1219,7 +1219,7 @@ real(WP) function eqn1107(pc,T,A,B,C,D,E)
   n = C/T
   m = E/T
   eqn1107 = A + B*(n/sinh(n))**2 + D*(m/cosh(m))**2;
-  call abort("Error! Integral eqn1107 not implemented...")
+  call abort()
 
 end function eqn1107
 
@@ -1317,7 +1317,7 @@ real(WP) function eqn121(pc,T,A,B,C,D,E)
   real(WP), intent(in) :: T, A, B, C, D, E
   ! --------------------------------------------
 
-  eqn121 = 1.0E-03_WP*(10**(A + B/T + + C*T + D*T**2)) !in Pa.s
+  eqn121 = 1.0E-03_WP*(10**(A + B/T + C*T + D*T**2)) !in Pa.s
 
 end function eqn121
 

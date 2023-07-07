@@ -685,7 +685,8 @@ contains
                spray%alpha)
 
     deallocate(spray%Fuel,spray%T_fuel,spray%sigma,spray%rho_l,spray%visc_l,spray%lambda_l,spray%C_l, &
-               spray%T_boil,spray%T_crit,spray%sigmab,spray%sigma_bub,spray%rho_lb,spray%rho_lbub,spray%visc_lb,spray%lambda_lb,spray%C_lb,spray%L_fb, &
+               spray%T_boil,spray%T_crit,spray%sigmab,spray%sigma_bub,spray%rho_lb,spray%rho_lbub, &
+	       spray%visc_lb,spray%lambda_lb,spray%C_lb,spray%L_fb, &
                spray%rho_l_loc, spray%sigma_loc, spray%visc_l_loc, spray%lambda_l_loc, &
                spray%P_bub,spray%p_vap,spray%T_sat,spray%MW_f,spray%MVol,spray%L_f,spray%MP,spray%NBP,spray%stoic_coeff)
 
@@ -766,7 +767,8 @@ contains
     call deallocate_solver(spray%solver)
 
     deallocate(spray%omega_ent, spray%omega_vap, spray%omega_vapdm, spray%omega_vapd2, spray%omega_vapd3, spray%omega_vapres, &
-            spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_bre3, spray%omega_exp, spray%omega_expdm, spray%omega_expd2, spray%omega_expd3, &
+            spray%f_drag, spray%omega_bre1, spray%omega_bre2, spray%omega_bre3, &
+	    spray%omega_exp, spray%omega_expdm, spray%omega_expd2, spray%omega_expd3, &
             spray%omega_T, spray%omega_k_g_p, spray%omega_k_g_d, spray%omega_eps_g_p, spray%omega_eps_g_d, &
             spray%omega_zvar_g_p, spray%omega_zvar_g_d)
 

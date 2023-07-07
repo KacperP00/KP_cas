@@ -526,7 +526,8 @@ contains
     real(WP), dimension(spray%nzo) :: b2
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
-    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar; Td => spray%Td; Tg => spray%Tg; b => spray%b
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar
+    Td => spray%Td; Tg => spray%Tg; b => spray%b
     k_g => spray%k_g; eps_g => spray%eps_g; zvar_g=>spray%zvar_g
     W => spray%solver%W
 
@@ -566,7 +567,8 @@ contains
     real(WP), dimension(spray%nzo) :: b2
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
-    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar; Td => spray%Td; Tg => spray%Tg; b => spray%b
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar;
+    Td => spray%Td; Tg => spray%Tg; b => spray%b
     k_g => spray%k_g; eps_g => spray%eps_g; zvar_g => spray%zvar_g
 
     F => spray%solver%F
@@ -603,7 +605,8 @@ contains
 
     ! ---------------------------------
     real(WP), dimension(:,:), pointer :: S=>null()
-    real(WP), dimension(:), pointer :: u_l=>null(), d2=>null(), d3=>null(), dm=>null(), Td=>null(), Tg=>null(), Tv=>null(), b=>null(), &
+    real(WP), dimension(:), pointer :: u_l=>null(), d2=>null(), d3=>null(), dm=>null(), Td=>null(), &
+                                       Tg=>null(), Tv=>null(), b=>null(), &
                                        omega_ent=>null(), omega_vap=>null(), omega_vapdm=>null(), &
                                        omega_vapd2=>null(), omega_vapd3=>null(), f_drag=>null(), &
                                        omega_bre1=>null(), omega_bre2=>null(), omega_bre3=>null(), &
@@ -672,7 +675,8 @@ contains
     integer :: i
 
     rho => spray%rho; Y_l => spray%Y_l; Y_v => spray%Y_v; Y_a => spray%Y_a; Y_g => spray%Y_g
-    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar; Td => spray%Td; b => spray%b
+    u_l => spray%u_l; u_g => spray%u_g; d3 => spray%d3; d2 => spray%d2; dm => spray%dm; dvar => spray%dvar; 
+    Td => spray%Td; b => spray%b
     k_g => spray%k_g; eps_g => spray%eps_g; zvar_g=>spray%zvar_g
     W => spray%solver%W
     F => spray%solver%F
@@ -800,7 +804,8 @@ contains
     divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
     F => spray%solver%F; S => spray%solver%S
 
-    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g; alpha_m => spray%solver%alpha_m
+    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g;
+    alpha_m => spray%solver%alpha_m
 
     Flux => spray%solver%Flux; Res => spray%solver%Res
 
@@ -896,7 +901,8 @@ contains
     divc => spray%solver%divc; W => spray%solver%W; Wold => spray%solver%Wold; 
     F => spray%solver%F; S => spray%solver%S
 
-    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g; alpha_m => spray%solver%alpha_m
+    u_l => spray%u_l; u_g => spray%u_g; alpha_l => spray%solver%alpha_l; alpha_g => spray%solver%alpha_g;
+    alpha_m => spray%solver%alpha_m
     Flux => spray%solver%Flux; Res => spray%solver%Res
 
     ! Global LF splitting

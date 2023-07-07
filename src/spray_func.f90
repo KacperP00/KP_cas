@@ -9,9 +9,6 @@ module spray_func
   use fpt_func
   use solver_defs
   use solver_func
-#ifdef MDUC
-  use monitor_memory
-#endif
 #ifdef MDUC_MPI
   use spray_combust
   use MPI
@@ -483,10 +480,6 @@ contains
        if(spray%irank .eq. 0) call write_output(spray,spray%step,spray%ndtime)
 
        call modify_inputs(spray)
-
-#ifdef INTEL
-       call monitor_memory_update()
-#endif
 
     end do
 

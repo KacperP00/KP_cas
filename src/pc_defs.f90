@@ -31,7 +31,8 @@ module pc_defs
      real(WP), dimension(:), pointer :: FlammabilityLimits, FlammabilityLimitTemps
      
      real(WP), pointer :: solDensity, liqDensity, IG_vapDensity, HeatOfVap, solHeatCapacity, liqHeatCapacity, &
-                          IG_HeatCapacity, SecondViralCoef, DiffusionCoefficientWilkeLee, DiffusionCoefficientFuller, DiffusionCoefficientTheory, DiffusionCoefficientHighPres
+                          IG_HeatCapacity, SecondViralCoef, DiffusionCoefficientWilkeLee, DiffusionCoefficientFuller, &
+			  DiffusionCoefficientTheory, DiffusionCoefficientHighPres
 
      type(pc_prop_t), pointer :: solDensityMol, liqDensityMol, vapPressure, HeatOfVapMol, solHeatCapacityMol, &
                                  liqHeatCapacityMol, IG_HeatCapacityMol, SecondViralCoefMol, liqViscosity, vapViscosity, &
