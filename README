@@ -5,7 +5,7 @@ To compile to code
 OR
 2. Run 'make all_opt' to compile with optimization options
 
-*Default Makefile is written for Intel fortran compiler. A Makefile for GNU fortran compiler is in ./Makefiles/
+*Default Makefile is written for Intel fortran compiler. A Makefile for GNU fortran compiler is in ./Makefiles/ but currently does not compile due to some unsupported features.
 
 To run the code
 
