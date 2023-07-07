@@ -1,0 +1,83 @@
+! Input file for CAS
+
+! Grid and numerical parameters
+Length : 800.0
+Number of grid points : 801
+Maximum CFL : 0.5
+
+! Radial self-similar profiles for Zmix and Zvar
+!Use 2D profiles for convolution : .true.
+!Number of radial grid points : 100
+
+Maximum time : 1.5e-3
+
+! Fuel name
+Fuel : ndodecane
+
+! Nozzle parameters
+Injection pressure : 1500e5
+
+Fuel temperature : 373.0
+
+Use nozzle flow model : .true.
+
+Nozzle exit diameter : 90e-6
+
+Nozzle LD ratio : 11.0
+
+Nozzle rD ratio : 0.256
+
+Nozzle sac diameter : 660e-6
+
+Nozzle K inlet : 0.035
+
+Nozzle K expansion : 0.0
+
+! Ambient conditions
+Ambient pressure : 60e5
+
+Ambient temperature : 900.0
+
+Ambient molecular weight : 28.68e-3
+
+Compressibility factor : 1.016
+
+! Spray parameters
+Initial DSD : Delta
+Number of diameter classes : 1
+Initial Dm : 1.0
+Initial Dvar : 0.0
+
+! Break-up parameters
+B0 : 0.61
+B1 : 10.0
+C3 : 0.55
+!Crel : 1.0
+!Cevap : 0.3333333333
+
+Spray half-cone angle model : Hiroyasu-Arai
+!Spray half-cone angle : 3.5
+!Tangent of spray half-cone angle : 0.109
+
+! Injection rate profile, a comma-separated file
+ROI profile : roi.txt
+
+! RK solver parameters
+RK scheme : 1
+
+! Convective scheme
+!Conv scheme : WENO3
+
+! Output
+Data File : data.out
+Datafile frequency : 100
+PL File : spray_PL.out
+Output frequency : 10
+
+!Turbulence model : .true.
+
+! Combustion
+!Combustion model : MRIF
+!RIF Input File : mduc.inp
+!C_chi : 1.0
+!Y_O2 : 0.164215
