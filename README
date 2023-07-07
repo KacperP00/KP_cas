@@ -1,20 +1,31 @@
-To compile to code
+##################################################################################
+# Code compilation and running your first simulation                             #
+##################################################################################
+
+Important note before you compile: 
+Default Makefile is written for Intel fortran compiler. A Makefile for GNU 
+fortran compiler is in ./Makefiles/ but currently does not compile due to some 
+unsupported features.
+
+
+To compile:
 
 1. Enter into the 'src' directory
 2. Run 'make all_debug' to compile with debug options
 OR
 2. Run 'make all_opt' to compile with optimization options
 
-*Default Makefile is written for Intel fortran compiler. A Makefile for GNU fortran compiler is in ./Makefiles/ but currently does not compile due to some unsupported features.
-
-To run the code
+To run:
 
 1. Enter into the 'example > Aleiferis injector' directory
 2. Copy the executable or create a shortcut link 
 3. Run using the input file 'cas.in'
 
 
-#### Citation ####
+##################################################################################
+# Citations                                                                      #
+##################################################################################
+
 If you use this code for your research, please cite the following publications:
 
 1. A. Y. Deshmukh, T. Grenga, M. Davidovic, L. Schumacher, J. Palmer, M.A. Reddemann, R. Kneer and H. Pitsch. A reduced-order model for multiphase simulation of transient inert sprays in the context of compression ignition engines. Int. J. Multiph. Flow, vol. 147, page 103872, 2022. doi: http://dx.doi.org/10.1016/j.ijmultiphaseflow.2021.103872
@@ -23,5 +34,12 @@ If you use this code for your research, please cite the following publications:
 
 3. A. Saha, A. Y. Deshmukh, T. Grenga, and H. Pitsch. Physics-based reduced-order modeling of flash-boiling sprays in the context of internal combustion engines. (Submitted to International Journal of Multiphase Flow)
 
-FUNDING:
-This  work was funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) under Germany’s Excellence Strategy—Exzellenzcluster 2186 “The Fuel Science Center” ID: 390919832 and also supported by the European Research Council (ERC) under the European Union’s Horizon 2020 research and innovation program (grant agreement no.695747).
+##################################################################################
+# Funding                                                                        #
+##################################################################################
+
+This  work was funded by the Deutsche Forschungsgemeinschaft (DFG, German Research
+Foundation) under Germany’s Excellence Strategy—Exzellenzcluster 2186 
+“The Fuel Science Center” ID: 390919832 and also supported by the 
+European Research Council (ERC) under the European Union’s Horizon 2020 research 
+and innovation program (grant agreement no.695747).
