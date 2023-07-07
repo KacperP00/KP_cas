@@ -1,1 +1,0 @@
-/opt/intel/Compiler/19.0/1.144/rwthlnk/bin/intel64/icc -fPIC -O2 -fp-model precise -DNDEBUG  -shared -Wl,-soname,libsundials_fsunmatrixband.so.1 -o libsundials_fsunmatrixband.so.1.2.1 CMakeFiles/sundials_fsunmatrixband_shared.dir/fsunmatrix_band.c.o -Wl,-rpath,/home/md777659/codes/sundials/sundials-3.2.1/build/src/sunmat_band: libsundials_sunmatrixband.so.1.2.1 -lm 

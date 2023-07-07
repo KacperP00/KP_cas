@@ -1,1 +1,0 @@
-/opt/intel/Compiler/19.0/1.144/rwthlnk/bin/intel64/icc -fPIC -O2 -fp-model precise -DNDEBUG  -shared -Wl,-soname,libsundials_fnvecserial.so.2 -o libsundials_fnvecserial.so.2.7.0 CMakeFiles/sundials_fnvecserial_shared.dir/fnvector_serial.c.o 
