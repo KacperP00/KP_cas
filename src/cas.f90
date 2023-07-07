@@ -1,19 +1,23 @@
-!----------------------------------------!
-! CAS: Cross-sectionally Averaged Spray  !
-! This program solves cross-sectionally  !
-! averaged one-D multiphase equations    !
-! describing spray formation             !
-!                                        !
-! Author: Abhishek Y. Deshmukh           !
-! Contact: a.deshmukh@itv.rwth-aachen.de !
-!----------------------------------------!
+!--------------------------------------------------------------------------------!
+! CAS: Cross-sectionally Averaged Spray                                          !
+!                                                                                ! 
+! This program solves cross-sectionally averaged one-D multiphase equations      !
+! describing spray formation                                                     !
+!                                                                                !
+! Author: Abhishek Y. Deshmukh                                                   !
+! Major contributors: Avijit Saha, Carsten Giefer                                !
+!--------------------------------------------------------------------------------!
+
+!--------------------------------------------------------------------------------!
+! See the LICENSE file for license information. Please report all bugs and       !
+! problems to abhishekd18 at gmail.com or a.saha at itv.rwth-aachen.de           !
+!--------------------------------------------------------------------------------!
 
 program cas
 
   use parser
   use spray_defs
   use spray_func
-!!$  use output
 #ifdef MDUC_MPI
   use MPI
 #endif

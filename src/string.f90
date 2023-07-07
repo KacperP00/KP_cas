@@ -1,3 +1,12 @@
+!--------------------------------------------------------------------------------!
+! See the LICENSE file for license information. Please report all bugs and       !
+! problems to abhishekd18 at gmail.com                                           !
+!--------------------------------------------------------------------------------!
+
+!--------------------------------------------------------------------------------!
+! Adapted from CIAO code at Institute for Combustion Technology                  !
+! Due credit goes to writers of the CIAO code                                    !
+!--------------------------------------------------------------------------------!
 module string
   use, intrinsic :: iso_c_binding, only: c_char, c_null_char, c_ptr, c_loc
 

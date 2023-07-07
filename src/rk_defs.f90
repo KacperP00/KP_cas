@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------!
+! See the LICENSE file for license information. Please report all bugs and       !
+! problems to abhishekd18 at gmail.com                                           !
+!--------------------------------------------------------------------------------!
+
 module rk_defs
   use precision
   use math

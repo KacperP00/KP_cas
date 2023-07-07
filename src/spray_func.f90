@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------!
+! See the LICENSE file for license information. Please report all bugs and       !
+! problems to abhishekd18 at gmail.com or a.saha at itv.rwth-aachen.de           !
+!--------------------------------------------------------------------------------!
+
 module spray_func
   use precision
   use math

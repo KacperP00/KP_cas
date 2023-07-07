@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------!
+! See the LICENSE file for license information. Please report all bugs and       !
+! problems to abhishekd18 at gmail.com                                           !
+!--------------------------------------------------------------------------------!
+
 ! Data Structure for Fuel Property Table
 ! Written by Abhishek Deshmukh 02/2020
 module fpt_defs

@@ -1,3 +1,12 @@
+!--------------------------------------------------------------------------------!
+! See the LICENSE file for license information. Please report all bugs and       !
+! problems to abhishekd18 at gmail.com                                           !
+!--------------------------------------------------------------------------------!
+
+!--------------------------------------------------------------------------------!
+! Adapted from CIAO code at Institute for Combustion Technology                  !
+! Due credit goes to writers of the CIAO code                                    !
+!--------------------------------------------------------------------------------!
 module parser
    use precision
    use spray_defs

@@ -1,4 +1,11 @@
+
+!--------------------------------------------------------------------------------!
+! See the LICENSE file for license information. Please report all bugs and       !
+! problems to abhishekd18 at gmail.com                                           !
+!--------------------------------------------------------------------------------!
+
 ! Pure Chemicals Database adapted from matlab code of J. Palmer (WSA)
+! Written by Abhishek Deshmukh 06/2017
 module pc_func
   use pc_defs
   use pc_database

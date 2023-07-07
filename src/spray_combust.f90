@@ -1,3 +1,8 @@
+!--------------------------------------------------------------------------------!
+! See the LICENSE file for license information. Please report all bugs and       !
+! problems to abhishekd18 at gmail.com                                           !
+!--------------------------------------------------------------------------------!
+
 ! Adapted from knock-indication routine in CIAO from Marco Davidovic
 module spray_combust
    use spray_defs

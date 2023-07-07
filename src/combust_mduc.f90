@@ -1,4 +1,12 @@
-!> @file combustion_mduc.f90
+!--------------------------------------------------------------------------------!
+! See the LICENSE file for license information. Please report all bugs and       !
+! problems to abhishekd18 at gmail.com or a.saha at itv.rwth-aachen.de           !
+!--------------------------------------------------------------------------------!
+
+!--------------------------------------------------------------------------------!
+! Adapted from CIAO code at Institute for Combustion Technology                  !
+! Due credit goes to Marco Davidovic and other writers of the CIAO code          !
+!--------------------------------------------------------------------------------!
 
 ! ==================================================================================== !
 !> @brief actual interface functions to mduc code
