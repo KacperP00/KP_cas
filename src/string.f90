@@ -4,8 +4,8 @@
 !--------------------------------------------------------------------------------!
 
 !--------------------------------------------------------------------------------!
-! Adapted from CIAO code at Institute for Combustion Technology                  !
-! Due credit goes to writers of the CIAO code                                    !
+! Adapted from CIAO code at Institute for Combustion Technology, RWTH Aachen     !
+! University. Due credit goes to the writers of the CIAO code                    !
 !--------------------------------------------------------------------------------!
 module string
   use, intrinsic :: iso_c_binding, only: c_char, c_null_char, c_ptr, c_loc
