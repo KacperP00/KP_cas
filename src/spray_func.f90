@@ -3479,33 +3479,30 @@ subroutine evaporationModel(spray)
              K_bre1(k) = 0.0_WP
           end if
 
+       ! Thermal breakup model
        call computeSatBubbleProperties(spray,Tfuel)
        Rcrit = 2.0*spray%sigma/(spray%P_bub-spray%P_a)
 
        call computeSatBubbleProperties(spray,T_d(k))
-       !Rcrit = 2.0*spray%sigma/(spray%P_bub-spray%P_a)
 
        if (spray%flash_boiling .and. spray%P_bub-spray%P_a.gt.5.0_WP)then
           Pdif = spray%P_bub-spray%P_a 
           Rdot = sqrt((2.0_WP/3.0_WP)*Pdif/spray%rho_l) 
 
           Vd = (Pi/6.0_WP)*(di(spray%nd,k)*spray%D_eff)**3.0_WP
-          !Nden = 5.757e12_WP*exp(-5.279_WP/(T_d(k) - Tboil))+eps  
           Nden = 5.757e12_WP*exp(-5.279_WP/(spray%T_fuel - Tboil))+eps  
           Nbub = ceiling(Nden*Pi*((di(:,k)*spray%D_eff)**3.0_WP)/6.0_WP)
 
           eta_thm = (6.0_WP*0.55_WP*Vd/(Pi*Nbub*0.45))**(1.0_WP/3.0_WP)
           omega_thm = 2.0_WP*Rdot/spray%D_eff 
 
-          tauTHM = spray%D0*(di(spray%nd,k)*spray%D_eff)/(eta_thm*omega_thm*spray%tau)
-          dst = spray%D1*eta_thm/spray%D_eff
+          tauTHM = spray%A0*(di(spray%nd,k)*spray%D_eff)/(eta_thm*omega_thm*spray%tau)
+          dst = spray%A1*eta_thm/spray%D_eff
 
           diff = di(:,k)- dst
 
           if(diff(1)<0.0_WP)then
-           where(diff < 0.0_WP) diff = 0.0_WP
-           !write(*,*)'dstb is less than di: dst and dd', dst, di(1,k)*spray%D_eff
-           !stop
+           diff = 0.0_WP
           end if 
 
           K_bref1(k) = sum(diff/tauTHM*dsd(:,k))     
