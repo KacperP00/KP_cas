@@ -1,33 +1,39 @@
 ! Input file for CAS
 
 ! Grid and numerical parameters
-Length : 1600.0
-Number of grid points : 1601
+Length : 450
+Number of grid points : 451
 Maximum CFL : 0.1
 
 Maximum time : 1.12e-3
 
 ! Fuel name
-Fuel : npentane
+Fuel : ndodecane
 
-Fuel molecular volume : 0.000115220 
+Fuel molecular volume : 0.000018
 
 Use nozzle flow model : .true.
 
 In nozzle cavitation: .true.
 
-Injection pressure : 150e5
+Injection pressure : 720000
 
-Fuel temperature : 363.15
+Fuel temperature : 433.15
 
-Nozzle exit diameter : 200e-6
+Nozzle exit diameter : 0.0007
 
-Discharge coefficient of nozzle : 0.6
+Nozzle LD ratio : 5.0
+
+Nozzle rD ratio : 0.1
+
+Nozzle sac diameter : 0.0
+
+Discharge coefficient of nozzle : 0.967
 
 ! Ambient conditions
 Ambient pressure : 1.0e5
 
-Ambient temperature : 298.15
+Ambient temperature : 293.15
 
 Ambient molecular weight : 28.97e-3
 
@@ -36,10 +42,9 @@ Compressibility factor : 1.0
 Flash boiling: .true.
 
 ! Spray parameters
-Number of diameter classes : 1
 
 Initial DSD : Delta
-Initial Dm : 1.0
+Initial Dm : 1
 Initial Dvar : 0.0
 Number of diameter classes : 1
 
@@ -63,17 +68,25 @@ Use evaporation model : .true.
 Spray half-cone angle model : Kitamura
 
 ! Injection rate profile, a comma-separated file
-ROI profile : roi.txt
+ROI profile : roi_water.txt
 
 ! Saturation data 
-Saturation PT profile: pentane_sat.txt
+Saturation PT profile: water_sat.txt
+
+Strang splitting : .true.
+
+Tolerance for Newton solver : 1e-6
+Initial relaxation coefficient for Newton solver : 1.0
+Alpha for Newton solver : 0.1
+Maximum iterations for Newton solver : 100
+
 ! RK solver parameters
 RK scheme : 1
 
 ! Output
-Data File : data.out
+Data File : data_water.out
 !Datafile frequency : 500
-PL File : spray_PL.out
+PL File : spray_water_PL.out
 Output frequency : 10
 
 #####################################################

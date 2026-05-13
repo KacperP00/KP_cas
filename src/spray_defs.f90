@@ -16,7 +16,7 @@ module spray_defs
   type spray_t
      
      ! Input
-     character(len=128), pointer :: inp_fname
+     character(len=128), pointer :: inp_fnamea
 
      ! Number of grid points
      integer, pointer :: Nz, nzo, step, nro
@@ -131,6 +131,8 @@ module spray_defs
      logical :: evap_model = .true.
      ! Evaporation parameters
      real(WP) :: Cevap = 1.0_WP
+     real(WP) :: A0 = 1.0_WP
+     real(WP) :: A1 = 1.0_WP
 
      ! Universal constants
      real(WP), pointer :: R_gas
@@ -183,6 +185,8 @@ module spray_defs
 
      ! End of simulation
      logical :: end=.false.
+
+     character(len=256) :: inp_fname
 
   end type spray_t
 
@@ -318,7 +322,7 @@ contains
 
     allocate(spray)
 
-    allocate(spray%inp_fname); spray%inp_fname = 'noname'
+    !allocate(character(len=64) :: spray%inp_fname); spray%inp_fname = 'noname'
 
     allocate(spray%Nz); spray%Nz = -9999
     allocate(spray%nzo); spray%nzo = -9999
@@ -661,7 +665,7 @@ contains
 
     ! ---------------------------------
 
-    deallocate(spray%inp_fname)
+    !deallocate(spray%inp_fname)
 
     deallocate(spray%Nz,spray%nzo,spray%nro,spray%step,spray%kmin,spray%kmax,spray%kmino,spray%kmaxo)
 

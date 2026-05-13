@@ -11,7 +11,7 @@ OBJDIR = ../obj
 ifeq ($(withMDUC),YES)
 
 # The compiler
-FC = mpiifort
+FC = mpiifx
 
 # LINK MDUC LIBRARY
 ifeq ($(withSOOT),YES)
@@ -44,7 +44,7 @@ endif
 SDIAL_INC  := -I$(SDIAL)/include
 SDIAL_LINK := -lsundials_cvode -lsundials_ida -lsundials_kinsol \
                    -lsundials_nvecserial
-ifneq ($(findstring mpiifort,$(strip $(FC))),)
+ifneq ($(findstring mpiifx,$(strip $(FC))),)
 SDIAL_LINK += -lsundials_nvecparallel
 endif
 SDIAL_LIB := -L$(SDIAL)/lib $(SDIAL_LINK) -Wl,-rpath,$(SDIAL)/lib
@@ -60,7 +60,7 @@ endif
 
 else
 
-FC = ifort
+FC = ifx
 
 INCFLAGS = $(MODDIR)
 LDFLAGS = #-mkl -limf -lm
