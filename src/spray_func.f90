@@ -2,6 +2,7 @@
 ! See the LICENSE file for license information. Please report all bugs and       !
 ! problems to abhishekd18 at gmail.com or a.saha at itv.rwth-aachen.de           !
 !--------------------------------------------------------------------------------!
+! line ~3017 see comment
 
 module spray_func
   use precision
@@ -2973,6 +2974,11 @@ subroutine evaporationModel(spray)
           spray%omega_expdm(k) = max(0.0_WP,(1.5_WP*rho(k)*Y_l(k))*sum((dsd(:,k)*K_vap_swl/di(:,k))))
           spray%omega_expd2(k) = max(0.0_WP,(1.5_WP*rho(k)*Y_l(k))*sum((dsd(:,k)*K_vap_swl)))
           spray%omega_expd3(k) = max(0.0_WP,(1.5_WP*rho(k)*Y_l(k))*sum((dsd(:,k)*K_vap_swl*di(:,k))))
+         ! added by me KP
+          spray%omega_vap(k)   = spray%omega_vap(k)   + spray%omega_exp(k)
+          spray%omega_vapdm(k) = spray%omega_vapdm(k) + spray%omega_expdm(k)
+          spray%omega_vapd2(k) = spray%omega_vapd2(k) + spray%omega_expd2(k)
+          spray%omega_vapd3(k) = spray%omega_vapd3(k) + spray%omega_expd3(k)
 
           Qd = (1.0_WP/(Pr_g(k)*VRg(k)))*(spray%Cp_g(k)/spray%C_l(k))*f2(:,k)*(Tg(k)-(Tboil/Tfuel))*Nud(:,k)/di(:,k)
           K_T = sum((6.0_WP*Qd/di(:,k)-1.5_WP*CR(k)*(K_vap_ext/HRg1+K_vap_swl*Re/HRg2)/(di(:,k)**2))*dsd(:,k))/Re
@@ -3025,7 +3031,8 @@ subroutine evaporationModel(spray)
     ! more hot gas entrainment.
     !spray%Y_ref = (-1.5_WP/spray%b)*spray%Y_v
     !spray%Y_ref = (0.5_WP/spray%b)*(spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP
-    spray%Y_ref = (0.5_WP/spray%b)*(spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP
+    !spray%Y_ref = (0.5_WP/spray%b)*(spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP <-this one was imported 
+    spray%Y_ref = (spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP !added by me KP
     !spray%Y_ref = (spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP
     !spray%Y_ref = spray%Y_v
 
@@ -3071,7 +3078,8 @@ subroutine evaporationModel(spray)
 
           !Yref = spray%Y_ref(k) !spray%Y_v(k)
           !Yref = (spray%Y_v(k)/spray%Y_g(k) + 2.0_WP*Ystar_f)/3.0_WP
-          Yref = (0.5_WP/spray%b(k))*(spray%Y_v(k) + 2.0_WP*Ystar_f)/3.0_WP
+          !Yref = (0.5_WP/spray%b(k))*(spray%Y_v(k) + 2.0_WP*Ystar_f)/3.0_WP <- originaly imported
+          Yref = (spray%Y_v(k) + 2.0_WP*Ystar_f)/3.0_WP !added by me KP
           !Yref = (spray%Y_v(k) + 2.0_WP*Ystar_f)/3.0_WP
 
           Bd = (Ystar_f - Yref)/(1.0_WP-Ystar_f)
@@ -3501,9 +3509,10 @@ subroutine evaporationModel(spray)
 
           diff = di(:,k)- dst
 
-          if(diff(1)<0.0_WP)then
-           diff = 0.0_WP
-          end if 
+          !if(diff(1)<0.0_WP)then
+           !diff = 0.0_WP
+          !end if 
+          where(diff < 0.0_WP) diff = 0.0_WP
 
           K_bref1(k) = sum(diff/tauTHM*dsd(:,k))     
           K_bref2(k) = 2.0_WP*sum(di(:,k)*diff/tauTHM*dsd(:,k))    
@@ -3518,7 +3527,14 @@ subroutine evaporationModel(spray)
           tauTHM = 9999.0_WP
         end if
 
-        if(tauTHM(1)<tauRT(1).and.tauTHM(1)<tauKH(1))then
+        !if(tauTHM(1)<tauRT(1).and.tauTHM(1)<tauKH(1))then changed by me KP
+          !K_bre1(k) = K_bref1(k)   
+          !K_bre2(k) = K_bref2(k)     
+          !K_bre3(k) = K_bref3(k)   
+        !end if
+        !added by me KP
+        if (spray%flash_boiling .and. tauTHM(1) < 9000.0_WP) then
+          print *, "FLASH-BOILING ACTIVE IN CELL: ", k
           K_bre1(k) = K_bref1(k)   
           K_bre2(k) = K_bref2(k)     
           K_bre3(k) = K_bref3(k)   
