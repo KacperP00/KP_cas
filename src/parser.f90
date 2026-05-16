@@ -121,6 +121,10 @@ contains
                   read(line(idx+1:len(line)),*) spray%bre_model
                else if(param .eq. 'Use evaporation model') then
                   read(line(idx+1:len(line)),*) spray%evap_model
+               else if(param .eq. 'A0') then !changed by me KP, A0 and A1
+                  read(line(idx+1:len(line)),*) spray%A0
+               else if(param .eq. 'A1') then
+                  read(line(idx+1:len(line)),*) spray%A1
                else if(param .eq. 'B0') then
                   read(line(idx+1:len(line)),*) spray%B0
                else if(param .eq. 'B1') then

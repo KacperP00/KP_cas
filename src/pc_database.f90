@@ -206,7 +206,7 @@ subroutine pc_ndodecane(pc)
     implicit none
     type(pc_t), pointer, intent(inout) :: pc
 
-    ! --- KUKULCZE JAJO: FIZYKA WODY UKRYTA POD NAZWA NDODECANE ---
+    ! --- Cuckoo's egg: Water parameters under name: NDODECANE ---
     pc%name = 'ndodecane'
     pc%CAS = '7732-18-5'
     

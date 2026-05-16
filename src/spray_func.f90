@@ -3534,7 +3534,7 @@ subroutine evaporationModel(spray)
         !end if
         !added by me KP
         if (spray%flash_boiling .and. tauTHM(1) < 9000.0_WP) then
-          print *, "FLASH-BOILING ACTIVE IN CELL: ", k
+          !print *, "FLASH-BOILING ACTIVE IN CELL: ", k <- no need for that anymore
           K_bre1(k) = K_bref1(k)   
           K_bre2(k) = K_bref2(k)     
           K_bre3(k) = K_bref3(k)   

@@ -131,8 +131,8 @@ module spray_defs
      logical :: evap_model = .true.
      ! Evaporation parameters
      real(WP) :: Cevap = 1.0_WP
-     real(WP) :: A0 = 1.0_WP
-     real(WP) :: A1 = 1.0_WP
+     real(WP) :: A0 != 1.0_WP
+     real(WP) :: A1 != 1.0_WP zmiany do sprawdzenia KP 
 
      ! Universal constants
      real(WP), pointer :: R_gas

@@ -1,0 +1,176 @@
+For ease of implementation of water parameters, the ndodecane parameters where substituted with water parameters
+The following code snippet is from cas/src/pc_database.f90 file. 
+
+
+! --- Cuckoo's egg: Water parameters under name: NDODECANE ---
+    pc%name = 'ndodecane'
+    pc%CAS = '7732-18-5'
+    
+    pc%ChemicalFormula%C = 0;         
+    pc%ChemicalFormula%H = 2;
+    pc%ChemicalFormula%O = 1;
+
+    pc%MolecularWeight = 18.01528_WP;  ! kg/kmol    
+    pc%Tcrit = 647.096_WP;             ! K    
+    pc%pcrit = 22.064E6_WP;            ! Pa 
+    pc%vcrit = 0.05595_WP;             ! m^3/kmol 
+    pc%CritCompressFactor = 0.229_WP;  ! -
+
+    pc%MeltingPoint = 273.15_WP;       ! K
+    pc%TripletPointT = 273.16_WP;      ! K
+    pc%TripletPointp = 611.65_WP;      ! Pa
+    pc%NormalBoilingPoint = 373.15_WP; ! K
+    pc%liqMolarVolume  = 0.018015_WP;  ! m^3/kmol
+
+    pc%IG_HeatOfFormation = -2.418E08_WP; 
+    pc%IG_GibbsOfFormation = -2.286E08_WP;
+    pc%IG_AbsoluteEntropy = 1.888E5_WP;
+    pc%HeatFusionAtMeltPoint = 6.009E06_WP;
+    pc%StandardNetHeatOfCombustion = 0.0_WP;
+    pc%StandardGibbsOfFormation = 0.0_WP;
+    pc%StandardHeatOfFormation = 0.0_WP;
+    pc%StandardAbsoluteEntropy = 0.0_WP;
+
+    pc%AcentricFactor = 0.344_WP;      
+    pc%RadiusOfGyration = 0.0_WP;      
+    pc%SolubilityParameter = 0.0_WP;     
+    pc%DipoleMoment = 6.17E-30_WP;     
+    pc%VanDerWaalsVolume = 0.0_WP;     
+    pc%VanDerWaalsArea = 0.0_WP;       
+    pc%RefractiveIndex = 1.333_WP;     
+    pc%FlashPoint = 0.0_WP;            
+    pc%FlammabilityLimits = (/ 0.0_WP, 0.0_WP /); 
+    pc%FlammabilityLimitTemps = (/ 0.0_WP, 0.0_WP /); 
+    pc%AutoignitionTemp = 0.0_WP;      
+
+    ! Solid Density
+    pc%solDensityMol%A = 55.0_WP;
+    pc%solDensityMol%B = 0.0_WP;
+    pc%solDensityMol%C = 0.0_WP;
+    pc%solDensityMol%D = 0.0_WP;
+    pc%solDensityMol%E = 0.0_WP;
+    pc%solDensityMol%range(:,1) = (/ 200.0_WP, 273.15_WP /);
+    pc%solDensityMol%range(:,2) = (/ 55.0_WP, 55.0_WP /);
+    pc%solDensityMol%eqn = 100;
+
+    ! Liquid Density (Eqn 100 - Woda ~998 kg/m3)
+    pc%liqDensityMol%A = 55.39_WP;
+    pc%liqDensityMol%B = 0.0_WP;
+    pc%liqDensityMol%C = 0.0_WP;
+    pc%liqDensityMol%D = 0.0_WP;
+    pc%liqDensityMol%E = 0.0_WP;
+    pc%liqDensityMol%range(:,1) = (/ 273.15_WP, 647.09_WP /);
+    pc%liqDensityMol%range(:,2) = (/ 55.39_WP, 55.39_WP /);
+    pc%liqDensityMol%eqn = 100;
+
+    ! Vapor Pressure (Eqn 101 - Rownanie krytyczne)
+    pc%vapPressure%A =  73.649_WP;
+    pc%vapPressure%B = -7258.2_WP;
+    pc%vapPressure%C = -7.3037_WP;
+    pc%vapPressure%D =  4.1653E-06_WP;
+    pc%vapPressure%E =  2.0000E00_WP;
+    pc%vapPressure%range(:,1) = (/ 273.15_WP, 647.09_WP /);
+    pc%vapPressure%range(:,2) = (/ 611.65_WP, 22.064E6_WP /);
+    pc%vapPressure%eqn = 101;  
+
+    ! Latent Heat (Eqn 106 - Rownanie krytyczne)
+    pc%HeatOfVapMol%A = 5.2053E07_WP;
+    pc%HeatOfVapMol%B = 0.3199_WP;
+    pc%HeatOfVapMol%C = -0.212_WP;
+    pc%HeatOfVapMol%D = 0.25795_WP;
+    pc%HeatOfVapMol%E = 0.0_WP;
+    pc%HeatOfVapMol%range(:,1) = (/ 273.15_WP, 647.09_WP /);
+    pc%HeatOfVapMol%range(:,2) = (/ 4.5E07_WP, 0.0_WP /);
+    pc%HeatOfVapMol%eqn = 106;     
+
+    ! Solid Heat Capacity
+    pc%solHeatCapacityMol%A = 3.0E04_WP;
+    pc%solHeatCapacityMol%B = 0.0_WP;
+    pc%solHeatCapacityMol%C = 0.0_WP;
+    pc%solHeatCapacityMol%D = 0.0_WP;
+    pc%solHeatCapacityMol%E = 0.0_WP;
+    pc%solHeatCapacityMol%range(:,1) = (/ 200.0_WP, 273.15_WP /);
+    pc%solHeatCapacityMol%range(:,2) = (/ 3.0E04_WP, 3.0E04_WP /);
+    pc%solHeatCapacityMol%eqn = 100;
+
+    ! Liquid Heat Capacity (Eqn 100)
+    pc%liqHeatCapacityMol%A = 7.5375E04_WP;
+    pc%liqHeatCapacityMol%B = 0.0_WP;
+    pc%liqHeatCapacityMol%C = 0.0_WP;
+    pc%liqHeatCapacityMol%D = 0.0_WP;
+    pc%liqHeatCapacityMol%E = 0.0_WP;
+    pc%liqHeatCapacityMol%range(:,1) = (/ 273.15_WP, 647.09_WP /);
+    pc%liqHeatCapacityMol%range(:,2) = (/ 7.5E04_WP, 7.5E04_WP /);
+    pc%liqHeatCapacityMol%eqn = 100;    
+
+    ! IG Heat Capacity (Eqn 107)
+    pc%IG_HeatCapacityMol%A = 3.3363E04_WP;
+    pc%IG_HeatCapacityMol%B = 2.6790E04_WP;
+    pc%IG_HeatCapacityMol%C = 2.6105E03_WP;
+    pc%IG_HeatCapacityMol%D = 8.8960E03_WP;
+    pc%IG_HeatCapacityMol%E = 1.1690E03_WP;
+    pc%IG_HeatCapacityMol%range(:,1) = (/ 200.00_WP, 1500.00_WP /);
+    pc%IG_HeatCapacityMol%range(:,2) = (/ 3.3E04_WP, 5.0E04_WP /);
+    pc%IG_HeatCapacityMol%eqn = 107;
+
+    ! Second Virial Coefficient
+    pc%SecondViralCoefMol%A = 0.0_WP;
+    pc%SecondViralCoefMol%B = 0.0_WP;
+    pc%SecondViralCoefMol%C = 0.0_WP;
+    pc%SecondViralCoefMol%D = 0.0_WP;
+    pc%SecondViralCoefMol%E = 0.0_WP;
+    pc%SecondViralCoefMol%range(:,1) = (/ 329.00_WP, 1500.00_WP /);
+    pc%SecondViralCoefMol%range(:,2) = (/ 0.0_WP, 0.0_WP /);
+    pc%SecondViralCoefMol%eqn = 104;  
+
+    ! Liquid Viscosity (Eqn 101)
+    pc%liqViscosity%A = -5.2843E01_WP;
+    pc%liqViscosity%B = 3.7036E03_WP;
+    pc%liqViscosity%C = 5.8660E00_WP;
+    pc%liqViscosity%D = -5.8790E-29_WP;
+    pc%liqViscosity%E = 1.0000E01_WP;
+    pc%liqViscosity%range(:,1) = (/ 273.15_WP, 647.09_WP /);
+    pc%liqViscosity%range(:,2) = (/ 1.0E-03_WP, 1.0E-04_WP /);
+    pc%liqViscosity%eqn = 101;
+
+    ! Vapor Viscosity (Eqn 102)
+    pc%vapViscosity%A = 1.7096E-08_WP;
+    pc%vapViscosity%B = 1.1146E00_WP;
+    pc%vapViscosity%C = 0.0_WP;
+    pc%vapViscosity%D = 0.0_WP;
+    pc%vapViscosity%E = 0.0_WP;
+    pc%vapViscosity%range(:,1) = (/ 273.15_WP, 1000.00_WP /);
+    pc%vapViscosity%range(:,2) = (/ 1.0E-05_WP, 2.0E-05_WP /);
+    pc%vapViscosity%eqn = 102;
+
+    ! Liquid Thermal Conductivity (Eqn 100)
+    pc%liqThermalConductivity%A = 6.0000E-01_WP;
+    pc%liqThermalConductivity%B = 0.0_WP;
+    pc%liqThermalConductivity%C = 0.0_WP;
+    pc%liqThermalConductivity%D = 0.0_WP;
+    pc%liqThermalConductivity%E = 0.0_WP;
+    pc%liqThermalConductivity%range(:,1) = (/ 273.15_WP, 647.09_WP /);
+    pc%liqThermalConductivity%range(:,2) = (/ 0.6_WP, 0.6_WP /);
+    pc%liqThermalConductivity%eqn = 100;
+
+    ! Vapor Thermal Conductivity (Eqn 102)
+    pc%vapThermalConductivity%A = 1.7480E-04_WP;
+    pc%vapThermalConductivity%B = 7.7660E-01_WP;
+    pc%vapThermalConductivity%C = 0.0_WP;
+    pc%vapThermalConductivity%D = 0.0_WP;
+    pc%vapThermalConductivity%E = 0.0_WP;
+    pc%vapThermalConductivity%range(:,1) = (/ 273.15_WP, 1000.00_WP /);
+    pc%vapThermalConductivity%range(:,2) = (/ 0.02_WP, 0.05_WP /);
+    pc%vapThermalConductivity%eqn = 102; 
+
+    ! Surface Tension (Eqn 106)
+    pc%SurfaceTension%A = 1.3205E-01_WP;
+    pc%SurfaceTension%B = 9.4400E-01_WP;
+    pc%SurfaceTension%C = 2.1600E-01_WP;
+    pc%SurfaceTension%D = -2.4500E-01_WP;
+    pc%SurfaceTension%E = 0.0_WP;
+    pc%SurfaceTension%range(:,1) = (/ 273.15_WP, 647.09_WP /);
+    pc%SurfaceTension%range(:,2) = (/ 0.072_WP, 0.0_WP /);
+    pc%SurfaceTension%eqn = 106;
+
+  end subroutine pc_ndodecane
