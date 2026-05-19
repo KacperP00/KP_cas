@@ -8,7 +8,7 @@ to the spray_func.f90 file and parser.f90. Other changes:
 - change of ifort into ifx in Makefile 
 - some Intel-related corrections (machine dependent)
 - if during compilation one have additional problems, e.g. Lack of the Intel Fortran environment in the WSL system
-### See section after compilation.
+See section after compilation.
 
 
 
@@ -18,29 +18,30 @@ fortran compiler is in ./Makefiles/ but currently does not compile due to some
 unsupported features. }
 
 First, clone the repository:
-'git clone https://github.com/KacperP00/KP_cas.git'
+'''git clone https://github.com/KacperP00/KP_cas.git'''
 
 To compile:
 
 1. Enter into the 'src' directory
 'cd src'
-2. Run 'make all_debug' to compile with debug options
+2. Run '''make all_debug''' to compile with debug options
 OR
-2. Run 'make all_opt' to compile with optimization options
+2. Run '''make all_opt''' to compile with optimization options
 
 The file is created in the /bin/ directory.
 
 To run: (if all_opt was chosen.)
 
 1. Enter into the /example/Al_inj directory
- 'cd example/Al_inj'
+ '''cd example/Al_inj'''
 2. Copy the executable or create a shortcut link 
-'cp ../../bin/cas_opt .' 
+'''cp ../../bin/cas_opt .''' 
 3. Run using the input file 'cas.in'
-'./cas_opt cas.in'
+'''./cas_opt cas.in'''
 4. Use 'python3 result.py' and compare results of Liquid penetration with PEN54 case from author's article (pen54_article.csv or check the publication).
 5. If something is not correct and one does some changes to the code, the autom_recompile_testing.sh script was designed to
 delete old output files etc., recompile the code and run the simulation again along with python script for plotting. 
+'''./autom_recompile_testing.sh'''
 
 ## Introduction and Problem Diagnosis
 The default code for this model (written in Fortran) was designed specifically for the Intel compiler. Attempting to compile it straight away using the default Linux compiler (`gfortran`) will fail. 
@@ -82,7 +83,7 @@ Simply installing the compiler is not enough. Your terminal needs to "know" wher
 source /opt/intel/oneapi/setvars.sh
 ```
 
-> **IMPORTANT NOTE:** You must run this command every single time you open a NEW terminal window and want to work with this code. 
+> **IMPORTANT NOTE:** You must run this command every single time you open a NEW terminal window and want to work with this code.
 
 **To avoid doing this manually:**
 1. Open the `~/.bashrc` file: 
@@ -92,8 +93,9 @@ source /opt/intel/oneapi/setvars.sh
 3. Save the file and execute this in the terminal: 
    `source ~/.bashrc`
 
-The code will now execute this command automatically upon opening.
-
+The code will now execute this command automatically upon opening, BUT it can influence performance of the machine (the change is done to the general file)
+- One can add a conditional statement that checks if 'cd' command leads to particular directory e.g. cas, but it can in a small way influence the 'cd' command due to additional logic.
+- The cleanest way is to create the environment with 'direnv' or 'conda' (or miniconda)
 ---
 
 ## Step 3: Fix the "Makefile" (ERROR: ifort: No such file or directory)
