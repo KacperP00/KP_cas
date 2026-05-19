@@ -18,30 +18,30 @@ fortran compiler is in ./Makefiles/ but currently does not compile due to some
 unsupported features. }
 
 First, clone the repository:
-'''git clone https://github.com/KacperP00/KP_cas.git'''
+```git clone https://github.com/KacperP00/KP_cas.git```
 
 To compile:
 
 1. Enter into the 'src' directory
-'cd src'
-2. Run '''make all_debug''' to compile with debug options
+```cd src```
+2. Run ```make all_debug``` to compile with debug options
 OR
-2. Run '''make all_opt''' to compile with optimization options
+2. Run ```make all_opt``` to compile with optimization options
 
 The file is created in the /bin/ directory.
 
 To run: (if all_opt was chosen.)
 
 1. Enter into the /example/Al_inj directory
- '''cd example/Al_inj'''
+ ```cd example/Al_inj```
 2. Copy the executable or create a shortcut link 
-'''cp ../../bin/cas_opt .''' 
+```cp ../../bin/cas_opt .``` 
 3. Run using the input file 'cas.in'
-'''./cas_opt cas.in'''
+```./cas_opt cas.in```
 4. Use 'python3 result.py' and compare results of Liquid penetration with PEN54 case from author's article (pen54_article.csv or check the publication).
 5. If something is not correct and one does some changes to the code, the autom_recompile_testing.sh script was designed to
 delete old output files etc., recompile the code and run the simulation again along with python script for plotting. 
-'''./autom_recompile_testing.sh'''
+```./autom_recompile_testing.sh```
 
 ## Introduction and Problem Diagnosis
 The default code for this model (written in Fortran) was designed specifically for the Intel compiler. Attempting to compile it straight away using the default Linux compiler (`gfortran`) will fail. 
