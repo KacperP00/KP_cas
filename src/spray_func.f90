@@ -3031,8 +3031,8 @@ subroutine evaporationModel(spray)
     ! more hot gas entrainment.
     !spray%Y_ref = (-1.5_WP/spray%b)*spray%Y_v
     !spray%Y_ref = (0.5_WP/spray%b)*(spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP
-    !spray%Y_ref = (0.5_WP/spray%b)*(spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP <-this one was imported 
-    spray%Y_ref = (spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP !added by me KP
+    spray%Y_ref = (0.5_WP/spray%b)*(spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP
+    !spray%Y_ref = (spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP <- added by me KP
     !spray%Y_ref = (spray%Y_v + 2.0_WP*Ystar_fe)/3.0_WP
     !spray%Y_ref = spray%Y_v
 
@@ -3078,8 +3078,8 @@ subroutine evaporationModel(spray)
 
           !Yref = spray%Y_ref(k) !spray%Y_v(k)
           !Yref = (spray%Y_v(k)/spray%Y_g(k) + 2.0_WP*Ystar_f)/3.0_WP
-          !Yref = (0.5_WP/spray%b(k))*(spray%Y_v(k) + 2.0_WP*Ystar_f)/3.0_WP <- originaly imported
-          Yref = (spray%Y_v(k) + 2.0_WP*Ystar_f)/3.0_WP !added by me KP
+          Yref = (0.5_WP/spray%b(k))*(spray%Y_v(k) + 2.0_WP*Ystar_f)/3.0_WP 
+          !Yref = (spray%Y_v(k) + 2.0_WP*Ystar_f)/3.0_WP <- added by me KP
           !Yref = (spray%Y_v(k) + 2.0_WP*Ystar_f)/3.0_WP
 
           Bd = (Ystar_f - Yref)/(1.0_WP-Ystar_f)
