@@ -1,3 +1,4 @@
 *.out*
 *.png*
 **/cas_opt
+*.csv*
