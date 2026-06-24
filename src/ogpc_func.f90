@@ -295,9 +295,6 @@ contains
 
        call pc_tetrahydrofurfurylalcohol(pc)
 
-    case('water','Water','H2O')
-
-       call pc_water(pc)
     case default
 
        write(*,*) 'Error:: Fuel not available in the database'
